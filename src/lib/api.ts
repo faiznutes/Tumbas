@@ -1,0 +1,534 @@
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_TIMEOUT_MS = 15000;
+
+let authToken: string | null = null;
+
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie.split(';').map((cookie) => cookie.trim());
+  for (const cookie of cookies) {
+    if (cookie.startsWith(`${name}=`)) {
+      return decodeURIComponent(cookie.slice(name.length + 1));
+    }
+  }
+  return null;
+}
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('authToken', token);
+      document.cookie = `authToken=${encodeURIComponent(token)}; Path=/; Max-Age=604800; SameSite=Lax`;
+    } else {
+      localStorage.removeItem('authToken');
+      document.cookie = 'authToken=; Path=/; Max-Age=0; SameSite=Lax';
+    }
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (authToken) return authToken;
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('authToken') || getCookieValue('authToken');
+  }
+  return null;
+}
+
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = getAuthToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      signal: options?.signal ?? controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout. Pastikan backend aktif.');
+    }
+    if (error instanceof TypeError) {
+      throw new Error('Tidak dapat terhubung ke server API. Pastikan backend aktif.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    if (
+      response.status === 401 &&
+      typeof window !== 'undefined' &&
+      !endpoint.startsWith('/auth/login')
+    ) {
+      setAuthToken(null);
+      localStorage.removeItem('user');
+
+      if (window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/admin/login?sessionExpired=1';
+      }
+    }
+
+    const error = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  stock: number;
+  status: 'AVAILABLE' | 'SOLD' | 'ARCHIVED';
+  category: string | null;
+  createdAt: string;
+  updatedAt: string;
+  images: ProductImage[];
+}
+
+export interface ProductImage {
+  id: string;
+  productId: string;
+  url: string;
+  position: number;
+}
+
+export interface Order {
+  id: string;
+  orderCode: string;
+  productId: string;
+  amount: number;
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
+  midtransTransactionId: string | null;
+  midtransOrderId: string | null;
+  snapToken: string | null;
+  shippedToExpedition?: boolean;
+  expeditionResi?: string | null;
+  expeditionName?: string | null;
+  shippedAt?: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerCity: string;
+  customerPostalCode: string;
+  notes: string | null;
+  product: Product;
+  publicToken?: string;
+}
+
+export interface PublicOrder {
+  id: string;
+  orderCode: string;
+  amount: number;
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
+  shippedToExpedition?: boolean;
+  expeditionResi?: string | null;
+  expeditionName?: string | null;
+  shippedAt?: string | null;
+  createdAt: string;
+  product: {
+    id: string;
+    title: string;
+    slug: string;
+    price: number;
+    status: 'AVAILABLE' | 'SOLD' | 'ARCHIVED';
+  };
+}
+
+export interface ReceiptVerificationResult {
+  valid: boolean;
+  reason?: 'invalid_receipt_format' | 'receipt_not_found' | 'verification_code_mismatch' | 'invalid_resi_format' | 'resi_not_found' | 'not_shipped_to_expedition';
+  order?: {
+    id: string;
+    orderCode: string;
+    receiptNo: string;
+    verificationCode: string;
+    shippingResi?: string;
+    shippedToExpedition?: boolean;
+    expeditionResi?: string | null;
+    expeditionName?: string | null;
+    shippedAt?: string | null;
+    productTitle: string;
+    amount: number;
+    paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
+    createdAt: string;
+  };
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  role?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  permissions: string;
+  isActive: boolean;
+  createdAt: string;
+  _count: {
+    products: number;
+    orders: number;
+  };
+}
+
+export interface WebhookMonitorResponse {
+  rangeMinutes: number;
+  since: string;
+  summary: {
+    totalReceived: number;
+    processed: number;
+    warning: number;
+    failed: number;
+    invalidSignature: number;
+  };
+  recentFailures: Array<{
+    id: string;
+    createdAt: string;
+    orderId: string | null;
+    status: string;
+    attempts: number;
+    error: string | null;
+  }>;
+}
+
+export interface ApiListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  whatsapp: string | null;
+  subject: string;
+  message: string;
+  status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'SPAM';
+  adminNotes: string | null;
+  processedAt: string | null;
+  processedById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  processedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+  } | null;
+}
+
+export const api = {
+  products: {
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      category?: string;
+      status?: string;
+      search?: string;
+      sort?: string;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) searchParams.set(key, String(value));
+        });
+      }
+      return fetchApi<{ data: Product[]; meta: ApiListMeta }>(`/products?${searchParams}`);
+    },
+
+    getBySlug: (slug: string) => fetchApi<Product>(`/products/${slug}`),
+
+    create: (data: {
+      title: string;
+      slug: string;
+      description?: string;
+      price: number;
+      stock?: number;
+      category?: string;
+      images?: { url: string; position?: number }[];
+    }) => fetchApi<Product>('/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    update: (id: string, data: Partial<{
+      title: string;
+      slug: string;
+      description: string;
+      price: number;
+      stock: number;
+      status: string;
+      category: string;
+      images: { url: string; position?: number }[];
+    }>) => fetchApi<Product>(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+    delete: (id: string) => fetchApi<{ success: boolean }>(`/products/${id}`, {
+      method: 'DELETE',
+    }),
+
+    bulkAction: (data: {
+      action: 'DELETE' | 'MARK_SOLD' | 'CHANGE_STATUS';
+      ids: string[];
+      status?: string;
+    }) => fetchApi<{ success: boolean }>('/products/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  },
+
+  orders: {
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      search?: string;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) searchParams.set(key, String(value));
+        });
+      }
+      return fetchApi<{ data: Order[]; meta: ApiListMeta }>(`/orders?${searchParams}`);
+    },
+
+    getById: (id: string) => fetchApi<Order>(`/orders/${id}`),
+
+    getPublicById: (id: string, token: string) => fetchApi<PublicOrder>(`/orders/${id}/public?token=${encodeURIComponent(token)}`),
+
+    create: (data: {
+      productId: string;
+      customerName: string;
+      customerEmail: string;
+      customerPhone: string;
+      customerAddress: string;
+      customerCity: string;
+      customerPostalCode: string;
+      notes?: string;
+    }) => fetchApi<Order>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    verifyReceipt: (receiptNo: string, verificationCode: string) =>
+      fetchApi<ReceiptVerificationResult>(
+        `/orders/verify-receipt?receiptNo=${encodeURIComponent(receiptNo)}&verificationCode=${encodeURIComponent(verificationCode)}`,
+      ),
+
+    verifyResi: (resi: string) =>
+      fetchApi<ReceiptVerificationResult>(
+        `/orders/verify-resi?resi=${encodeURIComponent(resi)}`,
+      ),
+
+    confirmShipping: (id: string, data: { expeditionResi: string; expeditionName?: string }) =>
+      fetchApi<Order>(`/orders/${id}/shipping/confirm`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  contactMessages: {
+    create: (data: {
+      name: string;
+      email: string;
+      phone?: string;
+      whatsapp?: string;
+      subject: string;
+      message: string;
+    }) => fetchApi<ContactMessage>('/contact-messages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      status?: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'SPAM';
+      search?: string;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) searchParams.set(key, String(value));
+        });
+      }
+      return fetchApi<{ data: ContactMessage[]; meta: ApiListMeta }>(`/contact-messages?${searchParams}`);
+    },
+
+    updateById: (id: string, data: { status?: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'SPAM'; adminNotes?: string }) =>
+      fetchApi<ContactMessage>(`/contact-messages/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    bulkUpdate: (data: {
+      ids: string[];
+      status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'SPAM';
+      adminNotes?: string;
+    }) =>
+      fetchApi<{ updated: number }>('/contact-messages/bulk', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  auth: {
+    login: (email: string, password: string) => 
+      fetchApi<{ accessToken: string; access_token?: string; user: User }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }),
+
+    register: (email: string, password: string, name?: string) =>
+      fetchApi<{ accessToken: string; access_token?: string; user: User }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, name }),
+      }),
+  },
+
+  users: {
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      role?: string;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) searchParams.set(key, String(value));
+        });
+      }
+      return fetchApi<{ data: AdminUser[]; meta: ApiListMeta }>(`/users?${searchParams}`);
+    },
+
+    create: (data: {
+      email: string;
+      password: string;
+      name?: string;
+      role?: string;
+      permissions?: string[];
+    }) => fetchApi<AdminUser>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    update: (id: string, data: {
+      name?: string;
+      role?: string;
+      permissions?: string[];
+      isActive?: boolean;
+    }) => fetchApi<AdminUser>(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+    delete: (id: string) => fetchApi<{ success: boolean }>(`/users/${id}`, {
+      method: 'DELETE',
+    }),
+
+    toggleActive: (id: string) => fetchApi<AdminUser>(`/users/${id}/toggle-active`, {
+      method: 'PATCH',
+    }),
+  },
+
+  settings: {
+    getPromo: () => fetchApi<{
+      heroImage: string;
+      heroTitle: string;
+      heroSubtitle: string;
+      heroBadge: string;
+      discountText: string;
+    }>('/settings/promo'),
+
+    updatePromo: (data: {
+      heroImage?: string;
+      heroTitle?: string;
+      heroSubtitle?: string;
+      heroBadge?: string;
+      discountText?: string;
+    }) => fetchApi<{
+      heroImage: string;
+      heroTitle: string;
+      heroSubtitle: string;
+      heroBadge: string;
+      discountText: string;
+    }>('/settings/promo', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getWeeklyDeal: () => fetchApi<{
+      title: string;
+      subtitle: string;
+      enabled: boolean;
+      discount: number;
+      endDate: string;
+    }>('/settings/weekly-deal'),
+
+    updateWeeklyDeal: (data: {
+      title?: string;
+      subtitle?: string;
+      enabled?: boolean;
+      discount?: number;
+      endDate?: string;
+    }) => fetchApi<{
+      title: string;
+      subtitle: string;
+      enabled: boolean;
+      discount: number;
+      endDate: string;
+    }>('/settings/weekly-deal', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getHomepageFeatured: () => fetchApi<{
+      manualSlugs: string[];
+      maxItems: number;
+    }>('/settings/homepage-featured'),
+
+    updateHomepageFeatured: (data: {
+      manualSlugs?: string[];
+      maxItems?: number;
+    }) => fetchApi<{
+      manualSlugs: string[];
+      maxItems: number;
+    }>('/settings/homepage-featured', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  },
+
+  webhooks: {
+    getMidtransMonitor: (minutes = 60) =>
+      fetchApi<WebhookMonitorResponse>(`/webhook/midtrans/monitor?minutes=${minutes}`),
+  },
+};

@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  AVAILABLE
+  SOLD
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum ContactMessageStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  SPAM
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String?
+  role         UserRole  @default(STAFF)
+  permissions  String    @default("[]")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  products     Product[]
+  orders       Order[]
+  processedMessages ContactMessage[] @relation("MessageProcessedBy")
+
+  @@map("users")
+}
+
+model ContactMessage {
+  id           String               @id @default(uuid())
+  name         String
+  email        String
+  phone        String?
+  whatsapp     String?
+  subject      String
+  message      String
+  status       ContactMessageStatus @default(NEW)
+  adminNotes   String?              @map("admin_notes")
+  processedAt  DateTime?            @map("processed_at")
+  processedById String?             @map("processed_by")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  processedBy  User?                @relation("MessageProcessedBy", fields: [processedById], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  description String?
+  price       Float
+  stock       Int           @default(0)
+  status      ProductStatus @default(AVAILABLE)
+  category    String?
+  createdById String?       @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  createdBy   User?         @relation(fields: [createdById], references: [id])
+  images      ProductImage[]
+  orders      Order[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([category])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  url       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model Order {
+  id                    String        @id @default(uuid())
+  orderCode             String        @unique @map("order_code")
+  productId             String        @map("product_id")
+  amount                Float
+  customerName          String        @map("customer_name")
+  customerEmail         String        @map("customer_email")
+  customerPhone         String        @map("customer_phone")
+  customerAddress       String        @map("customer_address")
+  customerCity          String        @map("customer_city")
+  customerPostalCode    String        @map("customer_postal_code")
+  notes                 String?
+  paymentStatus         PaymentStatus @default(PENDING) @map("payment_status")
+  midtransTransactionId String?       @unique @map("midtrans_transaction_id")
+  midtransOrderId       String?       @unique @map("midtrans_order_id")
+  snapToken             String?       @map("snap_token")
+  shippedToExpedition   Boolean       @default(false) @map("shipped_to_expedition")
+  expeditionResi        String?       @map("expedition_resi")
+  expeditionName        String?       @map("expedition_name")
+  shippedAt             DateTime?     @map("shipped_at")
+  paidAt                DateTime?     @map("paid_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  createdById            String?       @map("created_by")
+
+  product   Product @relation(fields: [productId], references: [id])
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@index([paymentStatus])
+  @@index([midtransTransactionId])
+  @@index([midtransOrderId])
+  @@map("orders")
+}
+
+model WebhookLog {
+  id        String   @id @default(uuid())
+  provider  String
+  payload   Json
+  signature String?
+  isValid   Boolean  @default(false) @map("is_valid")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("webhook_logs")
+}
+
+model SiteSettings {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
