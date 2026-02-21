@@ -14,8 +14,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { MidtransService } from './midtrans.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Permissions } from '../auth/permissions.decorator';
-import { PermissionsGuard } from '../auth/permissions.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
@@ -159,9 +157,8 @@ export class WebhookController {
   }
 
   @Get('midtrans/monitor')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
-  @Permissions('reports.view')
   async getMidtransMonitor(@Query('minutes') minutes?: string) {
     const durationMinutes = Math.max(parseInt(minutes || '60', 10) || 60, 1);
     const since = new Date(Date.now() - durationMinutes * 60_000);

@@ -89,7 +89,6 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Aktifkan Quick Tunnel khusus Coolify dashboard untuk akses panel saat port 8000 tidak direct-access dari jaringan user
 
 ## Tambahan Plan (User Request Lanjutan)
-- [~] Timeout order belum bayar: otomatis `PENDING -> EXPIRED` setelah 2 jam (strategi aman tanpa hard delete langsung)
 - [x] Timeout order belum bayar: otomatis `PENDING -> EXPIRED` setelah 2 jam (strategi aman tanpa hard delete langsung)
 - [x] Exclude order `EXPIRED/CANCELLED` dari list/laporan default agar data pending lama tidak memenuhi laporan aktif
 - [x] Tambah aksi hapus di `/admin/messages` (single + bulk)
@@ -122,6 +121,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Audit popup/notifikasi: hapus penggunaan popup system browser (`alert/confirm/prompt`) dan ganti ke komponen website (`Popup` + `Toast`)
 - [x] Form edit pengguna mendukung ganti password opsional (endpoint `PATCH /users/:id/password`)
 - [x] Tambah pengaturan kategori pilihan beranda berbasis slug manual (multiline/koma) + kontrol hapus slug aktif di UI pengaturan
+- [x] Rapikan permission legacy `reports.view` (preset user + fallback role) karena monitor webhook kini khusus `SUPER_ADMIN`
 
 ## Verification Log
 - [x] `npm run build` backend (post RajaOngkir + Midtrans shipping item details): pass
@@ -230,6 +230,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm run build` frontend (post permission alignment + webhook super-admin restriction): pass
 - [x] `npm run build` backend (post permission alignment + webhook super-admin restriction): pass
 - [x] Push `main` commit `8608a44` (permission alignment batch) ke GitHub: pass
+- [x] `npm run build` backend (post remove webhook permission dependency): pass
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` only)
