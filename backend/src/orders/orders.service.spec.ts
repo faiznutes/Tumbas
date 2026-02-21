@@ -13,6 +13,7 @@ describe('OrdersService', () => {
 
   const midtransService = {
     createTransaction: jest.fn(),
+    getTransactionStatus: jest.fn(),
   } as any;
 
   const configService = {
@@ -68,6 +69,44 @@ describe('OrdersService', () => {
     );
     expect(result).toHaveProperty('id', orderId);
     expect(result).toHaveProperty('product.slug', 'product-a');
+  });
+
+  it('accepts previous public token secret during transition', async () => {
+    const orderId = 'ord-legacy';
+    const legacySecret = 'legacy-order-secret';
+
+    (configService.get as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'ORDER_PUBLIC_SECRET') return 'new-order-secret';
+      if (key === 'ORDER_PUBLIC_SECRET_PREVIOUS') return legacySecret;
+      if (key === 'JWT_SECRET') return 'fallback-secret';
+      return undefined;
+    });
+
+    service = new OrdersService(prisma, midtransService, configService, shippingService);
+
+    const legacyToken = crypto
+      .createHmac('sha256', legacySecret)
+      .update(orderId)
+      .digest('hex');
+
+    prisma.order.findUnique.mockResolvedValue({
+      id: orderId,
+      orderCode: 'TMB-LEGACY',
+      amount: 120000,
+      paymentStatus: 'PENDING',
+      createdAt: new Date(),
+      orderItems: [],
+      product: {
+        id: 'p2',
+        title: 'Legacy Product',
+        slug: 'legacy-product',
+        price: 120000,
+        status: 'AVAILABLE',
+      },
+    });
+
+    const result = await service.findPublicById(orderId, legacyToken);
+    expect(result).toHaveProperty('id', orderId);
   });
 
   it('throws not found when public order does not exist', async () => {

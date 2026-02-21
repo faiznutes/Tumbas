@@ -39,6 +39,37 @@ export default function AdminWebhookMonitorPage() {
     return statusMatch && orderIdMatch && attemptsMatch;
   });
 
+  const healthState = (() => {
+    if (!data) return { level: "unknown", text: "Menunggu data monitor webhook...", className: "border-slate-200 bg-slate-50 text-slate-700" };
+    if ((data.summary.failed || 0) > 0) {
+      return {
+        level: "critical",
+        text: "Ada webhook gagal diproses. Tindak lanjut sekarang: cek error detail dan retry incident flow di runbook.",
+        className: "border-red-200 bg-red-50 text-red-700",
+      };
+    }
+    if ((data.summary.invalidSignature || 0) > 0) {
+      return {
+        level: "warning",
+        text: "Terdeteksi invalid signature. Periksa konfigurasi Midtrans callback URL/key segera.",
+        className: "border-amber-200 bg-amber-50 text-amber-800",
+      };
+    }
+    if ((data.summary.warning || 0) > 0) {
+      return {
+        level: "warning",
+        text: "Ada warning webhook. Pantau order terkait dan pastikan sinkronisasi status pembayaran berjalan normal.",
+        className: "border-yellow-200 bg-yellow-50 text-yellow-800",
+      };
+    }
+
+    return {
+      level: "healthy",
+      text: "Webhook Midtrans sehat pada rentang waktu yang dipilih.",
+      className: "border-green-200 bg-green-50 text-green-700",
+    };
+  })();
+
   const exportCsv = () => {
     if (!data) {
       addToast("Data monitor belum tersedia", "warning");
@@ -195,6 +226,10 @@ export default function AdminWebhookMonitorPage() {
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-[#4c739a]">Memuat data webhook...</div>
       ) : (
         <>
+          <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${healthState.className}`}>
+            {healthState.text}
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <p className="text-xs text-[#4c739a]">Total Received</p>

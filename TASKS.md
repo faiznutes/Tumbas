@@ -186,6 +186,9 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Rotasi secret produksi di Coolify: `JWT_SECRET`, `ORDER_PUBLIC_SECRET`, `DB_PASSWORD` (aplikasi + database role)
 - [x] Tambah kompatibilitas transisi token publik via `ORDER_PUBLIC_SECRET_PREVIOUS` agar link/order lama tetap valid sementara
 - [x] Verifikasi startup backend setelah rotasi: warning placeholder security config tidak muncul lagi
+- [x] Tambah banner health di `/admin/webhooks` untuk threshold operasional (`failed`/`invalid_signature`/`warning`)
+- [x] Tambah test backend untuk kompatibilitas `ORDER_PUBLIC_SECRET_PREVIOUS` pada public token order
+- [x] Tambah dokumen UAT final pembayaran/webhook: `UAT_CHECKLIST_PAYMENT_WEBHOOK.md`
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)
