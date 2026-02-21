@@ -53,6 +53,10 @@ export default function AdminOrders() {
   const [shippingFilter, setShippingFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [shippingTargetIds, setShippingTargetIds] = useState<string[]>([]);
+  const [expeditionResiInput, setExpeditionResiInput] = useState("");
+  const [expeditionNameInput, setExpeditionNameInput] = useState("");
+  const [confirmingShipping, setConfirmingShipping] = useState(false);
   const { addToast } = useToast();
 
   const fetchOrders = useCallback(async () => {
@@ -130,6 +134,87 @@ export default function AdminOrders() {
     }
   };
 
+  const openShippingModal = (ids: string[]) => {
+    const eligible = orders.filter(
+      (order) => ids.includes(order.id) && order.paymentStatus === "PAID" && !order.shippedToExpedition,
+    );
+
+    if (eligible.length === 0) {
+      addToast("Pilih order yang sudah lunas dan belum dikirim ke ekspedisi", "warning");
+      return;
+    }
+
+    setShippingTargetIds(eligible.map((order) => order.id));
+    setExpeditionResiInput("");
+    setExpeditionNameInput("");
+  };
+
+  const closeShippingModal = () => {
+    if (confirmingShipping) return;
+    setShippingTargetIds([]);
+    setExpeditionResiInput("");
+    setExpeditionNameInput("");
+  };
+
+  const confirmShipping = async () => {
+    const trimmedResi = expeditionResiInput.trim();
+    const trimmedExpedition = expeditionNameInput.trim();
+
+    if (!trimmedResi) {
+      addToast("Nomor resi/prefix resi wajib diisi", "warning");
+      return;
+    }
+
+    if (shippingTargetIds.length === 0) {
+      addToast("Tidak ada order yang dipilih", "warning");
+      return;
+    }
+
+    setConfirmingShipping(true);
+    try {
+      if (shippingTargetIds.length === 1) {
+        await api.orders.confirmShipping(shippingTargetIds[0], {
+          expeditionResi: trimmedResi,
+          expeditionName: trimmedExpedition || undefined,
+        });
+        addToast("Order berhasil dikonfirmasi ke ekspedisi", "success");
+      } else {
+        const selectedOrders = orders.filter((order) => shippingTargetIds.includes(order.id));
+        const prefix = trimmedResi.toUpperCase().replace(/\s+/g, "-");
+        const results = await Promise.allSettled(
+          selectedOrders.map((order) =>
+            api.orders.confirmShipping(order.id, {
+              expeditionResi: `${prefix}-${order.orderCode}`,
+              expeditionName: trimmedExpedition || undefined,
+            }),
+          ),
+        );
+        const successCount = results.filter((result) => result.status === "fulfilled").length;
+        const failedCount = results.length - successCount;
+        if (successCount > 0) {
+          addToast(
+            failedCount > 0
+              ? `${successCount} order berhasil, ${failedCount} order gagal konfirmasi`
+              : `${successCount} order berhasil dikonfirmasi ke ekspedisi`,
+            failedCount > 0 ? "warning" : "success",
+          );
+        } else {
+          addToast("Semua order gagal dikonfirmasi", "error");
+        }
+      }
+
+      closeShippingModal();
+      setSelectedIds([]);
+      setSelectedOrder(null);
+      await fetchOrders();
+    } catch (error) {
+      console.error("Failed to confirm shipping:", error);
+      addToast(error instanceof Error ? error.message : "Gagal konfirmasi pengiriman", "error");
+    } finally {
+      setConfirmingShipping(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -138,6 +223,13 @@ export default function AdminOrders() {
           <p className="text-[#4c739a]">Pantau pembayaran, pengiriman, dan tindak lanjut order</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => openShippingModal(selectedIds)}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#0d141b] hover:bg-slate-50"
+          >
+            <span className="material-symbols-outlined text-base">local_shipping</span>
+            Konfirmasi Ekspedisi ({selectedIds.length})
+          </button>
           <button
             onClick={copySelectedOrderCodes}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#0d141b] hover:bg-slate-50"
@@ -284,6 +376,14 @@ export default function AdminOrders() {
                         >
                           <span className="material-symbols-outlined">visibility</span>
                         </button>
+                        {order.paymentStatus === "PAID" && !order.shippedToExpedition && (
+                          <button
+                            onClick={() => openShippingModal([order.id])}
+                            className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Kirim
+                          </button>
+                        )}
                         <Link
                           href={`/admin/orders/${order.id}`}
                           className="rounded-lg bg-[#137fec] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0f65bd]"
@@ -353,6 +453,68 @@ export default function AdminOrders() {
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-[#4c739a]">
                 Status pembayaran tidak dapat diubah manual dari panel admin. Status diperbarui otomatis melalui webhook Midtrans.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shippingTargetIds.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[#0d141b]">Konfirmasi ke Ekspedisi</h2>
+              <button onClick={closeShippingModal} className="text-[#4c739a] hover:text-[#0d141b]" disabled={confirmingShipping}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-[#4c739a]">
+              {shippingTargetIds.length === 1
+                ? "Konfirmasi satu order ke ekspedisi dengan nomor resi asli."
+                : `Konfirmasi ${shippingTargetIds.length} order sekaligus. Sistem akan membuat resi per order dengan format PREFIX-ORDERCODE.`}
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#0d141b]">Nama Ekspedisi (opsional)</label>
+                <input
+                  type="text"
+                  value={expeditionNameInput}
+                  onChange={(e) => setExpeditionNameInput(e.target.value)}
+                  placeholder="Contoh: JNE"
+                  className="w-full rounded-lg border border-[#e7edf3] px-4 py-2 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#0d141b]">
+                  {shippingTargetIds.length === 1 ? "Nomor Resi" : "Prefix Resi"}
+                </label>
+                <input
+                  type="text"
+                  value={expeditionResiInput}
+                  onChange={(e) => setExpeditionResiInput(e.target.value)}
+                  placeholder={shippingTargetIds.length === 1 ? "Contoh: JNE0123456789" : "Contoh: JNEBATCH-2202"}
+                  className="w-full rounded-lg border border-[#e7edf3] px-4 py-2 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={closeShippingModal}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-[#0d141b] hover:bg-slate-50"
+                  disabled={confirmingShipping}
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmShipping}
+                  className="rounded-lg bg-[#137fec] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-60"
+                  disabled={confirmingShipping}
+                >
+                  {confirmingShipping ? "Menyimpan..." : "Konfirmasi Pengiriman"}
+                </button>
               </div>
             </div>
           </div>
