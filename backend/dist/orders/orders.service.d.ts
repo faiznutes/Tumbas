@@ -12,6 +12,8 @@ export declare class OrdersService {
     private createPublicToken;
     private createVerificationCode;
     private createShippingResi;
+    private extractProductVariants;
+    private reduceStock;
     findAll(params: {
         page?: number;
         limit?: number;
@@ -34,6 +36,18 @@ export declare class OrdersService {
                 variants: Prisma.JsonValue | null;
                 createdById: string | null;
             };
+            orderItems: {
+                id: string;
+                createdAt: Date;
+                productId: string;
+                selectedVariantKey: string | null;
+                selectedVariantLabel: string | null;
+                itemWeightGram: number;
+                orderId: string;
+                productTitleSnapshot: string;
+                unitPrice: number;
+                quantity: number;
+            }[];
         } & {
             id: string;
             createdAt: Date;
@@ -85,6 +99,18 @@ export declare class OrdersService {
             variants: Prisma.JsonValue | null;
             createdById: string | null;
         };
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
     } & {
         id: string;
         createdAt: Date;
@@ -123,6 +149,18 @@ export declare class OrdersService {
         };
         id: string;
         createdAt: Date;
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
         orderCode: string;
         amount: number;
         paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
@@ -250,7 +288,13 @@ export declare class OrdersService {
         reason?: undefined;
     }>;
     create(data: {
-        productId: string;
+        productId?: string;
+        items?: Array<{
+            productId: string;
+            quantity: number;
+            selectedVariantKey?: string;
+            selectedVariantLabel?: string;
+        }>;
         customerName: string;
         customerEmail: string;
         customerPhone: string;
@@ -285,6 +329,18 @@ export declare class OrdersService {
             variants: Prisma.JsonValue | null;
             createdById: string | null;
         };
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -327,6 +383,18 @@ export declare class OrdersService {
             variants: Prisma.JsonValue | null;
             createdById: string | null;
         };
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
     } & {
         id: string;
         createdAt: Date;

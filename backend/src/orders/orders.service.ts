@@ -34,6 +34,50 @@ export class OrdersService {
     return `TMB-RESI-${compact}`;
   }
 
+  private extractProductVariants(product: { variants: Prisma.JsonValue | null }) {
+    if (!Array.isArray(product.variants)) return [] as Array<{ key: string; label: string; stock: number; price?: number; weightGram?: number }>;
+    return product.variants as unknown as Array<{ key: string; label: string; stock: number; price?: number; weightGram?: number }>;
+  }
+
+  private async reduceStock(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    quantity: number,
+    variantKey?: string | null,
+  ) {
+    const product = await tx.product.findUnique({ where: { id: productId } });
+    if (!product) return;
+
+    const qty = Math.max(1, quantity);
+    const variants = this.extractProductVariants(product);
+    if (variantKey && variants.length > 0) {
+      const index = variants.findIndex((variant) => variant.key === variantKey);
+      if (index >= 0) {
+        variants[index] = {
+          ...variants[index],
+          stock: Math.max(0, Number(variants[index].stock || 0) - qty),
+        };
+      }
+
+      const remainingVariantStock = variants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock || 0)), 0);
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          variants,
+          stock: remainingVariantStock,
+          status: remainingVariantStock > 0 ? 'AVAILABLE' : 'SOLD',
+        },
+      });
+      return;
+    }
+
+    const nextStock = Math.max(0, (product.stock || 0) - qty);
+    await tx.product.update({
+      where: { id: productId },
+      data: { stock: nextStock, status: nextStock > 0 ? 'AVAILABLE' : 'SOLD' },
+    });
+  }
+
   async findAll(params: {
     page?: number;
     limit?: number;
@@ -63,7 +107,7 @@ export class OrdersService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { product: true },
+        include: { product: true, orderItems: true },
       }),
       this.prisma.order.count({ where }),
     ]);
@@ -82,7 +126,7 @@ export class OrdersService {
   async findById(id: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      include: { product: true },
+      include: { product: true, orderItems: true },
     });
 
     if (!order) {
@@ -109,6 +153,7 @@ export class OrdersService {
         expeditionName: true,
         shippedAt: true,
         createdAt: true,
+        orderItems: true,
         product: {
           select: {
             id: true,
@@ -284,7 +329,13 @@ export class OrdersService {
   }
 
   async create(data: {
-    productId: string;
+    productId?: string;
+    items?: Array<{
+      productId: string;
+      quantity: number;
+      selectedVariantKey?: string;
+      selectedVariantLabel?: string;
+    }>;
     customerName: string;
     customerEmail: string;
     customerPhone: string;
@@ -303,48 +354,103 @@ export class OrdersService {
     selectedVariantLabel?: string;
   }) {
     return this.prisma.$transaction(async (tx) => {
-      const product = await tx.product.findUnique({
-        where: { id: data.productId },
+      const requestedItems = Array.isArray(data.items) && data.items.length > 0
+        ? data.items
+        : data.productId
+          ? [{
+            productId: data.productId,
+            quantity: 1,
+            selectedVariantKey: data.selectedVariantKey,
+            selectedVariantLabel: data.selectedVariantLabel,
+          }]
+          : [];
+
+      if (requestedItems.length === 0) {
+        throw new BadRequestException('Produk pesanan tidak boleh kosong');
+      }
+
+      const mergedMap = new Map<string, { productId: string; quantity: number; selectedVariantKey?: string; selectedVariantLabel?: string }>();
+      for (const item of requestedItems) {
+        const quantity = Math.max(1, Number(item.quantity || 1));
+        const variantKey = item.selectedVariantKey?.trim();
+        const key = `${item.productId}:${variantKey || 'default'}`;
+        const existing = mergedMap.get(key);
+        mergedMap.set(key, {
+          productId: item.productId,
+          quantity: (existing?.quantity || 0) + quantity,
+          selectedVariantKey: variantKey,
+          selectedVariantLabel: item.selectedVariantLabel?.trim(),
+        });
+      }
+
+      const mergedItems = Array.from(mergedMap.values());
+      const products = await tx.product.findMany({
+        where: {
+          id: { in: mergedItems.map((item) => item.productId) },
+        },
       });
+      const productMap = new Map(products.map((product) => [product.id, product]));
 
-      if (!product) {
-        throw new NotFoundException('Product not found');
+      const normalizedItems: Array<{
+        productId: string;
+        productTitleSnapshot: string;
+        unitPrice: number;
+        quantity: number;
+        selectedVariantKey?: string | null;
+        selectedVariantLabel?: string | null;
+        itemWeightGram: number;
+      }> = [];
+
+      for (const item of mergedItems) {
+        const product = productMap.get(item.productId);
+        if (!product) {
+          throw new NotFoundException('Product not found');
+        }
+        if (product.status !== 'AVAILABLE') {
+          throw new BadRequestException(`Produk ${product.title} tidak tersedia`);
+        }
+
+        const variants = this.extractProductVariants(product);
+        const selectedVariant = item.selectedVariantKey
+          ? variants.find((variant) => variant.key === item.selectedVariantKey)
+          : undefined;
+
+        if (item.selectedVariantKey && !selectedVariant) {
+          throw new BadRequestException(`Varian produk ${product.title} tidak valid`);
+        }
+
+        if (selectedVariant) {
+          if (Number(selectedVariant.stock || 0) < item.quantity) {
+            throw new BadRequestException(`Stok varian ${selectedVariant.label} untuk ${product.title} tidak mencukupi`);
+          }
+        } else if ((product.stock || 0) < item.quantity) {
+          throw new BadRequestException(`Stok produk ${product.title} tidak mencukupi`);
+        }
+
+        const unitPrice = selectedVariant && Number(selectedVariant.price || 0) > 0
+          ? Number(selectedVariant.price)
+          : product.price;
+        const itemWeightGram = selectedVariant?.weightGram
+          ? Math.max(1, Number(selectedVariant.weightGram))
+          : Math.max(1, Number(product.weightGram || 1000));
+
+        normalizedItems.push({
+          productId: product.id,
+          productTitleSnapshot: product.title,
+          unitPrice,
+          quantity: item.quantity,
+          selectedVariantKey: item.selectedVariantKey || null,
+          selectedVariantLabel: item.selectedVariantLabel || selectedVariant?.label || null,
+          itemWeightGram,
+        });
       }
 
-      if (product.status !== 'AVAILABLE') {
-        throw new BadRequestException('Product is not available');
-      }
-
-      type VariantRow = {
-        key: string;
-        label: string;
-        stock: number;
-        price?: number;
-        weightGram?: number;
-      };
-
-      const productVariants = Array.isArray(product.variants)
-        ? (product.variants as unknown as VariantRow[])
-        : [];
-      const selectedVariant = data.selectedVariantKey
-        ? productVariants.find((variant) => variant.key === data.selectedVariantKey)
-        : undefined;
-
-      if (data.selectedVariantKey && !selectedVariant) {
-        throw new BadRequestException('Varian produk tidak valid');
-      }
-
-      if (selectedVariant && Number(selectedVariant.stock || 0) <= 0) {
-        throw new BadRequestException('Stok varian habis');
-      }
-
-      if (!selectedVariant && product.stock <= 0) {
-        throw new BadRequestException('Stok produk habis');
-      }
+      const subtotal = normalizedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      const totalWeightGram = normalizedItems.reduce((sum, item) => sum + item.itemWeightGram * item.quantity, 0);
 
       const orderCode = `TMB-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       let shippingCost = Math.max(0, data.shippingCost ?? 0);
-      const shippingWeightGram = Math.max(1, data.shippingWeightGram ?? 1000);
+      const shippingWeightGram = Math.max(1, data.shippingWeightGram ?? (totalWeightGram || 1000));
       let resolvedShippingService = data.shippingService?.trim() || '';
       let resolvedShippingEtd = data.shippingEtd?.trim() || '';
 
@@ -373,27 +479,25 @@ export class OrdersService {
         throw new BadRequestException('Kurir pengiriman wajib dipilih');
       }
 
-      const unitPrice = selectedVariant && Number(selectedVariant.price || 0) > 0
-        ? Number(selectedVariant.price)
-        : product.price;
-      const lineWeightGram = selectedVariant?.weightGram ? Math.max(1, Number(selectedVariant.weightGram)) : product.weightGram;
-      const amount = unitPrice + shippingCost;
+      const amount = subtotal + shippingCost;
       const shippingNote = [
         data.shippingProvider ? `Courier: ${data.shippingProvider}` : null,
         resolvedShippingService ? `Service: ${resolvedShippingService}` : null,
         resolvedShippingEtd ? `ETD: ${resolvedShippingEtd}` : null,
         data.shippingRegion ? `Region: ${data.shippingRegion}` : null,
         data.shippingDestinationCityId ? `Destination City ID: ${data.shippingDestinationCityId}` : null,
-        `Weight: ${lineWeightGram}g`,
+        `Weight: ${shippingWeightGram}g`,
         `Shipping: ${shippingCost}`,
       ]
         .filter(Boolean)
         .join(' | ');
 
+      const firstItem = normalizedItems[0];
+
       const order = await tx.order.create({
         data: {
           orderCode,
-          productId: data.productId,
+          productId: firstItem.productId,
           amount,
           customerName: data.customerName,
           customerEmail: data.customerEmail,
@@ -401,13 +505,24 @@ export class OrdersService {
           customerAddress: data.customerAddress,
           customerCity: data.customerCity,
           customerPostalCode: data.customerPostalCode,
-          selectedVariantKey: data.selectedVariantKey || null,
-          selectedVariantLabel: data.selectedVariantLabel || selectedVariant?.label || null,
-          itemWeightGram: Math.max(1, Math.round(lineWeightGram)),
+          selectedVariantKey: firstItem.selectedVariantKey || null,
+          selectedVariantLabel: firstItem.selectedVariantLabel || null,
+          itemWeightGram: Math.max(1, Math.round(firstItem.itemWeightGram)),
           notes: data.notes ? `${data.notes}\n${shippingNote}` : shippingNote,
           paymentStatus: 'PENDING',
+          orderItems: {
+            create: normalizedItems.map((item) => ({
+              productId: item.productId,
+              productTitleSnapshot: item.productTitleSnapshot,
+              unitPrice: item.unitPrice,
+              quantity: item.quantity,
+              selectedVariantKey: item.selectedVariantKey || null,
+              selectedVariantLabel: item.selectedVariantLabel || null,
+              itemWeightGram: Math.max(1, Math.round(item.itemWeightGram)),
+            })),
+          },
         },
-        include: { product: true },
+        include: { product: true, orderItems: true },
       });
 
       const snapToken = await this.midtransService.createTransaction({
@@ -418,12 +533,12 @@ export class OrdersService {
         customerEmail: data.customerEmail,
         customerPhone: data.customerPhone,
         itemDetails: [
-          {
-            id: product.id,
-            name: `${product.title}${selectedVariant?.label ? ` (${selectedVariant.label})` : ''}`.slice(0, 50),
-            price: Math.round(unitPrice),
-            quantity: 1,
-          },
+          ...normalizedItems.map((item) => ({
+            id: item.productId,
+            name: `${item.productTitleSnapshot}${item.selectedVariantLabel ? ` (${item.selectedVariantLabel})` : ''}`.slice(0, 50),
+            price: Math.round(item.unitPrice),
+            quantity: item.quantity,
+          })),
           {
             id: 'shipping',
             name: `Ongkir ${data.shippingProvider || ''}`.trim(),
@@ -455,17 +570,16 @@ export class OrdersService {
     const order = await this.prisma.order.update({
       where: { id },
       data: { paymentStatus: status },
-      include: { product: true },
+      include: { product: true, orderItems: true },
     });
 
     if (status === 'PAID') {
-      const product = await this.prisma.product.findUnique({ where: { id: order.productId } });
-      if (product) {
-        const nextStock = Math.max(0, (product.stock || 0) - 1);
-        await this.prisma.product.update({
-          where: { id: order.productId },
-          data: { stock: nextStock, status: nextStock > 0 ? 'AVAILABLE' : 'SOLD' },
-        });
+      if (order.orderItems.length > 0) {
+        for (const item of order.orderItems) {
+          await this.reduceStock(this.prisma, item.productId, item.quantity, item.selectedVariantKey);
+        }
+      } else {
+        await this.reduceStock(this.prisma, order.productId, 1, order.selectedVariantKey);
       }
     }
 
@@ -481,6 +595,7 @@ export class OrdersService {
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
         where: { midtransOrderId: payload.order_id },
+        include: { orderItems: true },
       });
 
       if (!order) {
@@ -522,34 +637,12 @@ export class OrdersService {
       });
 
       if (paymentStatus === 'PAID') {
-        const product = await tx.product.findUnique({ where: { id: order.productId } });
-        if (product) {
-          const variants = Array.isArray(product.variants) ? [...(product.variants as unknown as any[])] : [];
-          if (order.selectedVariantKey && variants.length > 0) {
-            const idx = variants.findIndex((variant: any) => variant?.key === order.selectedVariantKey);
-            if (idx >= 0) {
-              variants[idx] = {
-                ...variants[idx],
-                stock: Math.max(0, Number(variants[idx].stock || 0) - 1),
-              };
-            }
-
-            const remainingVariantStock = variants.reduce((sum: number, variant: any) => sum + Math.max(0, Number(variant?.stock || 0)), 0);
-            await tx.product.update({
-              where: { id: order.productId },
-              data: {
-                variants,
-                stock: remainingVariantStock,
-                status: remainingVariantStock > 0 ? 'AVAILABLE' : 'SOLD',
-              },
-            });
-          } else {
-            const nextStock = Math.max(0, (product.stock || 0) - 1);
-            await tx.product.update({
-              where: { id: order.productId },
-              data: { stock: nextStock, status: nextStock > 0 ? 'AVAILABLE' : 'SOLD' },
-            });
+        if (order.orderItems.length > 0) {
+          for (const item of order.orderItems) {
+            await this.reduceStock(tx, item.productId, item.quantity, item.selectedVariantKey);
           }
+        } else {
+          await this.reduceStock(tx, order.productId, 1, order.selectedVariantKey);
         }
       }
 

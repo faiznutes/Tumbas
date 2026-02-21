@@ -146,7 +146,20 @@ export interface Order {
   selectedVariantLabel?: string | null;
   itemWeightGram?: number;
   product: Product;
+  orderItems?: OrderItem[];
   publicToken?: string;
+}
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  productTitleSnapshot: string;
+  unitPrice: number;
+  quantity: number;
+  selectedVariantKey?: string | null;
+  selectedVariantLabel?: string | null;
+  itemWeightGram: number;
 }
 
 export interface PublicOrder {
@@ -363,7 +376,13 @@ export const api = {
     getPublicById: (id: string, token: string) => fetchApi<PublicOrder>(`/orders/${id}/public?token=${encodeURIComponent(token)}`),
 
     create: (data: {
-      productId: string;
+      productId?: string;
+      items?: Array<{
+        productId: string;
+        quantity: number;
+        selectedVariantKey?: string;
+        selectedVariantLabel?: string;
+      }>;
       customerName: string;
       customerEmail: string;
       customerPhone: string;

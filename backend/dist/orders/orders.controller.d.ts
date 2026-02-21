@@ -1,7 +1,14 @@
 import { OrdersService } from './orders.service';
 import { PaymentStatus } from '@prisma/client';
-declare class CreateOrderDto {
+declare class CreateOrderItemDto {
     productId: string;
+    quantity: number;
+    selectedVariantKey?: string;
+    selectedVariantLabel?: string;
+}
+declare class CreateOrderDto {
+    productId?: string;
+    items?: CreateOrderItemDto[];
     customerName: string;
     customerEmail: string;
     customerPhone: string;
@@ -50,6 +57,18 @@ export declare class OrdersController {
                 variants: import("@prisma/client/runtime/library").JsonValue | null;
                 createdById: string | null;
             };
+            orderItems: {
+                id: string;
+                createdAt: Date;
+                productId: string;
+                selectedVariantKey: string | null;
+                selectedVariantLabel: string | null;
+                itemWeightGram: number;
+                orderId: string;
+                productTitleSnapshot: string;
+                unitPrice: number;
+                quantity: number;
+            }[];
         } & {
             id: string;
             createdAt: Date;
@@ -172,6 +191,18 @@ export declare class OrdersController {
             variants: import("@prisma/client/runtime/library").JsonValue | null;
             createdById: string | null;
         };
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
     } & {
         id: string;
         createdAt: Date;
@@ -210,6 +241,18 @@ export declare class OrdersController {
         };
         id: string;
         createdAt: Date;
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
         orderCode: string;
         amount: number;
         paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
@@ -236,6 +279,18 @@ export declare class OrdersController {
             variants: import("@prisma/client/runtime/library").JsonValue | null;
             createdById: string | null;
         };
+        orderItems: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            selectedVariantKey: string | null;
+            selectedVariantLabel: string | null;
+            itemWeightGram: number;
+            orderId: string;
+            productTitleSnapshot: string;
+            unitPrice: number;
+            quantity: number;
+        }[];
         id: string;
         createdAt: Date;
         updatedAt: Date;

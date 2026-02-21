@@ -47,12 +47,7 @@ export default function Cart() {
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
-      const first = cartItems[0];
-      const params = new URLSearchParams();
-      if (first.variantKey) params.set("variantKey", first.variantKey);
-      if (first.variantLabel) params.set("variantLabel", first.variantLabel);
-      const suffix = params.toString() ? `?${params.toString()}` : "";
-      router.push(`/checkout/${first.slug}${suffix}`);
+      router.push("/checkout/cart");
     }
   };
 

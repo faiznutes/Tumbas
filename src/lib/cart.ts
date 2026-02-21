@@ -111,6 +111,10 @@ export function getCartCount() {
   return getCartItems().reduce((sum, item) => sum + item.quantity, 0);
 }
 
+export function clearCart() {
+  saveCartItems([]);
+}
+
 export function onCartUpdated(listener: () => void) {
   if (typeof window === "undefined") return () => undefined;
   const wrapped = () => listener();

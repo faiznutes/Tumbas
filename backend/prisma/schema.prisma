@@ -93,6 +93,7 @@ model Product {
   createdBy   User?         @relation(fields: [createdById], references: [id])
   images      ProductImage[]
   orders      Order[]
+  orderItems  OrderItem[]
 
   @@index([slug])
   @@index([status])
@@ -142,11 +143,32 @@ model Order {
 
   product   Product @relation(fields: [productId], references: [id])
   createdBy User? @relation(fields: [createdById], references: [id])
+  orderItems OrderItem[]
 
   @@index([paymentStatus])
   @@index([midtransTransactionId])
   @@index([midtransOrderId])
   @@map("orders")
+}
+
+model OrderItem {
+  id                  String   @id @default(uuid())
+  orderId             String   @map("order_id")
+  productId           String   @map("product_id")
+  productTitleSnapshot String  @map("product_title_snapshot")
+  unitPrice           Float    @map("unit_price")
+  quantity            Int      @default(1)
+  selectedVariantKey  String?  @map("selected_variant_key")
+  selectedVariantLabel String? @map("selected_variant_label")
+  itemWeightGram      Int      @default(1000) @map("item_weight_gram")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
 }
 
 model WebhookLog {

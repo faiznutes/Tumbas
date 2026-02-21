@@ -50,7 +50,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Sinkronisasi ongkir ke Midtrans (`item_details` + `gross_amount`) agar total pembayaran konsisten
 - [x] Aktifkan keranjang real: add-to-cart dari homepage/shop/detail + badge navbar realtime
 - [x] Hilangkan pintasan admin `T` dari navbar user/public
-- [~] Refactor checkout dari single-product ke multi-item cart checkout
+- [x] Refactor checkout dari single-product ke multi-item cart checkout
 - [x] Implement variant matrix 2 atribut (opsi x opsi), stok per kombinasi, dan berat per varian (admin + user)
 - [x] Tambah data shipping terstruktur di tabel order (courier/service/etd/weight/cost/destination) via migrasi Prisma
 - [x] Lengkapi audit menyeluruh: Route & Auth Coverage Map + No Route Left Behind checklist
@@ -99,6 +99,9 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [ ] `npx prisma migrate dev --name add_product_variants_and_order_variant_fields`: gagal (`P1001 localhost:5432` DB lokal belum aktif)
 - [x] Remote `prisma migrate deploy` saat Coolify deploy commit `e4354b4`: pass (migration `20260221123000_add_product_variants_and_order_variant_fields` applied)
 - [x] Remote deploy commit `e0bb691`: pass; smoke test `/`, `/api`, `/api/shipping/cities`, `/api/shipping/rates`
+- [x] `npm run build` frontend (post `/checkout/cart` multi-item): pass
+- [x] `npm run build` backend (post `OrderItem` relation & stock deduction multi-item): pass
+- [x] `npm run test` backend (post multi-item order service): pass
 - [x] `npm run build` frontend: pass
 - [x] `npm run build` backend: pass
 - [x] `npm test` backend: pass

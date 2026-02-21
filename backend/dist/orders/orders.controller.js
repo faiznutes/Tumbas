@@ -15,13 +15,40 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrdersController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 const orders_service_1 = require("./orders.service");
 const client_1 = require("@prisma/client");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const roles_guard_1 = require("../auth/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
+class CreateOrderItemDto {
+    productId;
+    quantity;
+    selectedVariantKey;
+    selectedVariantLabel;
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderItemDto.prototype, "productId", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], CreateOrderItemDto.prototype, "quantity", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderItemDto.prototype, "selectedVariantKey", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderItemDto.prototype, "selectedVariantLabel", void 0);
 class CreateOrderDto {
     productId;
+    items;
     customerName;
     customerEmail;
     customerPhone;
@@ -40,9 +67,17 @@ class CreateOrderDto {
     selectedVariantLabel;
 }
 __decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateOrderDto.prototype, "productId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => CreateOrderItemDto),
+    __metadata("design:type", Array)
+], CreateOrderDto.prototype, "items", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)

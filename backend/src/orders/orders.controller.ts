@@ -1,14 +1,39 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { IsString, IsEmail, IsOptional, IsInt, Min } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsInt, Min, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { OrdersService } from './orders.service';
 import { PaymentStatus, UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
-class CreateOrderDto {
+class CreateOrderItemDto {
   @IsString()
   productId: string;
+
+  @IsInt()
+  @Min(1)
+  quantity: number;
+
+  @IsOptional()
+  @IsString()
+  selectedVariantKey?: string;
+
+  @IsOptional()
+  @IsString()
+  selectedVariantLabel?: string;
+}
+
+class CreateOrderDto {
+  @IsOptional()
+  @IsString()
+  productId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemDto)
+  items?: CreateOrderItemDto[];
 
   @IsString()
   customerName: string;
