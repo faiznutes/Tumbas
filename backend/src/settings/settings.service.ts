@@ -44,9 +44,54 @@ export class SettingsService {
       heroBadge: 'Penawaran Terbatas',
       discountText: '50% Off',
     };
-    
-    const settings = await this.getAllSettings();
-    return { ...defaults, ...settings };
+
+    const keys = [
+      'promo_hero_image',
+      'promo_hero_title',
+      'promo_hero_subtitle',
+      'promo_hero_badge',
+      'promo_discount_text',
+      // backward compatibility with older key names
+      'heroImage',
+      'heroTitle',
+      'heroSubtitle',
+      'heroBadge',
+      'discountText',
+    ];
+
+    const settings = await this.prisma.siteSettings.findMany({
+      where: { key: { in: keys } },
+    });
+
+    const result = { ...defaults };
+    settings.forEach((setting) => {
+      if (setting.key === 'promo_hero_image' || setting.key === 'heroImage') result.heroImage = setting.value;
+      if (setting.key === 'promo_hero_title' || setting.key === 'heroTitle') result.heroTitle = setting.value;
+      if (setting.key === 'promo_hero_subtitle' || setting.key === 'heroSubtitle') result.heroSubtitle = setting.value;
+      if (setting.key === 'promo_hero_badge' || setting.key === 'heroBadge') result.heroBadge = setting.value;
+      if (setting.key === 'promo_discount_text' || setting.key === 'discountText') result.discountText = setting.value;
+    });
+
+    return result;
+  }
+
+  async setPromoSettings(data: {
+    heroImage?: string;
+    heroTitle?: string;
+    heroSubtitle?: string;
+    heroBadge?: string;
+    discountText?: string;
+  }) {
+    const updates: Promise<any>[] = [];
+
+    if (data.heroImage !== undefined) updates.push(this.setSetting('promo_hero_image', data.heroImage));
+    if (data.heroTitle !== undefined) updates.push(this.setSetting('promo_hero_title', data.heroTitle));
+    if (data.heroSubtitle !== undefined) updates.push(this.setSetting('promo_hero_subtitle', data.heroSubtitle));
+    if (data.heroBadge !== undefined) updates.push(this.setSetting('promo_hero_badge', data.heroBadge));
+    if (data.discountText !== undefined) updates.push(this.setSetting('promo_discount_text', data.discountText));
+
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getPromoSettings();
   }
 
   async getWeeklyDealSettings() {
@@ -108,11 +153,15 @@ export class SettingsService {
   }
 
   async getPaymentSettings() {
+    const envClientKey = process.env.MIDTRANS_CLIENT_KEY || '';
+    const envServerKey = process.env.MIDTRANS_SERVER_KEY || '';
+    const envIsProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+
     const defaults = {
-      midtransEnabled: true,
-      midtransClientKey: '',
-      midtransServerKey: '',
-      midtransIsProduction: false,
+      midtransEnabled: Boolean(envClientKey),
+      midtransClientKey: envClientKey,
+      midtransServerKey: envServerKey,
+      midtransIsProduction: envIsProduction,
     };
 
     const keys = [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
@@ -53,6 +53,7 @@ export default function CheckoutPage() {
   const [destinationCityId, setDestinationCityId] = useState("");
   const [selectedCityLabel, setSelectedCityLabel] = useState("");
   const [cityOptions, setCityOptions] = useState<ShippingCity[]>([]);
+  const citySearchRequestIdRef = useRef(0);
   const [shippingServices, setShippingServices] = useState<ShippingRateService[]>([]);
   const [selectedShippingService, setSelectedShippingService] = useState("");
   const [loadingRates, setLoadingRates] = useState(false);
@@ -162,7 +163,14 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    const nextImage = product?.images?.[0]?.url || "https://via.placeholder.com/400";
+    setSummaryImageSrc(nextImage);
+  }, [product]);
+
+  useEffect(() => {
     const query = formData.customerCity.trim();
+    const requestId = ++citySearchRequestIdRef.current;
+
     if (destinationCityId && selectedCityLabel && query.toLowerCase() === selectedCityLabel.toLowerCase()) {
       setCityOptions([]);
       return;
@@ -175,8 +183,14 @@ export default function CheckoutPage() {
     const timeout = setTimeout(async () => {
       try {
         const cities = await api.shipping.searchCities(query, 8);
+        if (requestId !== citySearchRequestIdRef.current) {
+          return;
+        }
         setCityOptions(cities);
       } catch {
+        if (requestId !== citySearchRequestIdRef.current) {
+          return;
+        }
         setCityOptions([]);
       }
     }, 300);
@@ -324,14 +338,6 @@ export default function CheckoutPage() {
     );
   }
 
-  const productImage = product.images && product.images.length > 0 
-    ? product.images[0].url 
-    : "https://via.placeholder.com/400";
-
-  useEffect(() => {
-    setSummaryImageSrc(productImage);
-  }, [productImage]);
-
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
       {effectiveClientKey && (
@@ -416,6 +422,7 @@ export default function CheckoutPage() {
                               key={city.cityId}
                               type="button"
                               onClick={() => {
+                                citySearchRequestIdRef.current += 1;
                                 setDestinationCityId(city.cityId);
                                 setSelectedCityLabel(city.label);
                                 setFormData((prev) => ({

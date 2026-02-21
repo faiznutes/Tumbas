@@ -157,6 +157,14 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Remote smoke test: home `200`, products API `200`, contact submit `201` via Quick Tunnel
 - [x] Remote admin seed: `admin@tumbas.id` role `MANAGER`, login test `200`
 - [x] Verifikasi route auth publik via tunnel: `/login` `307`, `/register` `307`, `/forgot-password` `307`
+- [x] Perbaiki hook order checkout `/checkout/[productId]` agar tidak ada client-side exception akibat `useEffect` setelah early return
+- [x] Hardening city picker checkout (`/checkout/[productId]` + `/checkout/cart`) dengan request-id guard agar saran kelurahan tidak muncul ulang dari response async lama
+- [x] Refactor settings promo backend agar hanya baca/simpan key promo (hindari payload kontaminasi key lain yang memicu `property ... should not exist`)
+- [x] Tambah fallback env Midtrans di settings payment backend agar Snap client key tetap tersedia saat nilai DB kosong
+- [x] Upgrade `/admin/orders` dengan metrik, filter pengiriman, multi-select, aksi `Kelola`, dan tautan laporan
+- [x] Tambah halaman `/admin/orders/report` (KPI, filter tanggal/status, export CSV)
+- [x] `npm run build` frontend (post checkout+orders report hardening): pass
+- [x] `npm run build` backend (post settings promo/payment fallback hardening): pass
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)

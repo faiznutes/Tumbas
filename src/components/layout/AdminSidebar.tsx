@@ -9,6 +9,7 @@ const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "dashboard" },
   { href: "/admin/products", label: "Produk", icon: "inventory_2" },
   { href: "/admin/orders", label: "Pesanan", icon: "shopping_cart" },
+  { href: "/admin/orders/report", label: "Laporan Pesanan", icon: "assessment" },
   { href: "/admin/messages", label: "Pesan", icon: "mail" },
   { href: "/admin/customers", label: "Pelanggan", icon: "group" },
   { href: "/admin/users", label: "Pengguna", icon: "admin_panel_settings" },
@@ -50,6 +51,17 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       return true;
     });
   }, [role]);
+
+  const currentTitle = useMemo(() => {
+    const exact = navItems.find((item) => pathname === item.href);
+    if (exact) return exact.label;
+
+    const matched = navItems
+      .filter((item) => item.href !== '/admin/dashboard' && pathname.startsWith(item.href))
+      .sort((a, b) => b.href.length - a.href.length)[0];
+
+    return matched?.label || 'Dashboard';
+  }, [pathname]);
 
   const handleLogout = () => {
     setAuthToken(null);
@@ -121,7 +133,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
               <span className="material-symbols-outlined">menu</span>
             </button>
             <h2 className="text-xl font-bold tracking-tight text-[#0d141b]">
-              {navItems.find(item => pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href)))?.label || 'Dashboard'}
+              {currentTitle}
             </h2>
           </div>
           <div className="w-10" />

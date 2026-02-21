@@ -170,8 +170,7 @@ export class SettingsController {
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
   @Post('promo')
   async updatePromoSettings(@Body() data: UpdatePromoSettingsDto) {
-    await this.settingsService.setSettings(data);
-    return this.settingsService.getPromoSettings();
+    return this.settingsService.setPromoSettings(data);
   }
 
   @Get('weekly-deal')

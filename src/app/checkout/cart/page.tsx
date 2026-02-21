@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
@@ -58,6 +58,7 @@ export default function CartCheckoutPage() {
   const [destinationCityId, setDestinationCityId] = useState("");
   const [selectedCityLabel, setSelectedCityLabel] = useState("");
   const [cityOptions, setCityOptions] = useState<ShippingCity[]>([]);
+  const citySearchRequestIdRef = useRef(0);
   const [shippingServices, setShippingServices] = useState<ShippingRateService[]>([]);
   const [selectedShippingService, setSelectedShippingService] = useState("");
   const [loadingRates, setLoadingRates] = useState(false);
@@ -158,6 +159,8 @@ export default function CartCheckoutPage() {
 
   useEffect(() => {
     const query = formData.customerCity.trim();
+    const requestId = ++citySearchRequestIdRef.current;
+
     if (destinationCityId && selectedCityLabel && query.toLowerCase() === selectedCityLabel.toLowerCase()) {
       setCityOptions([]);
       return;
@@ -169,8 +172,14 @@ export default function CartCheckoutPage() {
     const timeout = setTimeout(async () => {
       try {
         const cities = await api.shipping.searchCities(query, 8);
+        if (requestId !== citySearchRequestIdRef.current) {
+          return;
+        }
         setCityOptions(cities);
       } catch {
+        if (requestId !== citySearchRequestIdRef.current) {
+          return;
+        }
         setCityOptions([]);
       }
     }, 300);
@@ -335,6 +344,7 @@ export default function CartCheckoutPage() {
                         type="button"
                         className="block w-full border-b border-[#f2f4f7] px-3 py-2 text-left text-sm hover:bg-[#f6f7f8]"
                         onClick={() => {
+                          citySearchRequestIdRef.current += 1;
                           setDestinationCityId(city.cityId);
                           setSelectedCityLabel(city.label);
                           setFormData((prev) => ({ ...prev, customerCity: city.label, customerPostalCode: city.postalCode || prev.customerPostalCode }));
