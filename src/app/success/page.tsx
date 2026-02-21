@@ -39,6 +39,17 @@ function getPublicOrderErrorMessage(err: unknown) {
   return "Detail receipt belum bisa dimuat saat ini.";
 }
 
+function getOrderItemLines(order: PublicOrder | null) {
+  if (!order) return ["-"];
+  if (order.orderItems && order.orderItems.length > 0) {
+    return order.orderItems.map((item) => {
+      const variant = item.selectedVariantLabel ? ` (${item.selectedVariantLabel})` : "";
+      return `${item.quantity}x ${item.productTitleSnapshot}${variant}`;
+    });
+  }
+  return [order.product.title];
+}
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -60,7 +71,8 @@ function SuccessContent() {
     if (!safeOrderId) return;
 
     const dateText = order ? formatDateTimeId(order.createdAt) : formatDateTimeId(new Date().toISOString());
-    const productText = order?.product.title || "-";
+    const itemLines = getOrderItemLines(order);
+    const productText = itemLines[0] || "-";
     const totalText = order ? formatPriceIdr(order.amount) : "-";
     const text = buildReceiptText({
       orderId: safeOrderId,
@@ -70,6 +82,7 @@ function SuccessContent() {
       statusLabel: getOrderProgressLabel(order),
       dateText,
       productTitle: productText,
+      itemLines,
       totalText,
       verificationCode,
     });
@@ -92,7 +105,8 @@ function SuccessContent() {
     if (!win) return;
 
     const dateText = order ? formatDateTimeId(order.createdAt) : formatDateTimeId(new Date().toISOString());
-    const productText = order?.product.title || "-";
+    const itemLines = getOrderItemLines(order);
+    const productText = itemLines[0] || "-";
     const totalText = order ? formatPriceIdr(order.amount) : "-";
     const safeOrderId = order?.id || orderId;
     if (!safeOrderId) return;
@@ -106,6 +120,7 @@ function SuccessContent() {
         shippingResi,
         statusLabel: getOrderProgressLabel(order),
         productTitle: productText,
+        itemLines,
         totalText,
         verificationCode,
         footerText: RECEIPT_FOOTER_TEXT,
@@ -247,7 +262,7 @@ function SuccessContent() {
                 <>
                   <div className="flex justify-between items-center mb-4 pb-4 border-b border-[#e7edf3]">
                     <span className="text-[#4c739a]">Produk</span>
-                    <span className="font-medium text-[#0d141b]">{order.product.title}</span>
+                    <span className="font-medium text-[#0d141b] text-right">{getOrderItemLines(order).join(" • ")}</span>
                   </div>
                   <div className="flex justify-between items-center mb-4 pb-4 border-b border-[#e7edf3]">
                     <span className="text-[#4c739a]">Total</span>

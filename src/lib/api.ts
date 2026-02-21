@@ -179,6 +179,16 @@ export interface PublicOrder {
     price: number;
     status: 'AVAILABLE' | 'SOLD' | 'ARCHIVED';
   };
+  orderItems?: Array<{
+    id: string;
+    productId: string;
+    productTitleSnapshot: string;
+    unitPrice: number;
+    quantity: number;
+    selectedVariantKey?: string | null;
+    selectedVariantLabel?: string | null;
+    itemWeightGram: number;
+  }>;
 }
 
 export interface ReceiptVerificationResult {

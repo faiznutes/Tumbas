@@ -5,6 +5,7 @@ interface ReceiptPrintPayload {
   shippingResi: string;
   statusLabel: string;
   productTitle: string;
+  itemLines?: string[];
   totalText: string;
   verificationCode: string;
   footerText: string;
@@ -18,6 +19,7 @@ interface ReceiptTextPayload {
   statusLabel: string;
   dateText: string;
   productTitle: string;
+  itemLines?: string[];
   totalText: string;
   verificationCode: string;
 }
@@ -26,6 +28,10 @@ export const RECEIPT_FOOTER_TEXT =
   "Receipt ini diterbitkan otomatis oleh sistem Tumbas. Simpan sebagai bukti pembayaran.";
 
 export function buildReceiptText(payload: ReceiptTextPayload) {
+  const lines = payload.itemLines && payload.itemLines.length > 0
+    ? payload.itemLines
+    : [payload.productTitle];
+
   return [
     "TUMBAS - RECEIPT",
     "",
@@ -36,7 +42,7 @@ export function buildReceiptText(payload: ReceiptTextPayload) {
     `Kode Verifikasi: ${payload.verificationCode}`,
     `Status: ${payload.statusLabel}`,
     `Tanggal: ${payload.dateText}`,
-    `Produk: ${payload.productTitle}`,
+    `Produk: ${lines.join(" | ")}`,
     `Total: ${payload.totalText}`,
   ].join("\n");
 }
@@ -68,6 +74,7 @@ export function buildReceiptPrintHtml(payload: ReceiptPrintPayload, qrUrl: strin
     shippingResi: escapeHtml(payload.shippingResi),
     statusLabel: escapeHtml(payload.statusLabel),
     productTitle: escapeHtml(payload.productTitle),
+    itemLines: (payload.itemLines || []).map((line) => escapeHtml(line)),
     totalText: escapeHtml(payload.totalText),
     verificationCode: escapeHtml(payload.verificationCode),
     footerText: escapeHtml(payload.footerText),
@@ -123,6 +130,7 @@ export function buildReceiptPrintHtml(payload: ReceiptPrintPayload, qrUrl: strin
             <div class="total">
               <div class="total-box">
                 <div class="total-row"><span>Produk</span><span>${safe.productTitle}</span></div>
+                ${safe.itemLines.length > 0 ? `<div class="total-row"><span>Item</span><span>${safe.itemLines.join('<br/>')}</span></div>` : ''}
                 <div class="total-row"><span>Status</span><span>${safe.statusLabel}</span></div>
                 <div class="total-row"><strong>Total Dibayar</strong><strong>${safe.totalText}</strong></div>
               </div>

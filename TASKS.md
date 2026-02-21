@@ -109,6 +109,8 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Audit error admin dari `Error.md`: perbaiki save settings tab Midtrans/Promo/Weekly/Shipping agar role `MANAGER` tidak lagi terblokir
 - [x] Implement endpoint settings tambahan agar tab `Umum`, `Toko`, `Notifikasi` benar-benar bisa simpan (`/api/settings/general|store|notifications`)
 - [x] Hilangkan data hardcoded pada `/admin/customers` dan ganti ke agregasi data pelanggan berbasis pesanan real
+- [x] Sinkronkan UI multi-item di `/orders`, `/success`, dan `/admin/orders/[id]` agar tidak lagi fallback hard single-product
+- [x] Perbarui template receipt TXT/print untuk mendukung daftar item (qty + varian) pada order multi-item
 - [x] `npm run build` frontend: pass
 - [x] `npm run build` backend: pass
 - [x] `npm test` backend: pass

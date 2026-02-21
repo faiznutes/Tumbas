@@ -39,6 +39,16 @@ function mapPublicOrderError(err: unknown) {
   return "unknown" as const;
 }
 
+function getOrderItemLines(order: PublicOrder) {
+  if (order.orderItems && order.orderItems.length > 0) {
+    return order.orderItems.map((item) => {
+      const variant = item.selectedVariantLabel ? ` (${item.selectedVariantLabel})` : "";
+      return `${item.quantity}x ${item.productTitleSnapshot}${variant}`;
+    });
+  }
+  return [order.product.title];
+}
+
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-700",
   PAID: "bg-blue-100 text-blue-700",
@@ -122,6 +132,7 @@ function OrdersContent() {
   );
 
   const handleDownloadReceipt = (order: PublicOrder) => {
+    const itemLines = getOrderItemLines(order);
     const text = buildReceiptText({
       orderId: order.id,
       orderCode: order.orderCode,
@@ -129,7 +140,8 @@ function OrdersContent() {
       shippingResi: createResi(order.orderCode),
       verificationCode: createVerificationCode(order.orderCode),
       statusLabel: getOrderProgressLabel(order),
-      productTitle: order.product.title,
+      productTitle: itemLines[0],
+      itemLines,
       totalText: formatPriceIdr(order.amount),
       dateText: formatDateId(order.createdAt),
     });
@@ -153,6 +165,7 @@ function OrdersContent() {
     const resi = createResi(order.orderCode);
     const verificationCode = createVerificationCode(order.orderCode);
     const qrUrl = createReceiptQrUrl(receiptNo, order.id, resi, verificationCode);
+    const itemLines = getOrderItemLines(order);
     const html = buildReceiptPrintHtml(
       {
         receiptNo,
@@ -160,7 +173,8 @@ function OrdersContent() {
         dateText: formatDateId(order.createdAt),
         shippingResi: resi,
         statusLabel: getOrderProgressLabel(order),
-        productTitle: order.product.title,
+        productTitle: itemLines[0],
+        itemLines,
         totalText: formatPriceIdr(order.amount),
         verificationCode,
         footerText: RECEIPT_FOOTER_TEXT,
@@ -242,7 +256,7 @@ function OrdersContent() {
 
               <div className="p-6">
                 <div className="space-y-2 mb-4 text-sm">
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Produk</span><span className="font-medium text-[#0d141b]">{order.product.title}</span></div>
+                  <div className="flex justify-between"><span className="text-[#4c739a]">Produk</span><span className="font-medium text-[#0d141b] text-right">{getOrderItemLines(order).join(" • ")}</span></div>
                   <div className="flex justify-between"><span className="text-[#4c739a]">Total</span><span className="font-medium text-[#0d141b]">{formatPriceIdr(order.amount)}</span></div>
                   <div className="flex justify-between"><span className="text-[#4c739a]">No. Receipt</span><span className="font-medium text-[#0d141b]">{order.receiptNo}</span></div>
                   <div className="flex justify-between"><span className="text-[#4c739a]">Resi Pengiriman</span><span className="font-medium text-[#0d141b]">{order.shippingResi}</span></div>

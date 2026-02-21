@@ -119,7 +119,17 @@ export default function OrderDetailPage() {
     );
   }
 
-  const productImage = order.product?.images?.[0]?.url || "https://via.placeholder.com/200";
+  const orderItems = order.orderItems && order.orderItems.length > 0
+    ? order.orderItems
+    : [{
+      id: `${order.id}-fallback`,
+      productId: order.productId,
+      productTitleSnapshot: order.product.title,
+      unitPrice: order.product.price,
+      quantity: 1,
+      selectedVariantLabel: order.selectedVariantLabel,
+      itemWeightGram: order.itemWeightGram || order.product.weightGram || 1000,
+    }];
 
   return (
     <div className="p-8">
@@ -145,12 +155,24 @@ export default function OrderDetailPage() {
         <div className="space-y-6 lg:col-span-2">
           <div className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-[#0d141b]">Produk</h2>
-            <div className="flex gap-4">
-              <img src={productImage} alt={order.product.title} className="h-24 w-24 rounded-lg object-cover" />
-              <div>
-                <h3 className="font-semibold text-[#0d141b]">{order.product.title}</h3>
-                <p className="text-[#4c739a]">{formatPrice(order.product.price)}</p>
-              </div>
+            <div className="space-y-3">
+              {orderItems.map((item) => (
+                <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-[#0d141b]">{item.productTitleSnapshot}</h3>
+                      {item.selectedVariantLabel && (
+                        <p className="text-xs text-[#4c739a]">Varian: {item.selectedVariantLabel}</p>
+                      )}
+                      <p className="text-xs text-[#4c739a]">Qty: {item.quantity} • Berat: {item.itemWeightGram}g</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-[#4c739a]">{formatPrice(item.unitPrice)} / item</p>
+                      <p className="font-semibold text-[#0d141b]">{formatPrice(item.unitPrice * item.quantity)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
