@@ -165,6 +165,11 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Tambah halaman `/admin/orders/report` (KPI, filter tanggal/status, export CSV)
 - [x] `npm run build` frontend (post checkout+orders report hardening): pass
 - [x] `npm run build` backend (post settings promo/payment fallback hardening): pass
+- [x] `npm run test` frontend (`tsx --test src/lib/*.test.ts`): pass
+- [x] `npm test` backend (`jest`): pass
+- [x] Deploy Coolify commit `bb698d9`: pass (deployment `kcwcw88c4cogg0g4cgw4s08c`, status `finished`)
+- [x] Smoke production: `/checkout/iphone-promax` `200`, `/checkout/cart` `200`, `/admin/orders` `200`, `/admin/orders/report` `200`
+- [x] Smoke production API: `/api/settings/payment-public` `200`, `/api/settings/payment` `401`, `/api/settings/promo` payload clean (hanya key promo)
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)
