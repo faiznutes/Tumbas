@@ -49,11 +49,6 @@ const permissionGroups = [
       { key: "settings.edit", label: "Ubah pengaturan" },
     ],
   },
-  {
-    key: "reports",
-    label: "Laporan & Monitor",
-    permissions: [{ key: "reports.view", label: "Lihat laporan & monitor webhook" }],
-  },
 ] as const;
 
 const defaultEditorPermissions = [
@@ -64,13 +59,11 @@ const defaultEditorPermissions = [
   "messages.edit",
   "settings.view",
   "settings.edit",
-  "reports.view",
 ];
 
 const defaultViewerPermissions = [
   "orders.view",
   "messages.view",
-  "reports.view",
 ];
 
 const roleLabels: Record<string, string> = {

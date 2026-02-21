@@ -12,7 +12,6 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     "messages.edit",
     "settings.view",
     "settings.edit",
-    "reports.view",
   ],
   MANAGER: [],
 };
