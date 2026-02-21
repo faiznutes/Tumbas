@@ -98,8 +98,8 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Batasi pengaturan toko ke field yang dibutuhkan (nama toko + pajak)
 - [x] Refactor form varian produk jadi custom dinamis (atribut bebas + sub-opsi) pada halaman tambah/edit produk
 - [x] Tambah upload gambar produk (file), kompresi, dan normalisasi rasio 1:1 tanpa stretch (client-side processing)
-- [ ] Perbaiki responsive header: brand `TUMBAS` tetap tampil di mobile
-- [ ] Tambah menu header publik untuk cek status resi dan sinkronkan rute terkait
+- [x] Perbaiki responsive header: brand `TUMBAS` tetap tampil di mobile
+- [x] Tambah menu header publik untuk cek status resi dan sinkronkan rute terkait
 - [x] Perbaiki responsive navbar global: brand `TUMBAS` tampil di mobile (komponen `Navbar`)
 - [x] Tambah menu `Cek Resi` di navbar publik global (`Navbar`) desktop + mobile menuju `/receipt/verify`
 - [x] Sinkronkan link `Cek Resi` pada header custom halaman publik (checkout produk, detail produk, kontak)
@@ -226,9 +226,12 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm test` backend (post pending-timeout auto-expire + includeExpired filter): pass
 - [x] `npm run build` backend (post pending-timeout auto-expire): pass
 - [x] `npm run build` frontend (post includeExpired API param typing): pass
+- [x] `npm run build` frontend (post permission alignment + webhook super-admin restriction): pass
+- [x] `npm run build` backend (post permission alignment + webhook super-admin restriction): pass
+- [x] Push `main` commit `8608a44` (permission alignment batch) ke GitHub: pass
 
 ## Webhook Observability Notes
-- Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)
+- Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` only)
 - Retry processing webhook di backend: max retry dan delay dikontrol env
   - `WEBHOOK_MAX_RETRIES`
   - `WEBHOOK_RETRY_DELAY_MS`
