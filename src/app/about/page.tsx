@@ -218,7 +218,7 @@ export default function About() {
             </div>
 
             <div className="text-sm text-[#4c739a] text-center md:text-right">
-              <p>&copy; {new Date().getFullYear()} Tumbas Inc. All rights reserved.</p>
+              <p>&copy; {new Date().getFullYear()} Tumbas Inc. Seluruh hak cipta dilindungi.</p>
             </div>
           </div>
         </div>

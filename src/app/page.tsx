@@ -25,7 +25,7 @@ export default function Beranda() {
   const [minutes, setMinutes] = useState(52);
   const [promo, setPromo] = useState({
     heroImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200',
-    heroTitle: 'Sale Musim Panas: Hasta 50% Off',
+    heroTitle: 'Sale Musim Panas: Hingga Diskon 50%',
     heroSubtitle: 'Tingkatkan gaya hidup Anda dengan koleksi eksklusif kami. Dari teknologi tinggi hingga fashion premium.',
     heroBadge: 'Penawaran Terbatas',
     discountText: '50% Off',
@@ -33,7 +33,7 @@ export default function Beranda() {
 
   const [weeklyDeal, setWeeklyDeal] = useState({
     title: 'Penawaran Mingguan',
-    subtitle: 'Ambil ofertas especiais antes habis',
+    subtitle: 'Ambil promo spesial sebelum habis',
     enabled: true,
     discount: 20,
     endDate: '',
@@ -307,7 +307,7 @@ export default function Beranda() {
           <div className="max-w-3xl mx-auto">
             <span className="material-symbols-outlined text-5xl mb-6">mail</span>
             <h2 className="text-3xl font-black mb-4">Bergabung dengan komunitas kami dan dapat 10% off</h2>
-            <p className="text-white/80 mb-10 text-lg">Berlangganan newsletter kami dan jadi yang pertama tahu tentang produk baru, sale, dan ofertas eksklusif.</p>
+            <p className="text-white/80 mb-10 text-lg">Berlangganan newsletter kami dan jadi yang pertama tahu tentang produk baru, sale, dan promo eksklusif.</p>
             <form className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto" onSubmit={(e) => e.preventDefault()}>
               <input 
                 className="flex-grow px-6 py-4 rounded-lg bg-white/10 border border-white/20 placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 text-white backdrop-blur-sm" 
@@ -363,7 +363,7 @@ export default function Beranda() {
               <ul className="space-y-4 text-sm text-slate-500">
                 <li><Link className="hover:text-[#137fec] transition-colors" href="#">Lacak Pesanan</Link></li>
                 <li><Link className="hover:text-[#137fec] transition-colors" href="#">Kebijakan Pengiriman</Link></li>
-                <li><Link className="hover:text-[#137fec] transition-colors" href="#">Returns & Refunds</Link></li>
+                <li><Link className="hover:text-[#137fec] transition-colors" href="#">Retur & Refund</Link></li>
                 <li><Link className="hover:text-[#137fec] transition-colors" href="/faq">FAQ</Link></li>
               </ul>
             </div>
@@ -382,7 +382,7 @@ export default function Beranda() {
             </div>
           </div>
           <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-sm text-slate-500">&copy; 2026 Tumbas. All rights reserved.</p>
+            <p className="text-sm text-slate-500">&copy; 2026 Tumbas. Seluruh hak cipta dilindungi.</p>
           </div>
         </div>
       </footer>

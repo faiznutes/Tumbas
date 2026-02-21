@@ -159,7 +159,7 @@ export default function Cart() {
               </div>
               <span className="text-lg font-bold">Tumbas</span>
             </div>
-            <p className="text-sm text-[#4c739a]">&copy; 2026 Tumbas. All rights reserved.</p>
+            <p className="text-sm text-[#4c739a]">&copy; 2026 Tumbas. Seluruh hak cipta dilindungi.</p>
           </div>
         </div>
       </footer>

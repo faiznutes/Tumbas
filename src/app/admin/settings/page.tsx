@@ -609,7 +609,7 @@ export default function AdminSettings() {
                     value={promoSettings.heroTitle}
                     onChange={(e) => setPromoSettings(prev => ({ ...prev, heroTitle: e.target.value }))}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="Contoh: Sale Musim Panas: Hasta 50% Off"
+                    placeholder="Contoh: Sale Musim Panas: Hingga Diskon 50%"
                   />
                 </div>
 
@@ -736,7 +736,7 @@ export default function AdminSettings() {
                     value={weeklyDealSettings.subtitle}
                     onChange={(e) => setWeeklyDealSettings(prev => ({ ...prev, subtitle: e.target.value }))}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="Contoh: Ambil offers especiais sebelum habis"
+                    placeholder="Contoh: Ambil promo spesial sebelum habis"
                   />
                 </div>
 

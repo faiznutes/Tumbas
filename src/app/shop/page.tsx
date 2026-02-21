@@ -451,7 +451,7 @@ export default function ShopPage() {
               <span className="text-lg font-bold">Tumbas</span>
             </div>
             <div className="text-sm text-[#4c739a] text-center md:text-right">
-              <p>&copy; 2024 Tumbas Inc. All rights reserved.</p>
+              <p>&copy; 2024 Tumbas Inc. Seluruh hak cipta dilindungi.</p>
             </div>
           </div>
         </div>

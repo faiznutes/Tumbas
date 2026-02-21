@@ -48,7 +48,7 @@ export default function Footer() {
           </div>
 
           <div className="text-sm text-[#4c739a] text-center md:text-right">
-            <p>&copy; {currentYear} Tumbas Inc. All rights reserved.</p>
+            <p>&copy; {currentYear} Tumbas Inc. Seluruh hak cipta dilindungi.</p>
           </div>
         </div>
       </div>
