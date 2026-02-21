@@ -55,6 +55,7 @@ export default function CheckoutPage() {
   const [selectedShippingService, setSelectedShippingService] = useState("");
   const [loadingRates, setLoadingRates] = useState(false);
   const [shippingError, setShippingError] = useState("");
+  const [snapReady, setSnapReady] = useState(false);
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
   const selectedVariantKey = searchParams.get("variantKey") || "";
@@ -163,7 +164,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     try {
       if (!destinationCityId) {
-        throw new Error("Pilih kota tujuan dari daftar yang tersedia");
+        throw new Error("Pilih kelurahan dari daftar yang tersedia");
       }
 
       if (!selectedService && shipping !== 0) {
@@ -196,12 +197,15 @@ export default function CheckoutPage() {
         const pendingUrl = order.publicToken
           ? `/payment/pending?orderId=${order.id}&token=${encodeURIComponent(order.publicToken)}`
           : `/payment/pending?orderId=${order.id}`;
+        const successUrl = order.publicToken
+          ? `/success?orderId=${order.id}&token=${encodeURIComponent(order.publicToken)}`
+          : `/success?orderId=${order.id}`;
 
-        if (window.snap && midtransClientKey) {
+        if (window.snap && midtransClientKey && snapReady) {
           setSubmitting(false);
           window.snap.pay(order.snapToken, {
             onSuccess: () => {
-              router.push(pendingUrl);
+              router.push(successUrl);
             },
             onPending: () => {
               router.push(pendingUrl);
@@ -215,7 +219,7 @@ export default function CheckoutPage() {
           });
         } else {
           setSubmitting(false);
-          router.push(pendingUrl);
+          alert("Popup pembayaran diblokir atau belum siap. Izinkan pop-up lalu klik Bayar Sekarang lagi.");
         }
       } else {
         setSubmitting(false);
@@ -272,6 +276,7 @@ export default function CheckoutPage() {
           src={snapUrl}
           data-client-key={midtransClientKey}
           strategy="afterInteractive"
+          onLoad={() => setSnapReady(Boolean(window.snap))}
         />
       )}
       <nav className="sticky top-0 z-50 w-full border-b border-[#e7edf3] bg-white flex-shrink-0">
@@ -339,8 +344,8 @@ export default function CheckoutPage() {
                       <input required type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleChange} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]" placeholder="0812xxxxxxx" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Kota</label>
-                      <input required name="customerCity" value={formData.customerCity} onChange={handleChange} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]" placeholder="Jakarta" />
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Kelurahan / Kecamatan</label>
+                      <input required name="customerCity" value={formData.customerCity} onChange={handleChange} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]" placeholder="Jelambar" />
                       {cityOptions.length > 0 && (
                         <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[#e7edf3] bg-white">
                           {cityOptions.map((city) => (

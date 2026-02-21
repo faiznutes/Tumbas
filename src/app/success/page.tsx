@@ -47,6 +47,7 @@ function SuccessContent() {
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [orderError, setOrderError] = useState("");
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   const receiptNo = order ? createReceiptNo(order.orderCode) : orderId ? `RCPT-${orderId}` : "-";
   const shippingResi = order ? createResi(order.orderCode) : orderId ? createResi(orderId) : "-";
@@ -148,6 +149,31 @@ function SuccessContent() {
     loadOrder();
   }, [orderId, token]);
 
+  useEffect(() => {
+    if (!orderId || !token || !order || order.paymentStatus === "PAID") return;
+
+    let attempts = 0;
+    setCheckingPayment(true);
+    const timer = setInterval(async () => {
+      attempts += 1;
+      try {
+        const data = await api.orders.getPublicById(orderId, token);
+        setOrder(data);
+        if (data.paymentStatus === "PAID" || attempts >= 6) {
+          clearInterval(timer);
+          setCheckingPayment(false);
+        }
+      } catch {
+        if (attempts >= 6) {
+          clearInterval(timer);
+          setCheckingPayment(false);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [order, orderId, token]);
+
   if (!mounted) {
     return (
       <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
@@ -235,8 +261,11 @@ function SuccessContent() {
               ) : null}
               <div className="flex justify-between items-center">
                 <span className="text-[#4c739a]">Status</span>
-                <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">{getOrderProgressLabel(order)}</span>
+                <span className={`px-3 py-1 text-sm font-medium rounded-full ${order?.paymentStatus === "PAID" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{order?.paymentStatus === "PAID" ? "Pembayaran Berhasil" : getOrderProgressLabel(order)}</span>
               </div>
+              {checkingPayment && (
+                <p className="mt-3 text-xs text-[#4c739a]">Sedang sinkronisasi status pembayaran...</p>
+              )}
             </div>
           )}
 

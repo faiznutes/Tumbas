@@ -33,6 +33,7 @@ export default function CartCheckoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [snapReady, setSnapReady] = useState(false);
   const [items, setItems] = useState<CartItem[]>([]);
   const [formData, setFormData] = useState({
     customerName: "",
@@ -163,7 +164,7 @@ export default function CartCheckoutPage() {
 
     setSubmitting(true);
     try {
-      if (!destinationCityId) throw new Error("Pilih kota tujuan dari daftar yang tersedia");
+      if (!destinationCityId) throw new Error("Pilih kelurahan dari daftar yang tersedia");
       if (!selectedService && shipping !== 0) throw new Error("Pilih layanan pengiriman terlebih dahulu");
 
       const order = await api.orders.create({
@@ -194,21 +195,24 @@ export default function CartCheckoutPage() {
       if (order.snapToken) {
         localStorage.setItem("pendingOrderId", order.id);
         if (order.publicToken) savePublicOrderRef(order.id, order.publicToken);
+        const successUrl = order.publicToken
+          ? `/success?orderId=${order.id}&token=${encodeURIComponent(order.publicToken)}`
+          : `/success?orderId=${order.id}`;
         const pendingUrl = order.publicToken
           ? `/payment/pending?orderId=${order.id}&token=${encodeURIComponent(order.publicToken)}`
           : `/payment/pending?orderId=${order.id}`;
 
-        if (window.snap && midtransClientKey) {
+        if (window.snap && midtransClientKey && snapReady) {
           setSubmitting(false);
           window.snap.pay(order.snapToken, {
-            onSuccess: () => router.push(pendingUrl),
+            onSuccess: () => router.push(successUrl),
             onPending: () => router.push(pendingUrl),
             onError: () => router.push(`/payment/failed?orderId=${order.id}`),
             onClose: () => router.push(pendingUrl),
           });
         } else {
           setSubmitting(false);
-          router.push(pendingUrl);
+          alert("Popup pembayaran diblokir atau belum siap. Izinkan pop-up lalu klik Bayar Sekarang lagi.");
         }
       } else {
         setSubmitting(false);
@@ -242,7 +246,14 @@ export default function CartCheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f8]">
-      {midtransClientKey && <Script src={snapUrl} data-client-key={midtransClientKey} />}
+      {midtransClientKey && (
+        <Script
+          src={snapUrl}
+          data-client-key={midtransClientKey}
+          strategy="afterInteractive"
+          onLoad={() => setSnapReady(Boolean(window.snap))}
+        />
+      )}
       <Navbar />
       <main className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-3">
         <section className="lg:col-span-2">
@@ -255,7 +266,8 @@ export default function CartCheckoutPage() {
               <input required name="customerPostalCode" value={formData.customerPostalCode} onChange={handleChange} className="rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Kode pos" />
               <textarea required name="customerAddress" value={formData.customerAddress} onChange={handleChange} className="md:col-span-2 rounded-lg border border-[#e7edf3] px-4 py-3" rows={3} placeholder="Alamat lengkap" />
               <div className="md:col-span-2">
-                <input required name="customerCity" value={formData.customerCity} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Ketik kota (contoh: Jakarta)" />
+                <label className="mb-2 block text-sm font-medium text-[#0d141b]">Kelurahan / Kecamatan</label>
+                <input required name="customerCity" value={formData.customerCity} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Ketik kelurahan (contoh: Jelambar)" />
                 {cityOptions.length > 0 && (
                   <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[#e7edf3] bg-white">
                     {cityOptions.map((city) => (
