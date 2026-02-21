@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getCartCount, onCartUpdated } from "@/lib/cart";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    setCartCount(getCartCount());
+    return onCartUpdated(() => {
+      setCartCount(getCartCount());
+    });
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-[#e7edf3] bg-white/95 backdrop-blur-sm">
@@ -82,15 +91,8 @@ export default function Navbar() {
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
                 <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[#137fec] text-white text-[10px] font-bold rounded-full border-2 border-white">
-                  0
+                  {cartCount}
                 </span>
-              </Link>
-
-              <Link
-                href="/admin/login"
-                className="ml-2 w-8 h-8 rounded-full overflow-hidden border border-[#e7edf3] focus:ring-2 focus:ring-[#137fec] focus:outline-none bg-[#137fec] flex items-center justify-center text-white font-bold"
-              >
-                T
               </Link>
             </div>
 

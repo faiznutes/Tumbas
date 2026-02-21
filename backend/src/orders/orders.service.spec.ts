@@ -19,6 +19,10 @@ describe('OrdersService', () => {
     get: jest.fn(),
   } as unknown as ConfigService;
 
+  const shippingService = {
+    getRates: jest.fn(),
+  } as any;
+
   let service: OrdersService;
 
   beforeEach(() => {
@@ -28,7 +32,7 @@ describe('OrdersService', () => {
       if (key === 'JWT_SECRET') return 'fallback-secret';
       return undefined;
     });
-    service = new OrdersService(prisma, midtransService, configService);
+    service = new OrdersService(prisma, midtransService, configService, shippingService);
   });
 
   it('rejects public order request without token', async () => {

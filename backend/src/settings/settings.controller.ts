@@ -103,6 +103,16 @@ class UpdateShippingSettingsDto {
   @IsArray()
   @IsString({ each: true })
   providers?: string[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  originCityId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  defaultWeightGram?: number;
 }
 
 @Controller('settings')

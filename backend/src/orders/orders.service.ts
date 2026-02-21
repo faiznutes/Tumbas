@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { Prisma, PaymentStatus, ProductStatus } from '@prisma/client';
+import { Prisma, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MidtransService } from '../payments/midtrans.service';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { ShippingService } from '../shipping/shipping.service';
 
 @Injectable()
 export class OrdersService {
@@ -11,6 +12,7 @@ export class OrdersService {
     private prisma: PrismaService,
     private midtransService: MidtransService,
     private configService: ConfigService,
+    private shippingService: ShippingService,
   ) {}
 
   private createPublicToken(orderId: string) {
@@ -293,6 +295,12 @@ export class OrdersService {
     shippingCost?: number;
     shippingProvider?: string;
     shippingRegion?: string;
+    shippingService?: string;
+    shippingEtd?: string;
+    shippingWeightGram?: number;
+    shippingDestinationCityId?: string;
+    selectedVariantKey?: string;
+    selectedVariantLabel?: string;
   }) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({
@@ -307,23 +315,76 @@ export class OrdersService {
         throw new BadRequestException('Product is not available');
       }
 
-      const pendingOrders = await tx.order.count({
-        where: {
-          productId: data.productId,
-          paymentStatus: 'PENDING',
-        },
-      });
+      type VariantRow = {
+        key: string;
+        label: string;
+        stock: number;
+        price?: number;
+        weightGram?: number;
+      };
 
-      if (pendingOrders > 0) {
-        throw new BadRequestException('There is already a pending order for this product');
+      const productVariants = Array.isArray(product.variants)
+        ? (product.variants as unknown as VariantRow[])
+        : [];
+      const selectedVariant = data.selectedVariantKey
+        ? productVariants.find((variant) => variant.key === data.selectedVariantKey)
+        : undefined;
+
+      if (data.selectedVariantKey && !selectedVariant) {
+        throw new BadRequestException('Varian produk tidak valid');
+      }
+
+      if (selectedVariant && Number(selectedVariant.stock || 0) <= 0) {
+        throw new BadRequestException('Stok varian habis');
+      }
+
+      if (!selectedVariant && product.stock <= 0) {
+        throw new BadRequestException('Stok produk habis');
       }
 
       const orderCode = `TMB-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const shippingCost = Math.max(0, data.shippingCost ?? 15000);
-      const amount = product.price + shippingCost;
+      let shippingCost = Math.max(0, data.shippingCost ?? 0);
+      const shippingWeightGram = Math.max(1, data.shippingWeightGram ?? 1000);
+      let resolvedShippingService = data.shippingService?.trim() || '';
+      let resolvedShippingEtd = data.shippingEtd?.trim() || '';
+
+      if (data.shippingProvider && data.shippingDestinationCityId) {
+        const rates = await this.shippingService.getRates({
+          destinationCityId: data.shippingDestinationCityId,
+          courier: data.shippingProvider,
+          weightGram: shippingWeightGram,
+        });
+        if (!rates.services.length) {
+          throw new BadRequestException('Layanan kurir tidak tersedia untuk alamat tujuan');
+        }
+
+        const selectedService = data.shippingService
+          ? rates.services.find((service) => service && service.service.toLowerCase() === data.shippingService!.toLowerCase())
+          : rates.services[0];
+
+        if (!selectedService) {
+          throw new BadRequestException('Layanan pengiriman yang dipilih tidak valid');
+        }
+
+        shippingCost = selectedService.cost;
+        resolvedShippingService = selectedService.service;
+        resolvedShippingEtd = selectedService.etd;
+      } else if (!data.shippingProvider) {
+        throw new BadRequestException('Kurir pengiriman wajib dipilih');
+      }
+
+      const unitPrice = selectedVariant && Number(selectedVariant.price || 0) > 0
+        ? Number(selectedVariant.price)
+        : product.price;
+      const lineWeightGram = selectedVariant?.weightGram ? Math.max(1, Number(selectedVariant.weightGram)) : product.weightGram;
+      const amount = unitPrice + shippingCost;
       const shippingNote = [
         data.shippingProvider ? `Courier: ${data.shippingProvider}` : null,
+        resolvedShippingService ? `Service: ${resolvedShippingService}` : null,
+        resolvedShippingEtd ? `ETD: ${resolvedShippingEtd}` : null,
         data.shippingRegion ? `Region: ${data.shippingRegion}` : null,
+        data.shippingDestinationCityId ? `Destination City ID: ${data.shippingDestinationCityId}` : null,
+        `Weight: ${lineWeightGram}g`,
         `Shipping: ${shippingCost}`,
       ]
         .filter(Boolean)
@@ -340,6 +401,9 @@ export class OrdersService {
           customerAddress: data.customerAddress,
           customerCity: data.customerCity,
           customerPostalCode: data.customerPostalCode,
+          selectedVariantKey: data.selectedVariantKey || null,
+          selectedVariantLabel: data.selectedVariantLabel || selectedVariant?.label || null,
+          itemWeightGram: Math.max(1, Math.round(lineWeightGram)),
           notes: data.notes ? `${data.notes}\n${shippingNote}` : shippingNote,
           paymentStatus: 'PENDING',
         },
@@ -353,6 +417,20 @@ export class OrdersService {
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         customerPhone: data.customerPhone,
+        itemDetails: [
+          {
+            id: product.id,
+            name: `${product.title}${selectedVariant?.label ? ` (${selectedVariant.label})` : ''}`.slice(0, 50),
+            price: Math.round(unitPrice),
+            quantity: 1,
+          },
+          {
+            id: 'shipping',
+            name: `Ongkir ${data.shippingProvider || ''}`.trim(),
+            price: Math.round(shippingCost),
+            quantity: 1,
+          },
+        ],
       });
 
       await tx.order.update({
@@ -381,10 +459,14 @@ export class OrdersService {
     });
 
     if (status === 'PAID') {
-      await this.prisma.product.update({
-        where: { id: order.productId },
-        data: { status: 'SOLD' },
-      });
+      const product = await this.prisma.product.findUnique({ where: { id: order.productId } });
+      if (product) {
+        const nextStock = Math.max(0, (product.stock || 0) - 1);
+        await this.prisma.product.update({
+          where: { id: order.productId },
+          data: { stock: nextStock, status: nextStock > 0 ? 'AVAILABLE' : 'SOLD' },
+        });
+      }
     }
 
     return order;
@@ -440,10 +522,35 @@ export class OrdersService {
       });
 
       if (paymentStatus === 'PAID') {
-        await tx.product.update({
-          where: { id: order.productId },
-          data: { status: 'SOLD' },
-        });
+        const product = await tx.product.findUnique({ where: { id: order.productId } });
+        if (product) {
+          const variants = Array.isArray(product.variants) ? [...(product.variants as unknown as any[])] : [];
+          if (order.selectedVariantKey && variants.length > 0) {
+            const idx = variants.findIndex((variant: any) => variant?.key === order.selectedVariantKey);
+            if (idx >= 0) {
+              variants[idx] = {
+                ...variants[idx],
+                stock: Math.max(0, Number(variants[idx].stock || 0) - 1),
+              };
+            }
+
+            const remainingVariantStock = variants.reduce((sum: number, variant: any) => sum + Math.max(0, Number(variant?.stock || 0)), 0);
+            await tx.product.update({
+              where: { id: order.productId },
+              data: {
+                variants,
+                stock: remainingVariantStock,
+                status: remainingVariantStock > 0 ? 'AVAILABLE' : 'SOLD',
+              },
+            });
+          } else {
+            const nextStock = Math.max(0, (product.stock || 0) - 1);
+            await tx.product.update({
+              where: { id: order.productId },
+              data: { stock: nextStock, status: nextStock > 0 ? 'AVAILABLE' : 'SOLD' },
+            });
+          }
+        }
       }
 
       return { success: true };

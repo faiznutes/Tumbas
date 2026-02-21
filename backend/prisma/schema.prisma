@@ -82,6 +82,8 @@ model Product {
   description String?
   price       Float
   stock       Int           @default(0)
+  weightGram  Int           @default(1000) @map("weight_gram")
+  variants    Json?
   status      ProductStatus @default(AVAILABLE)
   category    String?
   createdById String?       @map("created_by")
@@ -121,6 +123,9 @@ model Order {
   customerAddress       String        @map("customer_address")
   customerCity          String        @map("customer_city")
   customerPostalCode    String        @map("customer_postal_code")
+  selectedVariantKey    String?       @map("selected_variant_key")
+  selectedVariantLabel  String?       @map("selected_variant_label")
+  itemWeightGram        Int           @default(1000) @map("item_weight_gram")
   notes                 String?
   paymentStatus         PaymentStatus @default(PENDING) @map("payment_status")
   midtransTransactionId String?       @unique @map("midtrans_transaction_id")

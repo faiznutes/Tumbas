@@ -10,6 +10,12 @@ export declare class MidtransService {
         customerName: string;
         customerEmail: string;
         customerPhone: string;
+        itemDetails?: Array<{
+            id: string;
+            name: string;
+            price: number;
+            quantity: number;
+        }>;
     }): Promise<{
         token: any;
         orderId: any;

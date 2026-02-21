@@ -28,6 +28,8 @@ declare class UpdateShippingSettingsDto {
     estimateJawa?: number;
     estimateLuarJawa?: number;
     providers?: string[];
+    originCityId?: number;
+    defaultWeightGram?: number;
 }
 export declare class SettingsController {
     private settingsService;
@@ -73,12 +75,16 @@ export declare class SettingsController {
         estimateJawa: number;
         estimateLuarJawa: number;
         providers: string[];
+        originCityId: number;
+        defaultWeightGram: number;
     }>;
     updateShippingSettings(data: UpdateShippingSettingsDto): Promise<{
         minFreeShipping: number;
         estimateJawa: number;
         estimateLuarJawa: number;
         providers: string[];
+        originCityId: number;
+        defaultWeightGram: number;
     }>;
     getAllSettings(): Promise<Record<string, string>>;
 }

@@ -105,6 +105,8 @@ export class ProductsService {
     stock?: number;
     category?: string;
     images?: { url: string; position?: number }[];
+    variants?: unknown;
+    weightGram?: number;
     createdById?: string;
   }) {
     const { images, ...productData } = data;
@@ -112,6 +114,8 @@ export class ProductsService {
     const product = await this.prisma.product.create({
       data: {
         ...productData,
+        weightGram: data.weightGram ? Math.max(1, Math.round(data.weightGram)) : 1000,
+        variants: this.normalizeVariants(data.variants),
         images: images ? {
           create: images.map((img, index) => ({
             url: img.url,
@@ -134,6 +138,8 @@ export class ProductsService {
     status?: ProductStatus;
     category?: string;
     images?: { url: string; position?: number }[];
+    variants?: unknown;
+    weightGram?: number;
   }) {
     const { images, ...productData } = data;
 
@@ -145,6 +151,8 @@ export class ProductsService {
       where: { id },
       data: {
         ...productData,
+        weightGram: data.weightGram ? Math.max(1, Math.round(data.weightGram)) : undefined,
+        variants: data.variants !== undefined ? this.normalizeVariants(data.variants) : undefined,
         images: images ? {
           create: images.map((img, index) => ({
             url: img.url,
@@ -184,5 +192,31 @@ export class ProductsService {
         break;
     }
     return { success: true };
+  }
+
+  private normalizeVariants(input: unknown) {
+    if (!Array.isArray(input)) return Prisma.JsonNull;
+    const variants = input
+      .map((row) => {
+        if (!row || typeof row !== 'object') return null;
+        const item = row as Record<string, unknown>;
+        const key = String(item.key || '').trim();
+        const label = String(item.label || '').trim();
+        if (!key || !label) return null;
+        return {
+          key,
+          label,
+          attribute1Name: String(item.attribute1Name || '').trim(),
+          attribute1Value: String(item.attribute1Value || '').trim(),
+          attribute2Name: String(item.attribute2Name || '').trim(),
+          attribute2Value: String(item.attribute2Value || '').trim(),
+          stock: Math.max(0, Number(item.stock || 0)),
+          price: Math.max(0, Number(item.price || 0)),
+          weightGram: Math.max(1, Number(item.weightGram || 1000)),
+        };
+      })
+      .filter(Boolean);
+
+    return variants.length > 0 ? (variants as Prisma.InputJsonValue) : Prisma.JsonNull;
   }
 }

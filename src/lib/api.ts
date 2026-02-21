@@ -91,11 +91,25 @@ export interface Product {
   description: string | null;
   price: number;
   stock: number;
+  weightGram: number;
+  variants?: ProductVariant[] | null;
   status: 'AVAILABLE' | 'SOLD' | 'ARCHIVED';
   category: string | null;
   createdAt: string;
   updatedAt: string;
   images: ProductImage[];
+}
+
+export interface ProductVariant {
+  key: string;
+  label: string;
+  attribute1Name: string;
+  attribute1Value: string;
+  attribute2Name: string;
+  attribute2Value: string;
+  stock: number;
+  price: number;
+  weightGram: number;
 }
 
 export interface ProductImage {
@@ -128,6 +142,9 @@ export interface Order {
   customerCity: string;
   customerPostalCode: string;
   notes: string | null;
+  selectedVariantKey?: string | null;
+  selectedVariantLabel?: string | null;
+  itemWeightGram?: number;
   product: Product;
   publicToken?: string;
 }
@@ -219,6 +236,24 @@ export interface ApiListMeta {
   totalPages: number;
 }
 
+export interface ShippingCity {
+  cityId: string;
+  provinceId: string;
+  cityName: string;
+  type: string;
+  province: string;
+  postalCode: string;
+  label: string;
+}
+
+export interface ShippingRateService {
+  courier: string;
+  service: string;
+  description: string;
+  cost: number;
+  etd: string;
+}
+
 export interface ContactMessage {
   id: string;
   name: string;
@@ -269,6 +304,8 @@ export const api = {
       price: number;
       stock?: number;
       category?: string;
+      variants?: ProductVariant[] | null;
+      weightGram?: number;
       images?: { url: string; position?: number }[];
     }) => fetchApi<Product>('/products', {
       method: 'POST',
@@ -284,6 +321,8 @@ export const api = {
       status: string;
       category: string;
       images: { url: string; position?: number }[];
+      variants: ProductVariant[] | null;
+      weightGram: number;
     }>) => fetchApi<Product>(`/products/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -335,6 +374,12 @@ export const api = {
       shippingCost?: number;
       shippingProvider?: string;
       shippingRegion?: string;
+      shippingService?: string;
+      shippingEtd?: string;
+      shippingWeightGram?: number;
+      shippingDestinationCityId?: string;
+      selectedVariantKey?: string;
+      selectedVariantLabel?: string;
     }) => fetchApi<Order>('/orders', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -556,6 +601,8 @@ export const api = {
       estimateJawa: number;
       estimateLuarJawa: number;
       providers: string[];
+      originCityId: number;
+      defaultWeightGram: number;
     }>('/settings/shipping'),
 
     updateShipping: (data: {
@@ -563,15 +610,41 @@ export const api = {
       estimateJawa?: number;
       estimateLuarJawa?: number;
       providers?: string[];
+      originCityId?: number;
+      defaultWeightGram?: number;
     }) => fetchApi<{
       minFreeShipping: number;
       estimateJawa: number;
       estimateLuarJawa: number;
       providers: string[];
+      originCityId: number;
+      defaultWeightGram: number;
     }>('/settings/shipping', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  },
+
+  shipping: {
+    searchCities: (q: string, limit = 20) =>
+      fetchApi<ShippingCity[]>(`/shipping/cities?q=${encodeURIComponent(q)}&limit=${limit}`),
+
+    getRates: (data: {
+      destinationCityId: string;
+      courier: string;
+      weightGram: number;
+      originCityId?: string;
+    }) =>
+      fetchApi<{
+        originCityId: string;
+        destinationCityId: string;
+        courier: string;
+        weightGram: number;
+        services: ShippingRateService[];
+      }>('/shipping/rates', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   webhooks: {

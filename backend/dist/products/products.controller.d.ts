@@ -11,6 +11,8 @@ declare class CreateProductDto {
         url: string;
         position?: number;
     }[];
+    variants?: unknown;
+    weightGram?: number;
 }
 declare class UpdateProductDto {
     title?: string;
@@ -24,6 +26,8 @@ declare class UpdateProductDto {
         url: string;
         position?: number;
     }[];
+    variants?: unknown;
+    weightGram?: number;
 }
 declare class BulkActionDto {
     action: 'DELETE' | 'MARK_SOLD' | 'CHANGE_STATUS';
@@ -53,6 +57,8 @@ export declare class ProductsController {
             slug: string;
             price: number;
             stock: number;
+            weightGram: number;
+            variants: import("@prisma/client/runtime/library").JsonValue | null;
             createdById: string | null;
         })[];
         meta: {
@@ -81,6 +87,8 @@ export declare class ProductsController {
         slug: string;
         price: number;
         stock: number;
+        weightGram: number;
+        variants: import("@prisma/client/runtime/library").JsonValue | null;
         createdById: string | null;
     }>;
     create(dto: CreateProductDto): Promise<{
@@ -102,6 +110,8 @@ export declare class ProductsController {
         slug: string;
         price: number;
         stock: number;
+        weightGram: number;
+        variants: import("@prisma/client/runtime/library").JsonValue | null;
         createdById: string | null;
     }>;
     update(id: string, dto: UpdateProductDto): Promise<{
@@ -123,6 +133,8 @@ export declare class ProductsController {
         slug: string;
         price: number;
         stock: number;
+        weightGram: number;
+        variants: import("@prisma/client/runtime/library").JsonValue | null;
         createdById: string | null;
     }>;
     delete(id: string): Promise<{

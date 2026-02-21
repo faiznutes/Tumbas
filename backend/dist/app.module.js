@@ -21,6 +21,7 @@ const orders_module_1 = require("./orders/orders.module");
 const payments_module_1 = require("./payments/payments.module");
 const settings_module_1 = require("./settings/settings.module");
 const contact_messages_module_1 = require("./contact-messages/contact-messages.module");
+const shipping_module_1 = require("./shipping/shipping.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -39,6 +40,7 @@ exports.AppModule = AppModule = __decorate([
             orders_module_1.OrdersModule,
             payments_module_1.PaymentsModule,
             settings_module_1.SettingsModule,
+            shipping_module_1.ShippingModule,
             contact_messages_module_1.ContactMessagesModule,
         ],
         controllers: [app_controller_1.AppController],

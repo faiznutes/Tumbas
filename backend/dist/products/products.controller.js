@@ -26,6 +26,8 @@ class CreateProductDto {
     stock;
     category;
     images;
+    variants;
+    weightGram;
 }
 __decorate([
     (0, class_validator_1.IsString)(),
@@ -61,6 +63,16 @@ __decorate([
     (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
 ], CreateProductDto.prototype, "images", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateProductDto.prototype, "variants", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], CreateProductDto.prototype, "weightGram", void 0);
 class UpdateProductDto {
     title;
     slug;
@@ -70,6 +82,8 @@ class UpdateProductDto {
     status;
     category;
     images;
+    variants;
+    weightGram;
 }
 __decorate([
     (0, class_validator_1.IsOptional)(),
@@ -113,6 +127,16 @@ __decorate([
     (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
 ], UpdateProductDto.prototype, "images", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], UpdateProductDto.prototype, "variants", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], UpdateProductDto.prototype, "weightGram", void 0);
 class BulkActionDto {
     action;
     ids;

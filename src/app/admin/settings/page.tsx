@@ -54,9 +54,11 @@ export default function AdminSettings() {
     minFreeShipping: 200000,
     estimateJawa: 15000,
     estimateLuarJawa: 30000,
-    providers: ['JNE', 'J&T', 'SiCepat'],
+    providers: ['jne', 'jnt', 'sicepat'],
+    originCityId: 444,
+    defaultWeightGram: 1000,
   });
-  const [shippingProvidersInput, setShippingProvidersInput] = useState('JNE, J&T, SiCepat');
+  const [shippingProvidersInput, setShippingProvidersInput] = useState('jne, jnt, sicepat');
 
   useEffect(() => {
     if (activeTab === 'promo') {
@@ -197,6 +199,8 @@ export default function AdminSettings() {
         estimateJawa: shippingSettings.estimateJawa,
         estimateLuarJawa: shippingSettings.estimateLuarJawa,
         providers,
+        originCityId: shippingSettings.originCityId,
+        defaultWeightGram: shippingSettings.defaultWeightGram,
       });
       setShippingSettings(response);
       setShippingProvidersInput(response.providers.join(', '));
@@ -840,6 +844,24 @@ export default function AdminSettings() {
               <h2 className="text-lg font-bold text-[#0d141b] mb-6">Pengaturan Pengiriman</h2>
               <div className="space-y-6">
                 <div>
+                  <label className="block text-sm font-medium text-[#0d141b] mb-2">Origin City ID RajaOngkir (Surabaya)</label>
+                  <input
+                    type="number"
+                    value={shippingSettings.originCityId}
+                    onChange={(e) => setShippingSettings((prev) => ({ ...prev, originCityId: Number(e.target.value) || 444 }))}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0d141b] mb-2">Berat Default Produk (gram)</label>
+                  <input
+                    type="number"
+                    value={shippingSettings.defaultWeightGram}
+                    onChange={(e) => setShippingSettings((prev) => ({ ...prev, defaultWeightGram: Number(e.target.value) || 1000 }))}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                  />
+                </div>
+                <div>
                   <label htmlFor="shippingCost" className="block text-sm font-medium text-[#0d141b] mb-2">
                     Estimasi Ongkir Jawa (Rp)
                   </label>
@@ -881,7 +903,7 @@ export default function AdminSettings() {
                     </div>
                     <div>
                       <p className="font-medium text-[#0d141b]">Kurir Aktif</p>
-                      <p className="text-sm text-[#4c739a]">Pisahkan dengan koma (contoh: JNE, J&T, SiCepat, AnterAja)</p>
+                      <p className="text-sm text-[#4c739a]">Pisahkan dengan koma (contoh: jne, jnt, sicepat)</p>
                     </div>
                     <span className="ml-auto px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">{shippingSettings.providers.length} kurir</span>
                   </div>

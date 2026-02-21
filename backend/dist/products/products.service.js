@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../prisma/prisma.service");
 let ProductsService = class ProductsService {
     prisma;
@@ -94,6 +95,8 @@ let ProductsService = class ProductsService {
         const product = await this.prisma.product.create({
             data: {
                 ...productData,
+                weightGram: data.weightGram ? Math.max(1, Math.round(data.weightGram)) : 1000,
+                variants: this.normalizeVariants(data.variants),
                 images: images ? {
                     create: images.map((img, index) => ({
                         url: img.url,
@@ -114,6 +117,8 @@ let ProductsService = class ProductsService {
             where: { id },
             data: {
                 ...productData,
+                weightGram: data.weightGram ? Math.max(1, Math.round(data.weightGram)) : undefined,
+                variants: data.variants !== undefined ? this.normalizeVariants(data.variants) : undefined,
                 images: images ? {
                     create: images.map((img, index) => ({
                         url: img.url,
@@ -150,6 +155,33 @@ let ProductsService = class ProductsService {
                 break;
         }
         return { success: true };
+    }
+    normalizeVariants(input) {
+        if (!Array.isArray(input))
+            return client_1.Prisma.JsonNull;
+        const variants = input
+            .map((row) => {
+            if (!row || typeof row !== 'object')
+                return null;
+            const item = row;
+            const key = String(item.key || '').trim();
+            const label = String(item.label || '').trim();
+            if (!key || !label)
+                return null;
+            return {
+                key,
+                label,
+                attribute1Name: String(item.attribute1Name || '').trim(),
+                attribute1Value: String(item.attribute1Value || '').trim(),
+                attribute2Name: String(item.attribute2Name || '').trim(),
+                attribute2Value: String(item.attribute2Value || '').trim(),
+                stock: Math.max(0, Number(item.stock || 0)),
+                price: Math.max(0, Number(item.price || 0)),
+                weightGram: Math.max(1, Number(item.weightGram || 1000)),
+            };
+        })
+            .filter(Boolean);
+        return variants.length > 0 ? variants : client_1.Prisma.JsonNull;
     }
 };
 exports.ProductsService = ProductsService;

@@ -154,13 +154,17 @@ let SettingsService = class SettingsService {
             minFreeShipping: 200000,
             estimateJawa: 15000,
             estimateLuarJawa: 30000,
-            providers: ['JNE', 'J&T', 'SiCepat'],
+            providers: ['jne', 'jnt', 'sicepat'],
+            originCityId: 444,
+            defaultWeightGram: 1000,
         };
         const keys = [
             'shipping_min_free',
             'shipping_estimate_jawa',
             'shipping_estimate_luar_jawa',
             'shipping_providers',
+            'shipping_origin_city_id',
+            'shipping_default_weight_gram',
         ];
         const settings = await this.prisma.siteSettings.findMany({
             where: { key: { in: keys } },
@@ -176,6 +180,10 @@ let SettingsService = class SettingsService {
             if (setting.key === 'shipping_providers') {
                 result.providers = setting.value.split(',').map((v) => v.trim()).filter(Boolean);
             }
+            if (setting.key === 'shipping_origin_city_id')
+                result.originCityId = parseInt(setting.value, 10) || defaults.originCityId;
+            if (setting.key === 'shipping_default_weight_gram')
+                result.defaultWeightGram = parseInt(setting.value, 10) || defaults.defaultWeightGram;
         });
         return result;
     }
@@ -188,9 +196,13 @@ let SettingsService = class SettingsService {
         if (data.estimateLuarJawa !== undefined)
             updates.push(this.setSetting('shipping_estimate_luar_jawa', String(Math.max(0, data.estimateLuarJawa))));
         if (data.providers !== undefined) {
-            const providers = data.providers.map((v) => v.trim()).filter(Boolean).slice(0, 10);
+            const providers = data.providers.map((v) => v.trim().toLowerCase()).filter(Boolean).slice(0, 10);
             updates.push(this.setSetting('shipping_providers', providers.join(',')));
         }
+        if (data.originCityId !== undefined)
+            updates.push(this.setSetting('shipping_origin_city_id', String(Math.max(1, data.originCityId))));
+        if (data.defaultWeightGram !== undefined)
+            updates.push(this.setSetting('shipping_default_weight_gram', String(Math.max(1, data.defaultWeightGram))));
         if (updates.length > 0)
             await Promise.all(updates);
         return this.getShippingSettings();

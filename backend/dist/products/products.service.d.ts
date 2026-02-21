@@ -1,4 +1,4 @@
-import { ProductStatus } from '@prisma/client';
+import { Prisma, ProductStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 export declare class ProductsService {
     private prisma;
@@ -32,6 +32,8 @@ export declare class ProductsService {
             slug: string;
             price: number;
             stock: number;
+            weightGram: number;
+            variants: Prisma.JsonValue | null;
             createdById: string | null;
         })[];
         meta: {
@@ -60,6 +62,8 @@ export declare class ProductsService {
         slug: string;
         price: number;
         stock: number;
+        weightGram: number;
+        variants: Prisma.JsonValue | null;
         createdById: string | null;
     }>;
     create(data: {
@@ -73,6 +77,8 @@ export declare class ProductsService {
             url: string;
             position?: number;
         }[];
+        variants?: unknown;
+        weightGram?: number;
         createdById?: string;
     }): Promise<{
         images: {
@@ -93,6 +99,8 @@ export declare class ProductsService {
         slug: string;
         price: number;
         stock: number;
+        weightGram: number;
+        variants: Prisma.JsonValue | null;
         createdById: string | null;
     }>;
     update(id: string, data: {
@@ -107,6 +115,8 @@ export declare class ProductsService {
             url: string;
             position?: number;
         }[];
+        variants?: unknown;
+        weightGram?: number;
     }): Promise<{
         images: {
             id: string;
@@ -126,6 +136,8 @@ export declare class ProductsService {
         slug: string;
         price: number;
         stock: number;
+        weightGram: number;
+        variants: Prisma.JsonValue | null;
         createdById: string | null;
     }>;
     delete(id: string): Promise<{
@@ -137,4 +149,5 @@ export declare class ProductsService {
     }): Promise<{
         success: boolean;
     }>;
+    private normalizeVariants;
 }

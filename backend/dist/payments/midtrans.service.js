@@ -74,6 +74,7 @@ let MidtransService = class MidtransService {
                 email: params.customerEmail,
                 phone: params.customerPhone,
             },
+            item_details: params.itemDetails,
             expiry: {
                 unit: 'hours',
                 duration: 24,

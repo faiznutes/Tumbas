@@ -2,10 +2,22 @@ import { PrismaService } from '../prisma/prisma.service';
 export declare class SettingsService {
     private prisma;
     constructor(prisma: PrismaService);
-    getSetting(key: string): Promise<any>;
-    setSetting(key: string, value: string): Promise<any>;
+    getSetting(key: string): Promise<string | undefined>;
+    setSetting(key: string, value: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        key: string;
+        value: string;
+    }>;
     getAllSettings(): Promise<Record<string, string>>;
-    setSettings(data: object): Promise<any>;
+    setSettings(data: object): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        key: string;
+        value: string;
+    }[]>;
     getPromoSettings(): Promise<{
         heroImage: string;
         heroTitle: string;
@@ -40,17 +52,23 @@ export declare class SettingsService {
         estimateJawa: number;
         estimateLuarJawa: number;
         providers: string[];
+        originCityId: number;
+        defaultWeightGram: number;
     }>;
     setShippingSettings(data: {
         minFreeShipping?: number;
         estimateJawa?: number;
         estimateLuarJawa?: number;
         providers?: string[];
+        originCityId?: number;
+        defaultWeightGram?: number;
     }): Promise<{
         minFreeShipping: number;
         estimateJawa: number;
         estimateLuarJawa: number;
         providers: string[];
+        originCityId: number;
+        defaultWeightGram: number;
     }>;
     setHomepageFeaturedSettings(data: {
         manualSlugs?: string[];

@@ -12,6 +12,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SettingsModule } from './settings/settings.module';
 import { ContactMessagesModule } from './contact-messages/contact-messages.module';
+import { ShippingModule } from './shipping/shipping.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ContactMessagesModule } from './contact-messages/contact-messages.modul
     OrdersModule,
     PaymentsModule,
     SettingsModule,
+    ShippingModule,
     ContactMessagesModule,
   ],
   controllers: [AppController],

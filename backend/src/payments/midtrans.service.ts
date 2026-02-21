@@ -25,6 +25,12 @@ export class MidtransService {
     customerName: string;
     customerEmail: string;
     customerPhone: string;
+    itemDetails?: Array<{
+      id: string;
+      name: string;
+      price: number;
+      quantity: number;
+    }>;
   }) {
     const parameter = {
       transaction_details: {
@@ -36,6 +42,7 @@ export class MidtransService {
         email: params.customerEmail,
         phone: params.customerPhone,
       },
+      item_details: params.itemDetails,
       expiry: {
         unit: 'hours',
         duration: 24,

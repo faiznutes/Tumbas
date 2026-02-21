@@ -31,6 +31,14 @@ class CreateProductDto {
   @IsOptional()
   @IsArray()
   images?: { url: string; position?: number }[];
+
+  @IsOptional()
+  variants?: unknown;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  weightGram?: number;
 }
 
 class UpdateProductDto {
@@ -67,6 +75,14 @@ class UpdateProductDto {
   @IsOptional()
   @IsArray()
   images?: { url: string; position?: number }[];
+
+  @IsOptional()
+  variants?: unknown;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  weightGram?: number;
 }
 
 class BulkActionDto {

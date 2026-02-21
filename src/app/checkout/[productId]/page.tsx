@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
-import { api, Product } from "@/lib/api";
+import { api, Product, ShippingCity, ShippingRateService } from "@/lib/api";
 import { savePublicOrderRef } from "@/lib/order-tracking";
 
 declare global {
@@ -30,6 +30,7 @@ function formatPrice(price: number) {
 
 export default function CheckoutPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const productId = params?.productId as string;
   const [product, setProduct] = useState<Product | null>(null);
@@ -43,11 +44,25 @@ export default function CheckoutPage() {
     minFreeShipping: 200000,
     estimateJawa: 15000,
     estimateLuarJawa: 30000,
-    providers: ["JNE", "J&T", "SiCepat"],
+    providers: ["jne", "jnt", "sicepat"],
+    originCityId: 444,
+    defaultWeightGram: 1000,
   });
-  const [shippingProvider, setShippingProvider] = useState("JNE");
+  const [shippingProvider, setShippingProvider] = useState("jne");
+  const [destinationCityId, setDestinationCityId] = useState("");
+  const [cityOptions, setCityOptions] = useState<ShippingCity[]>([]);
+  const [shippingServices, setShippingServices] = useState<ShippingRateService[]>([]);
+  const [selectedShippingService, setSelectedShippingService] = useState("");
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [shippingError, setShippingError] = useState("");
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
+  const selectedVariantKey = searchParams.get("variantKey") || "";
+  const selectedVariantLabel = searchParams.get("variantLabel") || "";
+  const variantList = Array.isArray(product?.variants) ? product.variants : [];
+  const selectedVariant = variantList.find((item) => item.key === selectedVariantKey);
+  const unitPrice = selectedVariant && selectedVariant.price > 0 ? selectedVariant.price : (product?.price || 0);
+  const effectiveWeight = selectedVariant?.weightGram || shippingConfig.defaultWeightGram;
 
   useEffect(() => {
     async function fetchProduct() {
@@ -80,13 +95,66 @@ export default function CheckoutPage() {
     fetchShipping();
   }, []);
 
+  useEffect(() => {
+    const query = formData.customerCity.trim();
+    if (query.length < 3) {
+      setCityOptions([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const cities = await api.shipping.searchCities(query, 8);
+        setCityOptions(cities);
+      } catch {
+        setCityOptions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [formData.customerCity]);
+
+  useEffect(() => {
+    async function fetchRates() {
+      if (!destinationCityId || !shippingProvider || !product) {
+        setShippingServices([]);
+        setSelectedShippingService("");
+        return;
+      }
+
+      setLoadingRates(true);
+      setShippingError("");
+      try {
+        const rates = await api.shipping.getRates({
+          destinationCityId,
+          courier: shippingProvider.toLowerCase(),
+          weightGram: effectiveWeight,
+          originCityId: String(shippingConfig.originCityId),
+        });
+        setShippingServices(rates.services);
+        setSelectedShippingService(rates.services[0]?.service || "");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Gagal menghitung ongkir";
+        setShippingError(message);
+        setShippingServices([]);
+        setSelectedShippingService("");
+      } finally {
+        setLoadingRates(false);
+      }
+    }
+
+    fetchRates();
+  }, [destinationCityId, effectiveWeight, product, shippingConfig.originCityId, shippingProvider]);
+
   const cityLower = formData.customerCity.trim().toLowerCase();
   const jawaKeywords = ["jakarta", "bandung", "bogor", "depok", "bekasi", "semarang", "yogyakarta", "solo", "surabaya", "malang", "kediri", "cirebon", "tegal"];
   const isJawa = jawaKeywords.some((key) => cityLower.includes(key));
   const shippingRegion = isJawa ? "Jawa" : "Luar Jawa";
-  const baseShipping = isJawa ? shippingConfig.estimateJawa : shippingConfig.estimateLuarJawa;
-  const shipping = (product?.price || 0) >= shippingConfig.minFreeShipping ? 0 : baseShipping;
-  const total = (product?.price || 0) + shipping;
+  const selectedService = shippingServices.find((service) => service.service === selectedShippingService);
+  const dynamicShipping = selectedService?.cost ?? 0;
+  const fallbackShipping = isJawa ? shippingConfig.estimateJawa : shippingConfig.estimateLuarJawa;
+  const shipping = unitPrice >= shippingConfig.minFreeShipping ? 0 : (selectedService ? dynamicShipping : fallbackShipping);
+  const total = unitPrice + shipping;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +162,30 @@ export default function CheckoutPage() {
     
     setSubmitting(true);
     try {
+      if (!destinationCityId) {
+        throw new Error("Pilih kota tujuan dari daftar yang tersedia");
+      }
+
+      if (!selectedService && shipping !== 0) {
+        throw new Error("Pilih layanan pengiriman terlebih dahulu");
+      }
+
+      if (selectedVariantKey && !selectedVariant) {
+        throw new Error("Varian produk tidak valid, kembali pilih varian dari halaman produk");
+      }
+
       const order = await api.orders.create({
         productId: product.id,
         ...formData,
         shippingCost: shipping,
-        shippingProvider,
+        shippingProvider: shippingProvider.toLowerCase(),
         shippingRegion,
+        shippingService: selectedService?.service,
+        shippingEtd: selectedService?.etd,
+        shippingWeightGram: effectiveWeight,
+        shippingDestinationCityId: destinationCityId,
+        selectedVariantKey: selectedVariantKey || undefined,
+        selectedVariantLabel: selectedVariantLabel || undefined,
       });
       
       if (order.snapToken) {
@@ -150,6 +236,11 @@ export default function CheckoutPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    if (name === "customerCity") {
+      setDestinationCityId("");
+      setShippingServices([]);
+      setSelectedShippingService("");
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -231,7 +322,7 @@ export default function CheckoutPage() {
                       <label className="block text-sm font-medium text-[#0d141b] mb-2">Kurir</label>
                       <select value={shippingProvider} onChange={(e) => setShippingProvider(e.target.value)} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]">
                         {shippingConfig.providers.map((provider) => (
-                          <option key={provider} value={provider}>{provider}</option>
+                          <option key={provider} value={provider}>{provider.toUpperCase()}</option>
                         ))}
                       </select>
                     </div>
@@ -250,6 +341,28 @@ export default function CheckoutPage() {
                     <div>
                       <label className="block text-sm font-medium text-[#0d141b] mb-2">Kota</label>
                       <input required name="customerCity" value={formData.customerCity} onChange={handleChange} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]" placeholder="Jakarta" />
+                      {cityOptions.length > 0 && (
+                        <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[#e7edf3] bg-white">
+                          {cityOptions.map((city) => (
+                            <button
+                              key={city.cityId}
+                              type="button"
+                              onClick={() => {
+                                setDestinationCityId(city.cityId);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  customerCity: `${city.type} ${city.cityName}`,
+                                  customerPostalCode: city.postalCode || prev.customerPostalCode,
+                                }));
+                                setCityOptions([]);
+                              }}
+                              className="block w-full border-b border-[#f2f4f7] px-3 py-2 text-left text-sm text-[#0d141b] hover:bg-[#f6f7f8]"
+                            >
+                              {city.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#0d141b] mb-2">Kode Pos</label>
@@ -258,6 +371,24 @@ export default function CheckoutPage() {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-[#0d141b] mb-2">Alamat Lengkap</label>
                       <textarea required name="customerAddress" value={formData.customerAddress} onChange={handleChange} rows={3} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]" placeholder="Jl. Example No. 123" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Layanan Pengiriman</label>
+                      <select
+                        value={selectedShippingService}
+                        onChange={(e) => setSelectedShippingService(e.target.value)}
+                        className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                        disabled={loadingRates || shippingServices.length === 0}
+                      >
+                        {loadingRates && <option value="">Menghitung ongkir...</option>}
+                        {!loadingRates && shippingServices.length === 0 && <option value="">Belum ada layanan</option>}
+                        {shippingServices.map((service) => (
+                          <option key={service.service} value={service.service}>
+                            {service.service} - {service.description} ({formatPrice(service.cost)}, ETD {service.etd} hari)
+                          </option>
+                        ))}
+                      </select>
+                      {shippingError && <p className="mt-2 text-xs text-red-600">{shippingError}</p>}
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-[#0d141b] mb-2">Catatan (Opsional)</label>
@@ -294,19 +425,20 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <h3 className="font-medium text-[#0d141b] line-clamp-2">{product.title}</h3>
-                    <p className="text-sm text-[#4c739a]">{formatPrice(product.price)}</p>
+                    {selectedVariantLabel && <p className="text-xs text-[#4c739a]">Varian: {selectedVariantLabel}</p>}
+                    <p className="text-sm text-[#4c739a]">{formatPrice(unitPrice)}</p>
                   </div>
                 </div>
                 <div className="border-t border-[#e7edf3] pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-[#4c739a]">Subtotal</span>
-                    <span className="text-[#0d141b]">{formatPrice(product.price)}</span>
+                    <span className="text-[#0d141b]">{formatPrice(unitPrice)}</span>
                   </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-[#4c739a]">Ongkir</span>
                       <span className="text-[#0d141b]">{formatPrice(shipping)}</span>
                     </div>
-                    <p className="text-xs text-[#4c739a]">Estimasi wilayah: {shippingRegion} via {shippingProvider}</p>
+                    <p className="text-xs text-[#4c739a]">Estimasi wilayah: {shippingRegion} via {shippingProvider.toUpperCase()} {selectedService ? `(${selectedService.service}, ETD ${selectedService.etd} hari)` : ""}</p>
                     <div className="flex justify-between font-bold text-lg pt-2 border-t border-[#e7edf3]">
                       <span className="text-[#0d141b]">Total</span>
                       <span className="text-[#137fec]">{formatPrice(total)}</span>

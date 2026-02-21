@@ -134,6 +134,8 @@ class UpdateShippingSettingsDto {
     estimateJawa;
     estimateLuarJawa;
     providers;
+    originCityId;
+    defaultWeightGram;
 }
 __decorate([
     (0, class_validator_1.IsOptional)(),
@@ -159,6 +161,18 @@ __decorate([
     (0, class_validator_1.IsString)({ each: true }),
     __metadata("design:type", Array)
 ], UpdateShippingSettingsDto.prototype, "providers", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], UpdateShippingSettingsDto.prototype, "originCityId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], UpdateShippingSettingsDto.prototype, "defaultWeightGram", void 0);
 let SettingsController = class SettingsController {
     settingsService;
     constructor(settingsService) {

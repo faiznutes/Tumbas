@@ -44,6 +44,31 @@ class CreateOrderDto {
   @IsOptional()
   @IsString()
   shippingRegion?: string;
+
+  @IsOptional()
+  @IsString()
+  shippingService?: string;
+
+  @IsOptional()
+  @IsString()
+  shippingEtd?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  shippingWeightGram?: number;
+
+  @IsOptional()
+  @IsString()
+  shippingDestinationCityId?: string;
+
+  @IsOptional()
+  @IsString()
+  selectedVariantKey?: string;
+
+  @IsOptional()
+  @IsString()
+  selectedVariantLabel?: string;
 }
 
 class VerifyReceiptQueryDto {

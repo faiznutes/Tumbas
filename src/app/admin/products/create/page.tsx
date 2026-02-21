@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-import { api } from "@/lib/api";
+import { api, ProductVariant } from "@/lib/api";
+
+type VariantDraft = ProductVariant;
+
+function parseOptions(input: string) {
+  return input
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function variantKey(aName: string, a: string, bName: string, b: string) {
+  return `${aName}:${a}|${bName}:${b}`;
+}
 
 export default function CreateProduct() {
   const router = useRouter();
@@ -16,12 +29,17 @@ export default function CreateProduct() {
     slug: "",
     category: "",
     price: "",
-    discountPrice: "",
     stock: "",
+    weightGram: "1000",
     description: "",
-    specifications: "",
     status: "AVAILABLE",
   });
+  const [variantEnabled, setVariantEnabled] = useState(false);
+  const [variantAttr1Name, setVariantAttr1Name] = useState("Warna");
+  const [variantAttr1Options, setVariantAttr1Options] = useState("");
+  const [variantAttr2Name, setVariantAttr2Name] = useState("Ukuran");
+  const [variantAttr2Options, setVariantAttr2Options] = useState("");
+  const [variantRows, setVariantRows] = useState<VariantDraft[]>([]);
 
   const categories = [
     "Smartphone",
@@ -34,10 +52,55 @@ export default function CreateProduct() {
     "Other",
   ];
 
+  const generatedKeys = useMemo(() => {
+    if (!variantEnabled) return [] as string[];
+    const aOptions = parseOptions(variantAttr1Options);
+    const bOptions = parseOptions(variantAttr2Options);
+    if (!aOptions.length || !bOptions.length) return [];
+    return aOptions.flatMap((a) => bOptions.map((b) => variantKey(variantAttr1Name, a, variantAttr2Name, b)));
+  }, [variantEnabled, variantAttr1Options, variantAttr2Options, variantAttr1Name, variantAttr2Name]);
+
+  useEffect(() => {
+    if (!variantEnabled) {
+      setVariantRows([]);
+      return;
+    }
+    const aOptions = parseOptions(variantAttr1Options);
+    const bOptions = parseOptions(variantAttr2Options);
+    if (!aOptions.length || !bOptions.length) {
+      setVariantRows([]);
+      return;
+    }
+
+    setVariantRows((prev) => {
+      const prevMap = new Map(prev.map((row) => [row.key, row]));
+      const next: VariantDraft[] = [];
+      for (const a of aOptions) {
+        for (const b of bOptions) {
+          const key = variantKey(variantAttr1Name, a, variantAttr2Name, b);
+          next.push(
+            prevMap.get(key) || {
+              key,
+              label: `${variantAttr1Name}: ${a} / ${variantAttr2Name}: ${b}`,
+              attribute1Name: variantAttr1Name,
+              attribute1Value: a,
+              attribute2Name: variantAttr2Name,
+              attribute2Value: b,
+              stock: 0,
+              price: Number(formData.price || 0),
+              weightGram: Number(formData.weightGram || 1000),
+            },
+          );
+        }
+      }
+      return next;
+    });
+  }, [variantEnabled, variantAttr1Name, variantAttr1Options, variantAttr2Name, variantAttr2Options, formData.price, formData.weightGram]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    
+
     if (name === "name") {
       const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       setFormData((prev) => ({ ...prev, slug }));
@@ -55,17 +118,30 @@ export default function CreateProduct() {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const updateVariantField = (key: string, field: "stock" | "price" | "weightGram", value: number) => {
+    setVariantRows((prev) =>
+      prev.map((row) => (row.key === key ? { ...row, [field]: Math.max(field === "stock" ? 0 : 1, value) } : row)),
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const payloadVariants = variantEnabled ? variantRows : null;
+      const stock = payloadVariants
+        ? payloadVariants.reduce((sum, row) => sum + row.stock, 0)
+        : Number(formData.stock);
+
       await api.products.create({
         title: formData.name,
         slug: formData.slug,
         description: formData.description,
         category: formData.category,
         price: Number(formData.price),
-        stock: Number(formData.stock),
+        stock,
+        weightGram: Number(formData.weightGram),
+        variants: payloadVariants,
         images: images.map((url, index) => ({ url, position: index })),
       });
 
@@ -88,251 +164,148 @@ export default function CreateProduct() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-[#0d141b]">Tambah Produk Baru</h1>
-            <p className="text-[#4c739a]">Tambahkan produk baru ke toko Anda</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0d141b]">Tambah Produk Baru</h1>
+          <p className="text-[#4c739a]">Tambahkan produk baru ke toko Anda</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-xl border border-[#e7edf3] bg-white p-6">
+            <h2 className="mb-6 text-lg font-bold text-[#0d141b]">Informasi Produk</h2>
+
+            <div className="space-y-5">
+              <div>
+                <label htmlFor="name" className="mb-2 block text-sm font-medium text-[#0d141b]">Nama Produk <span className="text-red-500">*</span></label>
+                <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]" required />
+              </div>
+              <div>
+                <label htmlFor="slug" className="mb-2 block text-sm font-medium text-[#0d141b]">Slug <span className="text-red-500">*</span></label>
+                <input type="text" id="slug" name="slug" value={formData.slug} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]" required />
+              </div>
+              <div>
+                <label htmlFor="category" className="mb-2 block text-sm font-medium text-[#0d141b]">Kategori <span className="text-red-500">*</span></label>
+                <select id="category" name="category" value={formData.category} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]" required>
+                  <option value="">Pilih Kategori</option>
+                  {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="description" className="mb-2 block text-sm font-medium text-[#0d141b]">Deskripsi</label>
+                <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={5} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#e7edf3] bg-white p-6">
+            <h2 className="mb-6 text-lg font-bold text-[#0d141b]">Varian Produk (2 Atribut)</h2>
+
+            <label className="mb-4 flex items-center gap-2 text-sm text-[#0d141b]">
+              <input type="checkbox" checked={variantEnabled} onChange={(e) => setVariantEnabled(e.target.checked)} /> Aktifkan varian
+            </label>
+
+            {variantEnabled && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <input value={variantAttr1Name} onChange={(e) => setVariantAttr1Name(e.target.value)} className="rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Nama Atribut 1 (contoh: Warna)" />
+                  <input value={variantAttr1Options} onChange={(e) => setVariantAttr1Options(e.target.value)} className="rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Opsi Atribut 1 (Merah, Hitam)" />
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <input value={variantAttr2Name} onChange={(e) => setVariantAttr2Name(e.target.value)} className="rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Nama Atribut 2 (contoh: Ukuran)" />
+                  <input value={variantAttr2Options} onChange={(e) => setVariantAttr2Options(e.target.value)} className="rounded-lg border border-[#e7edf3] px-4 py-3" placeholder="Opsi Atribut 2 (S, M, L)" />
+                </div>
+                <p className="text-xs text-[#4c739a]">Total kombinasi: {generatedKeys.length}</p>
+
+                {variantRows.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#e7edf3] text-left text-[#4c739a]">
+                          <th className="py-2">Varian</th>
+                          <th className="py-2">Stok</th>
+                          <th className="py-2">Harga</th>
+                          <th className="py-2">Berat (gram)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {variantRows.map((row) => (
+                          <tr key={row.key} className="border-b border-[#f3f5f7]">
+                            <td className="py-2 text-[#0d141b]">{row.label}</td>
+                            <td className="py-2"><input type="number" min={0} value={row.stock} onChange={(e) => updateVariantField(row.key, "stock", Number(e.target.value) || 0)} className="w-24 rounded border border-[#e7edf3] px-2 py-1" /></td>
+                            <td className="py-2"><input type="number" min={1} value={row.price} onChange={(e) => updateVariantField(row.key, "price", Number(e.target.value) || 1)} className="w-32 rounded border border-[#e7edf3] px-2 py-1" /></td>
+                            <td className="py-2"><input type="number" min={1} value={row.weightGram} onChange={(e) => updateVariantField(row.key, "weightGram", Number(e.target.value) || 1)} className="w-28 rounded border border-[#e7edf3] px-2 py-1" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-[#e7edf3] bg-white p-6">
+            <h2 className="mb-6 text-lg font-bold text-[#0d141b]">Gambar Produk</h2>
+            <div className="mb-4 grid grid-cols-3 gap-4">
+              {images.map((url, index) => (
+                <div key={index} className="group relative">
+                  <img src={url} alt={`Product ${index + 1}`} className="h-32 w-full rounded-lg object-cover" />
+                  <button type="button" onClick={() => handleImageRemove(index)} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button type="button" onClick={handleImageUrlAdd} className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#e7edf3] py-4 text-[#4c739a] transition-colors hover:border-[#137fec] hover:text-[#137fec]">
+              <span className="material-symbols-outlined">add_photo_alternate</span>
+              Tambah Gambar (URL)
+            </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
-              <h2 className="text-lg font-bold text-[#0d141b] mb-6">Informasi Produk</h2>
-              
-              <div className="space-y-5">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Nama Produk <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="Contoh: iPhone 15 Pro Max"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="slug" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Slug <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="slug"
-                    name="slug"
-                    value={formData.slug}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="iphone-15-pro-max"
-                    required
-                  />
-                  <p className="text-xs text-[#4c739a] mt-1">URL: /product/{formData.slug || "..."}</p>
-                </div>
-
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Kategori <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    required
-                  >
-                    <option value="">Pilih Kategori</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Deskripsi
-                  </label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={5}
-                    className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="Deskripsi produk..."
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="specifications" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Spesifikasi
-                  </label>
-                  <textarea
-                    id="specifications"
-                    name="specifications"
-                    value={formData.specifications}
-                    onChange={handleChange}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="Spesifikasi produk (format: - Spek 1&#10;- Spek 2)"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Images */}
-            <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
-              <h2 className="text-lg font-bold text-[#0d141b] mb-6">Gambar Produk</h2>
-              
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                {images.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={url}
-                      alt={`Product ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleImageRemove(index)}
-                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleImageUrlAdd}
-                className="w-full py-4 border-2 border-dashed border-[#e7edf3] rounded-lg text-[#4c739a] hover:border-[#137fec] hover:text-[#137fec] transition-colors flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined">add_photo_alternate</span>
-                Tambah Gambar (URL)
-              </button>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Pricing */}
-            <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
-              <h2 className="text-lg font-bold text-[#0d141b] mb-6">Harga & Stok</h2>
-              
-              <div className="space-y-5">
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Harga <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4c739a]">Rp</span>
-                    <input
-                      type="number"
-                      id="price"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      className="w-full pl-12 pr-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                      placeholder="24990000"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="discountPrice" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Harga Diskon
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4c739a]">Rp</span>
-                    <input
-                      type="number"
-                      id="discountPrice"
-                      name="discountPrice"
-                      value={formData.discountPrice}
-                      onChange={handleChange}
-                      className="w-full pl-12 pr-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                      placeholder="22990000"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="stock" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Stok <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    id="stock"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="100"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
-              <h2 className="text-lg font-bold text-[#0d141b] mb-6">Status</h2>
-              
+        <div className="space-y-6">
+          <div className="rounded-xl border border-[#e7edf3] bg-white p-6">
+            <h2 className="mb-6 text-lg font-bold text-[#0d141b]">Harga & Stok</h2>
+            <div className="space-y-5">
               <div>
-                <label htmlFor="status" className="block text-sm font-medium text-[#0d141b] mb-2">
-                  Status Produk
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                >
-                  <option value="AVAILABLE">Aktif</option>
-                  <option value="ARCHIVED">Arsip</option>
-                </select>
+                <label htmlFor="price" className="mb-2 block text-sm font-medium text-[#0d141b]">Harga Dasar</label>
+                <input type="number" id="price" name="price" value={formData.price} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3" required />
+              </div>
+              {!variantEnabled && (
+                <div>
+                  <label htmlFor="stock" className="mb-2 block text-sm font-medium text-[#0d141b]">Stok</label>
+                  <input type="number" id="stock" name="stock" value={formData.stock} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3" required />
+                </div>
+              )}
+              <div>
+                <label htmlFor="weightGram" className="mb-2 block text-sm font-medium text-[#0d141b]">Berat Dasar (gram)</label>
+                <input type="number" id="weightGram" name="weightGram" value={formData.weightGram} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3" required />
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="space-y-3">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <span className="animate-spin material-symbols-outlined">sync</span>
-                    Menyimpan...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined">save</span>
-                    Simpan Produk
-                  </>
-                )}
-              </button>
-              
-              <Link
-                href="/admin/products"
-                className="w-full bg-gray-100 hover:bg-gray-200 text-[#0d141b] font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined">arrow_back</span>
-                Kembali
-              </Link>
-            </div>
           </div>
-        </form>
+
+          <div className="rounded-xl border border-[#e7edf3] bg-white p-6">
+            <h2 className="mb-6 text-lg font-bold text-[#0d141b]">Status</h2>
+            <select id="status" name="status" value={formData.status} onChange={handleChange} className="w-full rounded-lg border border-[#e7edf3] px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]">
+              <option value="AVAILABLE">Aktif</option>
+              <option value="ARCHIVED">Arsip</option>
+            </select>
+          </div>
+
+          <div className="space-y-3">
+            <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#137fec] py-3 font-semibold text-white transition-colors hover:bg-[#0f65bd] disabled:opacity-50">
+              {loading ? <><span className="material-symbols-outlined animate-spin">sync</span>Menyimpan...</> : <><span className="material-symbols-outlined">save</span>Simpan Produk</>}
+            </button>
+            <Link href="/admin/products" className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 py-3 font-semibold text-[#0d141b] transition-colors hover:bg-gray-200">
+              <span className="material-symbols-outlined">arrow_back</span>
+              Kembali
+            </Link>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

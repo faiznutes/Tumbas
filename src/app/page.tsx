@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, Product } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
+import { addToCart } from "@/lib/cart";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -188,8 +189,8 @@ export default function Beranda() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
             <div>
-              <h2 className="text-3xl font-extrabold text-slate-900">Penawaran Mingguan</h2>
-              <p className="text-slate-500 mt-2">Ambil ofertas especiais antes habis</p>
+              <h2 className="text-3xl font-extrabold text-slate-900">{weeklyDeal.title || "Penawaran Mingguan"}</h2>
+              <p className="text-slate-500 mt-2">{weeklyDeal.subtitle || "Promo spesial terbatas waktu"}</p>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Berakhir Dalam:</span>
@@ -235,10 +236,23 @@ export default function Beranda() {
               <Link key={product.id} href={`/product/${product.slug}`} className="group block">
                 <div className="relative aspect-square rounded-xl bg-slate-100 overflow-hidden mb-4">
                   <span className="absolute top-3 left-3 z-10 bg-[#137fec] text-white text-[10px] font-black px-2 py-1 rounded uppercase">Baru</span>
-                  <button 
-                    onClick={(e) => { e.preventDefault(); router.push(`/checkout/${product.slug}`); }}
-                    className="absolute top-3 right-3 z-20 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300"
-                  >
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addToCart(
+                          {
+                            productId: product.id,
+                            slug: product.slug,
+                            title: product.title,
+                            description: product.description || "",
+                            price: product.price,
+                            image: getProductImage(product),
+                          },
+                          1,
+                        );
+                      }}
+                      className="absolute top-3 right-3 z-20 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300"
+                    >
                     <span className="material-symbols-outlined text-xl">favorite</span>
                   </button>
                   <img 
@@ -247,12 +261,26 @@ export default function Beranda() {
                     src={getProductImage(product)}
                   />
                   <div className="absolute inset-x-4 bottom-4 z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
-                    <button 
-                      onClick={(e) => { e.preventDefault(); router.push(`/checkout/${product.slug}`); }}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addToCart(
+                          {
+                            productId: product.id,
+                            slug: product.slug,
+                            title: product.title,
+                            description: product.description || "",
+                            price: product.price,
+                            image: getProductImage(product),
+                          },
+                          1,
+                        );
+                        router.push("/cart");
+                      }}
                       className="w-full py-2 bg-white text-slate-900 rounded-lg text-sm font-bold shadow-lg flex items-center justify-center gap-2"
                     >
                       <span className="material-symbols-outlined text-sm">shopping_cart</span>
-                      Beli Sekarang
+                      Tambah ke Keranjang
                     </button>
                   </div>
                 </div>

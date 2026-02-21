@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api, Product } from "@/lib/api";
+import { addToCart } from "@/lib/cart";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -22,6 +23,8 @@ export default function ProductDetail() {
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [selectedAttr1, setSelectedAttr1] = useState("");
+  const [selectedAttr2, setSelectedAttr2] = useState("");
 
   useEffect(() => {
     async function fetchProduct() {
@@ -42,8 +45,39 @@ export default function ProductDetail() {
 
   const handleBuyNow = () => {
     if (product) {
-      router.push(`/checkout/${product.slug}`);
+      const query = new URLSearchParams();
+      if (selectedVariant) {
+        query.set("variantKey", selectedVariant.key);
+        query.set("variantLabel", selectedVariant.label);
+      }
+      const suffix = query.toString() ? `?${query.toString()}` : "";
+      router.push(`/checkout/${product.slug}${suffix}`);
     }
+  };
+
+  const handleAddToCart = () => {
+    if (!product || product.status !== "AVAILABLE") return;
+    if (variants.length > 0 && !selectedVariant) {
+      alert("Pilih varian terlebih dahulu");
+      return;
+    }
+    setAddingToCart(true);
+    const image = product.images?.[0]?.url || "https://via.placeholder.com/400";
+    addToCart(
+      {
+        productId: product.id,
+        slug: product.slug,
+        title: product.title,
+        description: product.description || "",
+        price: activePrice,
+        image,
+        variantKey: selectedVariant?.key,
+        variantLabel: selectedVariant?.label,
+      },
+      1,
+    );
+    setAddingToCart(false);
+    router.push("/cart");
   };
 
   if (loading) {
@@ -66,6 +100,14 @@ export default function ProductDetail() {
   const images = product.images && product.images.length > 0
     ? product.images.map(img => img.url)
     : ['https://via.placeholder.com/400'];
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const attr1Name = variants[0]?.attribute1Name || "Atribut 1";
+  const attr2Name = variants[0]?.attribute2Name || "Atribut 2";
+  const attr1Options = Array.from(new Set(variants.map((variant) => variant.attribute1Value)));
+  const attr2Options = Array.from(new Set(variants.map((variant) => variant.attribute2Value)));
+  const selectedVariant = variants.find((variant) => variant.attribute1Value === selectedAttr1 && variant.attribute2Value === selectedAttr2);
+  const activePrice = selectedVariant && selectedVariant.price > 0 ? selectedVariant.price : product.price;
+  const activeStock = selectedVariant ? selectedVariant.stock : product.stock;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
@@ -141,14 +183,14 @@ export default function ProductDetail() {
             </div>
 
             <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-bold text-[#137fec]">{formatPrice(product.price)}</span>
+              <span className="text-3xl font-bold text-[#137fec]">{formatPrice(activePrice)}</span>
             </div>
 
             <div className="flex items-center gap-2">
               {product.status === 'AVAILABLE' ? (
                 <>
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span className="text-sm text-green-600 font-medium">Stok tersedia ({product.stock} unit)</span>
+                  <span className="text-sm text-green-600 font-medium">Stok tersedia ({activeStock} unit)</span>
                 </>
               ) : (
                 <>
@@ -165,10 +207,56 @@ export default function ProductDetail() {
               </div>
             )}
 
+            {variants.length > 0 && (
+              <div className="space-y-3 rounded-lg border border-[#e7edf3] p-4">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-[#0d141b]">{attr1Name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {attr1Options.map((option) => (
+                      <button
+                        type="button"
+                        key={option}
+                        onClick={() => setSelectedAttr1(option)}
+                        className={`rounded-md border px-3 py-1 text-sm ${selectedAttr1 === option ? "border-[#137fec] bg-[#137fec]/10 text-[#137fec]" : "border-[#dfe5ec] text-[#0d141b]"}`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-[#0d141b]">{attr2Name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {attr2Options.map((option) => (
+                      <button
+                        type="button"
+                        key={option}
+                        onClick={() => setSelectedAttr2(option)}
+                        className={`rounded-md border px-3 py-1 text-sm ${selectedAttr2 === option ? "border-[#137fec] bg-[#137fec]/10 text-[#137fec]" : "border-[#dfe5ec] text-[#0d141b]"}`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {!selectedVariant && <p className="text-xs text-amber-600">Pilih kombinasi varian untuk melihat stok akurat.</p>}
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-4">
               <button
+                onClick={handleAddToCart}
+                disabled={product.status !== 'AVAILABLE' || addingToCart || (variants.length > 0 && !selectedVariant) || activeStock <= 0}
+                className={`flex-1 border border-[#137fec] text-[#137fec] hover:bg-[#137fec]/10 font-semibold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  product.status !== 'AVAILABLE' ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                <span className="material-symbols-outlined">add_shopping_cart</span>
+                {product.status !== 'AVAILABLE' ? "Stok Habis" : "Tambah ke Keranjang"}
+              </button>
+              <button
                 onClick={handleBuyNow}
-                disabled={product.status !== 'AVAILABLE' || addingToCart}
+                disabled={product.status !== 'AVAILABLE' || addingToCart || (variants.length > 0 && !selectedVariant) || activeStock <= 0}
                 className={`flex-1 bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2 ${
                   product.status !== 'AVAILABLE' ? "opacity-50 cursor-not-allowed" : ""
                 }`}

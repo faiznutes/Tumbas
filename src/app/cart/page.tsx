@@ -4,16 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
-
-interface CartItem {
-  id: string;
-  productId: string;
-  title: string;
-  description: string;
-  price: number;
-  image: string;
-  quantity: number;
-}
+import { CartItem, getCartItems, onCartUpdated, removeCartItem, updateCartQuantity } from "@/lib/cart";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -29,44 +20,39 @@ export default function Cart() {
   const router = useRouter();
 
   useEffect(() => {
-    const stored = localStorage.getItem('cart');
-    if (stored) {
-      try {
-        setCartItems(JSON.parse(stored));
-      } catch (e) {
-        setCartItems([]);
-      }
-    }
+    setCartItems(getCartItems());
+    const unwatch = onCartUpdated(() => {
+      setCartItems(getCartItems());
+    });
     setLoading(false);
+    return unwatch;
   }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('cart', JSON.stringify(cartItems));
-    }
-  }, [cartItems, loading]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 100000000 ? 0 : 15000;
   const total = subtotal + shipping;
 
   const updateQuantity = (id: string, delta: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
+    const target = cartItems.find((item) => item.id === id);
+    if (!target) return;
+    const nextQuantity = Math.max(1, target.quantity + delta);
+    updateCartQuantity(id, nextQuantity);
+    setCartItems(getCartItems());
   };
 
   const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
+    removeCartItem(id);
+    setCartItems(getCartItems());
   };
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
-      router.push(`/checkout/${cartItems[0].productId}`);
+      const first = cartItems[0];
+      const params = new URLSearchParams();
+      if (first.variantKey) params.set("variantKey", first.variantKey);
+      if (first.variantLabel) params.set("variantLabel", first.variantLabel);
+      const suffix = params.toString() ? `?${params.toString()}` : "";
+      router.push(`/checkout/${first.slug}${suffix}`);
     }
   };
 
@@ -114,10 +100,11 @@ export default function Cart() {
                     <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Link href={`/product/${item.productId}`} className="font-semibold text-[#0d141b] hover:text-[#137fec] truncate block">
+                    <Link href={`/product/${item.slug}`} className="font-semibold text-[#0d141b] hover:text-[#137fec] truncate block">
                       {item.title}
                     </Link>
                     <p className="text-sm text-[#4c739a] truncate">{item.description}</p>
+                    {item.variantLabel && <p className="text-xs text-[#4c739a]">Varian: {item.variantLabel}</p>}
                     <p className="font-bold text-[#137fec] mt-2">{formatPrice(item.price)}</p>
                   </div>
                   <div className="flex flex-col items-end justify-between">

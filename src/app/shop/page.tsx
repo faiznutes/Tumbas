@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, Product } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
+import { addToCart } from "@/lib/cart";
 
 const sortOptions = [
   { value: "newest", label: "Terbaru" },
@@ -357,7 +358,20 @@ export default function ShopPage() {
                         <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/60 to-transparent flex justify-center">
                           <button 
                             className="bg-[#137fec] hover:bg-[#0f65bd] text-white text-sm font-bold py-2 px-6 rounded-full shadow-lg flex items-center gap-2 w-full justify-center"
-                            onClick={(e) => { e.preventDefault(); }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              addToCart(
+                                {
+                                  productId: product.id,
+                                  slug: product.slug,
+                                  title: product.title,
+                                  description: product.description || "",
+                                  price: product.price,
+                                  image: getProductImage(product),
+                                },
+                                1,
+                              );
+                            }}
                           >
                             <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
                             Add to Cart
