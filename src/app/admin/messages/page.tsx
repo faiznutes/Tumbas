@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ContactMessage } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { hasAdminPermission } from "@/lib/admin-permissions";
+import Popup from "@/components/ui/Popup";
 
 const statusLabels: Record<ContactMessage["status"], string> = {
   NEW: "Baru",
@@ -36,6 +37,8 @@ export default function AdminMessagesPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | ContactMessage["status"]>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMessage, setActiveMessage] = useState<ContactMessage | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [showBulkDeletePopup, setShowBulkDeletePopup] = useState(false);
   const [detailStatus, setDetailStatus] = useState<ContactMessage["status"]>("NEW");
   const [detailNotes, setDetailNotes] = useState("");
   const { addToast } = useToast();
@@ -122,9 +125,6 @@ export default function AdminMessagesPage() {
   };
 
   const handleDeleteById = async (id: string) => {
-    const confirmed = window.confirm("Hapus pesan ini secara permanen?");
-    if (!confirmed) return;
-
     try {
       await api.contactMessages.deleteById(id);
       setMessages((prev) => prev.filter((message) => message.id !== id));
@@ -141,9 +141,6 @@ export default function AdminMessagesPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-
-    const confirmed = window.confirm(`Hapus ${selectedIds.length} pesan terpilih secara permanen?`);
-    if (!confirmed) return;
 
     try {
       const result = await api.contactMessages.bulkDelete(selectedIds);
@@ -208,7 +205,7 @@ export default function AdminMessagesPage() {
             <button onClick={() => handleBulkStatus("SPAM")} className="rounded-lg bg-red-500 px-3 py-2 hover:bg-red-600">
               Tandai Spam
             </button>
-            <button onClick={handleBulkDelete} className="rounded-lg bg-red-700 px-3 py-2 hover:bg-red-800">
+            <button onClick={() => setShowBulkDeletePopup(true)} className="rounded-lg bg-red-700 px-3 py-2 hover:bg-red-800">
               Hapus
             </button>
           </div>
@@ -277,7 +274,7 @@ export default function AdminMessagesPage() {
                       </button>
                       {canEditMessages && (
                         <button
-                          onClick={() => handleDeleteById(message.id)}
+                          onClick={() => setDeleteTargetId(message.id)}
                           className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50"
                           title="Hapus pesan"
                         >
@@ -366,7 +363,7 @@ export default function AdminMessagesPage() {
               {canEditMessages ? (
                 <div className="flex justify-end gap-2">
                   <button
-                    onClick={() => handleDeleteById(activeMessage.id)}
+                    onClick={() => setDeleteTargetId(activeMessage.id)}
                     className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-medium text-red-700 hover:bg-red-100"
                   >
                     Hapus Pesan
@@ -387,6 +384,35 @@ export default function AdminMessagesPage() {
           </div>
         </div>
       )}
+
+      <Popup
+        isOpen={Boolean(deleteTargetId)}
+        onClose={() => setDeleteTargetId(null)}
+        title="Hapus Pesan"
+        message="Yakin ingin menghapus pesan ini secara permanen?"
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        onConfirm={async () => {
+          if (!deleteTargetId) return;
+          await handleDeleteById(deleteTargetId);
+          setDeleteTargetId(null);
+        }}
+      />
+
+      <Popup
+        isOpen={showBulkDeletePopup}
+        onClose={() => setShowBulkDeletePopup(false)}
+        title="Hapus Pesan Terpilih"
+        message={`Yakin ingin menghapus ${selectedIds.length} pesan terpilih secara permanen?`}
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        onConfirm={async () => {
+          await handleBulkDelete();
+          setShowBulkDeletePopup(false);
+        }}
+      />
     </div>
   );
 }

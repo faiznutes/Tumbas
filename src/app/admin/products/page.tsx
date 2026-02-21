@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import { api, Product } from "@/lib/api";
 import { hasAdminPermission } from "@/lib/admin-permissions";
+import Popup from "@/components/ui/Popup";
 
 const statusColors: Record<string, string> = {
   AVAILABLE: "bg-green-100 text-green-700",
@@ -22,6 +23,7 @@ export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { addToast } = useToast();
   const canEditProducts = hasAdminPermission("products.edit");
 
@@ -90,15 +92,15 @@ export default function AdminProducts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
-      try {
-        await api.products.delete(id);
-        addToast('Produk dihapus', 'success');
-        fetchProducts();
-      } catch {
-        addToast('Gagal menghapus produk', 'error');
-      }
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    try {
+      await api.products.delete(deleteTargetId);
+      addToast('Produk dihapus', 'success');
+      setDeleteTargetId(null);
+      fetchProducts();
+    } catch {
+      addToast('Gagal menghapus produk', 'error');
     }
   };
 
@@ -249,7 +251,7 @@ export default function AdminProducts() {
                                 <span className="material-symbols-outlined">edit</span>
                               </Link>
                               <button
-                                onClick={() => handleDelete(product.id)}
+                                onClick={() => setDeleteTargetId(product.id)}
                                 className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                 title="Hapus"
                               >
@@ -268,6 +270,17 @@ export default function AdminProducts() {
             </div>
           )}
         </div>
+
+      <Popup
+        isOpen={Boolean(deleteTargetId)}
+        onClose={() => setDeleteTargetId(null)}
+        title="Hapus Produk"
+        message="Yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan."
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

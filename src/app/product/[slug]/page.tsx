@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api, Product } from "@/lib/api";
 import { addToCart } from "@/lib/cart";
+import { useToast } from "@/components/ui/Toast";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -17,6 +18,7 @@ function formatPrice(price: number) {
 export default function ProductDetail() {
   const params = useParams();
   const router = useRouter();
+  const { addToast } = useToast();
   const slug = params.slug as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!product || product.status !== "AVAILABLE") return;
     if (variants.length > 0 && !selectedVariant) {
-      alert("Pilih varian terlebih dahulu");
+      addToast("Pilih varian terlebih dahulu", "warning");
       return;
     }
     setAddingToCart(true);

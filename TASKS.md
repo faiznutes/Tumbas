@@ -118,6 +118,8 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Perbaiki UX responsive `/admin/settings` (tab/icon mobile agar navigasi tab tetap terlihat di layar kecil)
 - [~] Audit full i18n: konsisten Bahasa Indonesia (contoh `Settings` -> `Pengaturan`)
 - [x] Konsistensi label utama admin/public diperbarui (Dasbor/Monitor Webhook/Terjual/Staf/Cek Resi/Cari)
+- [x] Audit popup/notifikasi: hapus penggunaan popup system browser (`alert/confirm/prompt`) dan ganti ke komponen website (`Popup` + `Toast`)
+- [x] Form edit pengguna mendukung ganti password opsional (endpoint `PATCH /users/:id/password`)
 - [x] Tambah pengaturan kategori pilihan beranda berbasis slug manual (multiline/koma) + kontrol hapus slug aktif di UI pengaturan
 
 ## Verification Log

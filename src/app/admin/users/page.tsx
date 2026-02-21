@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/components/ui/Toast";
+import Popup from "@/components/ui/Popup";
 import { api } from "@/lib/api";
 
 interface User {
@@ -93,6 +94,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -124,6 +126,11 @@ export default function AdminUsers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password && formData.password.length < 6) {
+      addToast('Password minimal 6 karakter', 'warning');
+      return;
+    }
+
     try {
       if (editingUser) {
         await api.users.update(editingUser.id, {
@@ -131,6 +138,13 @@ export default function AdminUsers() {
           role: formData.role,
           permissions: formData.permissions,
         });
+
+        if (formData.password) {
+          await api.users.updatePassword(editingUser.id, formData.password);
+          addToast('Profil pengguna diperbarui dan password berhasil diganti', 'success');
+        } else {
+          addToast('Profil pengguna diperbarui', 'success');
+        }
       } else {
         await api.users.create({
           email: formData.email,
@@ -139,16 +153,16 @@ export default function AdminUsers() {
           role: formData.role,
           permissions: formData.permissions,
         });
+        addToast('Pengguna ditambahkan', 'success');
       }
 
-      addToast(editingUser ? 'Pengguna diperbarui' : 'Pengguna ditambahkan', 'success');
       setShowModal(false);
       setEditingUser(null);
       resetForm();
       fetchUsers();
-      } catch {
-        addToast('Gagal menyimpan pengguna', 'error');
-      }
+    } catch {
+      addToast('Gagal menyimpan pengguna', 'error');
+    }
   };
 
   const handleEdit = (user: User) => {
@@ -180,15 +194,15 @@ export default function AdminUsers() {
     });
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) {
-      try {
-        await api.users.delete(id);
-        addToast('Pengguna dihapus', 'success');
-        fetchUsers();
-      } catch {
-        addToast('Gagal menghapus pengguna', 'error');
-      }
+  const handleDelete = async () => {
+    if (!deletingUser) return;
+    try {
+      await api.users.delete(deletingUser.id);
+      addToast('Pengguna dihapus', 'success');
+      setDeletingUser(null);
+      fetchUsers();
+    } catch {
+      addToast('Gagal menghapus pengguna', 'error');
     }
   };
 
@@ -319,7 +333,7 @@ export default function AdminUsers() {
                           <span className="material-symbols-outlined">edit</span>
                         </button>
                         <button
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => setDeletingUser(user)}
                           className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Hapus"
                         >
@@ -363,6 +377,18 @@ export default function AdminUsers() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full px-4 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
                     required={!editingUser}
+                  />
+                </div>
+              )}
+              {editingUser && (
+                <div>
+                  <label className="block text-sm font-medium text-[#0d141b] mb-2">Password Baru (opsional)</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+                    placeholder="Kosongkan jika tidak ingin ganti password"
                   />
                 </div>
               )}
@@ -454,6 +480,17 @@ export default function AdminUsers() {
           </div>
         </div>
       )}
+
+      <Popup
+        isOpen={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        title="Hapus Pengguna"
+        message={`Yakin ingin menghapus pengguna ${deletingUser?.email || ''}? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="danger"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

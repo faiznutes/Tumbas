@@ -558,6 +558,11 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+    updatePassword: (id: string, password: string) => fetchApi<AdminUser>(`/users/${id}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ password }),
+    }),
+
     delete: (id: string) => fetchApi<{ success: boolean }>(`/users/${id}`, {
       method: 'DELETE',
     }),

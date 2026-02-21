@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { api, ProductVariant } from "@/lib/api";
+import Popup from "@/components/ui/Popup";
 
 type VariantDraft = ProductVariant;
 type VariantAttribute = { id: string; name: string; optionsText: string };
@@ -91,6 +92,8 @@ export default function CreateProduct() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [showImageUrlPopup, setShowImageUrlPopup] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState("");
   const [uploadingImages, setUploadingImages] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -171,9 +174,22 @@ export default function CreateProduct() {
   };
 
   const handleImageUrlAdd = () => {
-    const url = prompt("Masukkan URL gambar:");
-    if (!url) return;
+    setImageUrlInput("");
+    setShowImageUrlPopup(true);
+  };
+
+  const submitImageUrl = () => {
+    const url = imageUrlInput.trim();
+    if (!url) {
+      addToast("URL gambar wajib diisi", "warning");
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      addToast("URL gambar harus diawali http:// atau https://", "warning");
+      return;
+    }
     setImages((prev) => [...prev, url]);
+    setShowImageUrlPopup(false);
   };
 
   const handleImageUpload = async (files: FileList | null) => {
@@ -392,6 +408,25 @@ export default function CreateProduct() {
           </div>
         </div>
       </form>
+
+      <Popup
+        isOpen={showImageUrlPopup}
+        onClose={() => setShowImageUrlPopup(false)}
+        title="Tambah Gambar dari URL"
+        confirmText="Tambah"
+        cancelText="Batal"
+        onConfirm={submitImageUrl}
+      >
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#0d141b]">URL Gambar</label>
+          <input
+            value={imageUrlInput}
+            onChange={(e) => setImageUrlInput(e.target.value)}
+            placeholder="https://..."
+            className="w-full rounded-lg border border-[#e7edf3] px-3 py-2 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+          />
+        </div>
+      </Popup>
     </div>
   );
 }
