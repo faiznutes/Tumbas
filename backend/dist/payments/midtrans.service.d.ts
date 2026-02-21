@@ -17,8 +17,8 @@ export declare class MidtransService {
             quantity: number;
         }>;
     }): Promise<{
-        token: any;
-        orderId: any;
+        token: string;
+        orderId: string;
     }>;
     verifySignature(signatureKey: string, orderId: string, statusCode: string, grossAmount: string): boolean;
 }

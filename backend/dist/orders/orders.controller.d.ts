@@ -262,7 +262,7 @@ export declare class OrdersController {
         shippedAt: Date | null;
     }>;
     create(dto: CreateOrderDto): Promise<{
-        snapToken: any;
+        snapToken: string;
         publicToken: string;
         product: {
             id: string;

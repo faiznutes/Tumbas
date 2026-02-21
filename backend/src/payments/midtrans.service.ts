@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import Midtrans from 'midtrans-client';
@@ -49,10 +49,24 @@ export class MidtransService {
       },
     };
 
-    const transaction = await this.snap.createTransaction(parameter);
+    const transaction = await this.snap.createTransaction(parameter) as {
+      token?: string;
+      order_id?: string;
+      transaction_details?: {
+        order_id?: string;
+      };
+      error_messages?: string[];
+      status_message?: string;
+    };
+
+    if (!transaction?.token) {
+      const reason = transaction?.error_messages?.join('; ') || transaction?.status_message || 'Midtrans transaction failed';
+      throw new BadRequestException(reason);
+    }
+
     return {
       token: transaction.token,
-      orderId: transaction.transaction_details.order_id,
+      orderId: transaction.order_id || transaction.transaction_details?.order_id || parameter.transaction_details.order_id,
     };
   }
 

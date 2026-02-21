@@ -81,9 +81,13 @@ let MidtransService = class MidtransService {
             },
         };
         const transaction = await this.snap.createTransaction(parameter);
+        if (!transaction?.token) {
+            const reason = transaction?.error_messages?.join('; ') || transaction?.status_message || 'Midtrans transaction failed';
+            throw new common_1.BadRequestException(reason);
+        }
         return {
             token: transaction.token,
-            orderId: transaction.transaction_details.order_id,
+            orderId: transaction.order_id || transaction.transaction_details?.order_id || parameter.transaction_details.order_id,
         };
     }
     verifySignature(signatureKey, orderId, statusCode, grossAmount) {

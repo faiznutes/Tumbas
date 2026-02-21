@@ -312,7 +312,7 @@ export declare class OrdersService {
         selectedVariantKey?: string;
         selectedVariantLabel?: string;
     }): Promise<{
-        snapToken: any;
+        snapToken: string;
         publicToken: string;
         product: {
             id: string;
