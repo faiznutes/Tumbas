@@ -106,6 +106,95 @@ let SettingsService = class SettingsService {
         });
         return result;
     }
+    async getPaymentSettings() {
+        const defaults = {
+            midtransEnabled: true,
+            midtransClientKey: '',
+            midtransServerKey: '',
+            midtransIsProduction: false,
+        };
+        const keys = [
+            'payment_midtrans_enabled',
+            'payment_midtrans_client_key',
+            'payment_midtrans_server_key',
+            'payment_midtrans_is_production',
+        ];
+        const settings = await this.prisma.siteSettings.findMany({
+            where: { key: { in: keys } },
+        });
+        const result = { ...defaults };
+        settings.forEach((setting) => {
+            if (setting.key === 'payment_midtrans_enabled')
+                result.midtransEnabled = setting.value === 'true';
+            if (setting.key === 'payment_midtrans_client_key')
+                result.midtransClientKey = setting.value;
+            if (setting.key === 'payment_midtrans_server_key')
+                result.midtransServerKey = setting.value;
+            if (setting.key === 'payment_midtrans_is_production')
+                result.midtransIsProduction = setting.value === 'true';
+        });
+        return result;
+    }
+    async setPaymentSettings(data) {
+        const updates = [];
+        if (data.midtransEnabled !== undefined)
+            updates.push(this.setSetting('payment_midtrans_enabled', String(data.midtransEnabled)));
+        if (data.midtransClientKey !== undefined)
+            updates.push(this.setSetting('payment_midtrans_client_key', data.midtransClientKey));
+        if (data.midtransServerKey !== undefined)
+            updates.push(this.setSetting('payment_midtrans_server_key', data.midtransServerKey));
+        if (data.midtransIsProduction !== undefined)
+            updates.push(this.setSetting('payment_midtrans_is_production', String(data.midtransIsProduction)));
+        if (updates.length > 0)
+            await Promise.all(updates);
+        return this.getPaymentSettings();
+    }
+    async getShippingSettings() {
+        const defaults = {
+            minFreeShipping: 200000,
+            estimateJawa: 15000,
+            estimateLuarJawa: 30000,
+            providers: ['JNE', 'J&T', 'SiCepat'],
+        };
+        const keys = [
+            'shipping_min_free',
+            'shipping_estimate_jawa',
+            'shipping_estimate_luar_jawa',
+            'shipping_providers',
+        ];
+        const settings = await this.prisma.siteSettings.findMany({
+            where: { key: { in: keys } },
+        });
+        const result = { ...defaults };
+        settings.forEach((setting) => {
+            if (setting.key === 'shipping_min_free')
+                result.minFreeShipping = parseInt(setting.value, 10) || defaults.minFreeShipping;
+            if (setting.key === 'shipping_estimate_jawa')
+                result.estimateJawa = parseInt(setting.value, 10) || defaults.estimateJawa;
+            if (setting.key === 'shipping_estimate_luar_jawa')
+                result.estimateLuarJawa = parseInt(setting.value, 10) || defaults.estimateLuarJawa;
+            if (setting.key === 'shipping_providers') {
+                result.providers = setting.value.split(',').map((v) => v.trim()).filter(Boolean);
+            }
+        });
+        return result;
+    }
+    async setShippingSettings(data) {
+        const updates = [];
+        if (data.minFreeShipping !== undefined)
+            updates.push(this.setSetting('shipping_min_free', String(Math.max(0, data.minFreeShipping))));
+        if (data.estimateJawa !== undefined)
+            updates.push(this.setSetting('shipping_estimate_jawa', String(Math.max(0, data.estimateJawa))));
+        if (data.estimateLuarJawa !== undefined)
+            updates.push(this.setSetting('shipping_estimate_luar_jawa', String(Math.max(0, data.estimateLuarJawa))));
+        if (data.providers !== undefined) {
+            const providers = data.providers.map((v) => v.trim()).filter(Boolean).slice(0, 10);
+            updates.push(this.setSetting('shipping_providers', providers.join(',')));
+        }
+        if (updates.length > 0)
+            await Promise.all(updates);
+        return this.getShippingSettings();
+    }
     async setHomepageFeaturedSettings(data) {
         const updates = [];
         if (data.manualSlugs !== undefined) {

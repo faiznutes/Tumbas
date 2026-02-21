@@ -65,6 +65,46 @@ class UpdateHomepageFeaturedSettingsDto {
   maxItems?: number;
 }
 
+class UpdatePaymentSettingsDto {
+  @IsOptional()
+  @IsBoolean()
+  midtransEnabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  midtransClientKey?: string;
+
+  @IsOptional()
+  @IsString()
+  midtransServerKey?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  midtransIsProduction?: boolean;
+}
+
+class UpdateShippingSettingsDto {
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  minFreeShipping?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  estimateJawa?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  estimateLuarJawa?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  providers?: string[];
+}
+
 @Controller('settings')
 export class SettingsController {
   constructor(private settingsService: SettingsService) {}
@@ -107,6 +147,32 @@ export class SettingsController {
   @Post('homepage-featured')
   async updateHomepageFeaturedSettings(@Body() data: UpdateHomepageFeaturedSettingsDto) {
     return this.settingsService.setHomepageFeaturedSettings(data);
+  }
+
+  @Get('payment')
+  async getPaymentSettings() {
+    return this.settingsService.getPaymentSettings();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @Post('payment')
+  async updatePaymentSettings(@Body() data: UpdatePaymentSettingsDto) {
+    return this.settingsService.setPaymentSettings(data);
+  }
+
+  @Get('shipping')
+  async getShippingSettings() {
+    return this.settingsService.getShippingSettings();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @Post('shipping')
+  async updateShippingSettings(@Body() data: UpdateShippingSettingsDto) {
+    return this.settingsService.setShippingSettings(data);
   }
 
   @Get()

@@ -3,9 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
+import { api } from "@/lib/api";
 
 export default function CreateProduct() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
@@ -17,7 +20,7 @@ export default function CreateProduct() {
     stock: "",
     description: "",
     specifications: "",
-    status: "ACTIVE",
+    status: "AVAILABLE",
   });
 
   const categories = [
@@ -55,9 +58,32 @@ export default function CreateProduct() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await api.products.create({
+        title: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        category: formData.category,
+        price: Number(formData.price),
+        stock: Number(formData.stock),
+        images: images.map((url, index) => ({ url, position: index })),
+      });
+
+      if (formData.status === "ARCHIVED") {
+        const latest = await api.products.getAll({ limit: 1, search: formData.slug });
+        const created = latest.data.find((item) => item.slug === formData.slug);
+        if (created) {
+          await api.products.update(created.id, { status: "ARCHIVED" });
+        }
+      }
+
+      addToast("Produk berhasil dibuat", "success");
       router.push("/admin/products");
-    }, 1000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal membuat produk";
+      addToast(message, "error");
+      setLoading(false);
+    }
   };
 
   return (
@@ -271,8 +297,8 @@ export default function CreateProduct() {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                 >
-                  <option value="ACTIVE">Aktif</option>
-                  <option value="DRAFT">Draf</option>
+                  <option value="AVAILABLE">Aktif</option>
+                  <option value="ARCHIVED">Arsip</option>
                 </select>
               </div>
             </div>

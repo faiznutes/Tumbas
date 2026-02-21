@@ -17,6 +17,18 @@ declare class UpdateHomepageFeaturedSettingsDto {
     manualSlugs?: string[];
     maxItems?: number;
 }
+declare class UpdatePaymentSettingsDto {
+    midtransEnabled?: boolean;
+    midtransClientKey?: string;
+    midtransServerKey?: string;
+    midtransIsProduction?: boolean;
+}
+declare class UpdateShippingSettingsDto {
+    minFreeShipping?: number;
+    estimateJawa?: number;
+    estimateLuarJawa?: number;
+    providers?: string[];
+}
 export declare class SettingsController {
     private settingsService;
     constructor(settingsService: SettingsService);
@@ -43,6 +55,30 @@ export declare class SettingsController {
     updateHomepageFeaturedSettings(data: UpdateHomepageFeaturedSettingsDto): Promise<{
         manualSlugs: string[];
         maxItems: number;
+    }>;
+    getPaymentSettings(): Promise<{
+        midtransEnabled: boolean;
+        midtransClientKey: string;
+        midtransServerKey: string;
+        midtransIsProduction: boolean;
+    }>;
+    updatePaymentSettings(data: UpdatePaymentSettingsDto): Promise<{
+        midtransEnabled: boolean;
+        midtransClientKey: string;
+        midtransServerKey: string;
+        midtransIsProduction: boolean;
+    }>;
+    getShippingSettings(): Promise<{
+        minFreeShipping: number;
+        estimateJawa: number;
+        estimateLuarJawa: number;
+        providers: string[];
+    }>;
+    updateShippingSettings(data: UpdateShippingSettingsDto): Promise<{
+        minFreeShipping: number;
+        estimateJawa: number;
+        estimateLuarJawa: number;
+        providers: string[];
     }>;
     getAllSettings(): Promise<Record<string, string>>;
 }

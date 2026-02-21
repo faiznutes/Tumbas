@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { IsString, IsEmail, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsInt, Min } from 'class-validator';
 import { OrdersService } from './orders.service';
 import { PaymentStatus, UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -31,6 +31,19 @@ class CreateOrderDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  shippingCost?: number;
+
+  @IsOptional()
+  @IsString()
+  shippingProvider?: string;
+
+  @IsOptional()
+  @IsString()
+  shippingRegion?: string;
 }
 
 class VerifyReceiptQueryDto {

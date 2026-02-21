@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrdersService = void 0;
 const common_1 = require("@nestjs/common");
@@ -308,7 +309,15 @@ let OrdersService = class OrdersService {
                 throw new common_1.BadRequestException('There is already a pending order for this product');
             }
             const orderCode = `TMB-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const amount = product.price + 15000;
+            const shippingCost = Math.max(0, data.shippingCost ?? 15000);
+            const amount = product.price + shippingCost;
+            const shippingNote = [
+                data.shippingProvider ? `Courier: ${data.shippingProvider}` : null,
+                data.shippingRegion ? `Region: ${data.shippingRegion}` : null,
+                `Shipping: ${shippingCost}`,
+            ]
+                .filter(Boolean)
+                .join(' | ');
             const order = await tx.order.create({
                 data: {
                     orderCode,
@@ -320,7 +329,7 @@ let OrdersService = class OrdersService {
                     customerAddress: data.customerAddress,
                     customerCity: data.customerCity,
                     customerPostalCode: data.customerPostalCode,
-                    notes: data.notes,
+                    notes: data.notes ? `${data.notes}\n${shippingNote}` : shippingNote,
                     paymentStatus: 'PENDING',
                 },
                 include: { product: true },
@@ -415,7 +424,6 @@ exports.OrdersService = OrdersService;
 exports.OrdersService = OrdersService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        midtrans_service_1.MidtransService,
-        config_1.ConfigService])
+        midtrans_service_1.MidtransService, typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
 ], OrdersService);
 //# sourceMappingURL=orders.service.js.map

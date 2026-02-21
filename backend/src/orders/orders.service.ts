@@ -290,6 +290,9 @@ export class OrdersService {
     customerCity: string;
     customerPostalCode: string;
     notes?: string;
+    shippingCost?: number;
+    shippingProvider?: string;
+    shippingRegion?: string;
   }) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({
@@ -316,7 +319,15 @@ export class OrdersService {
       }
 
       const orderCode = `TMB-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const amount = product.price + 15000;
+      const shippingCost = Math.max(0, data.shippingCost ?? 15000);
+      const amount = product.price + shippingCost;
+      const shippingNote = [
+        data.shippingProvider ? `Courier: ${data.shippingProvider}` : null,
+        data.shippingRegion ? `Region: ${data.shippingRegion}` : null,
+        `Shipping: ${shippingCost}`,
+      ]
+        .filter(Boolean)
+        .join(' | ');
 
       const order = await tx.order.create({
         data: {
@@ -329,7 +340,7 @@ export class OrdersService {
           customerAddress: data.customerAddress,
           customerCity: data.customerCity,
           customerPostalCode: data.customerPostalCode,
-          notes: data.notes,
+          notes: data.notes ? `${data.notes}\n${shippingNote}` : shippingNote,
           paymentStatus: 'PENDING',
         },
         include: { product: true },

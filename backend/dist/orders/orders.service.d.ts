@@ -16,151 +16,20 @@ export declare class OrdersService {
         status?: PaymentStatus;
         search?: string;
     }): Promise<{
-        data: ({
-            product: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                category: string | null;
-                status: import("@prisma/client").$Enums.ProductStatus;
-                description: string | null;
-                title: string;
-                slug: string;
-                price: number;
-                stock: number;
-                createdById: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            createdById: string | null;
-            productId: string;
-            customerEmail: string;
-            customerName: string;
-            orderCode: string;
-            amount: number;
-            customerPhone: string;
-            customerAddress: string;
-            customerCity: string;
-            customerPostalCode: string;
-            notes: string | null;
-            paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-            midtransTransactionId: string | null;
-            midtransOrderId: string | null;
-            snapToken: string | null;
-            shippedToExpedition: boolean;
-            expeditionResi: string | null;
-            expeditionName: string | null;
-            shippedAt: Date | null;
-            paidAt: Date | null;
-        })[];
+        data: any;
         meta: {
-            total: number;
+            total: any;
             page: number;
             limit: number;
             totalPages: number;
         };
     }>;
-    findById(id: string): Promise<{
-        product: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            category: string | null;
-            status: import("@prisma/client").$Enums.ProductStatus;
-            description: string | null;
-            title: string;
-            slug: string;
-            price: number;
-            stock: number;
-            createdById: string | null;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        createdById: string | null;
-        productId: string;
-        customerEmail: string;
-        customerName: string;
-        orderCode: string;
-        amount: number;
-        customerPhone: string;
-        customerAddress: string;
-        customerCity: string;
-        customerPostalCode: string;
-        notes: string | null;
-        paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-        midtransTransactionId: string | null;
-        midtransOrderId: string | null;
-        snapToken: string | null;
-        shippedToExpedition: boolean;
-        expeditionResi: string | null;
-        expeditionName: string | null;
-        shippedAt: Date | null;
-        paidAt: Date | null;
-    }>;
-    findPublicById(id: string, token?: string): Promise<{
-        product: {
-            id: string;
-            status: import("@prisma/client").$Enums.ProductStatus;
-            title: string;
-            slug: string;
-            price: number;
-        };
-        id: string;
-        createdAt: Date;
-        orderCode: string;
-        amount: number;
-        paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-        shippedToExpedition: boolean;
-        expeditionResi: string | null;
-        expeditionName: string | null;
-        shippedAt: Date | null;
-    }>;
+    findById(id: string): Promise<any>;
+    findPublicById(id: string, token?: string): Promise<any>;
     markShippedToExpedition(id: string, data: {
         expeditionResi: string;
         expeditionName?: string;
-    }): Promise<{
-        product: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            category: string | null;
-            status: import("@prisma/client").$Enums.ProductStatus;
-            description: string | null;
-            title: string;
-            slug: string;
-            price: number;
-            stock: number;
-            createdById: string | null;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        createdById: string | null;
-        productId: string;
-        customerEmail: string;
-        customerName: string;
-        orderCode: string;
-        amount: number;
-        customerPhone: string;
-        customerAddress: string;
-        customerCity: string;
-        customerPostalCode: string;
-        notes: string | null;
-        paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-        midtransTransactionId: string | null;
-        midtransOrderId: string | null;
-        snapToken: string | null;
-        shippedToExpedition: boolean;
-        expeditionResi: string | null;
-        expeditionName: string | null;
-        shippedAt: Date | null;
-        paidAt: Date | null;
-    }>;
+    }): Promise<any>;
     verifyReceipt(receiptNo: string, verificationCode: string): Promise<{
         valid: boolean;
         reason: "invalid_receipt_format";
@@ -176,14 +45,14 @@ export declare class OrdersService {
     } | {
         valid: boolean;
         order: {
-            id: string;
-            orderCode: string;
+            id: any;
+            orderCode: any;
             receiptNo: string;
             verificationCode: string;
-            productTitle: string;
-            amount: number;
-            paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-            createdAt: Date;
+            productTitle: any;
+            amount: any;
+            paymentStatus: any;
+            createdAt: any;
         };
         reason?: undefined;
     }>;
@@ -199,36 +68,36 @@ export declare class OrdersService {
         valid: boolean;
         reason: "not_shipped_to_expedition";
         order: {
-            id: string;
-            orderCode: string;
+            id: any;
+            orderCode: any;
             receiptNo: string;
             verificationCode: string;
             shippingResi: string;
-            shippedToExpedition: boolean;
-            expeditionResi: string | null;
-            expeditionName: string | null;
-            shippedAt: Date | null;
-            productTitle: string;
-            amount: number;
-            paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-            createdAt: Date;
+            shippedToExpedition: any;
+            expeditionResi: any;
+            expeditionName: any;
+            shippedAt: any;
+            productTitle: any;
+            amount: any;
+            paymentStatus: any;
+            createdAt: any;
         };
     } | {
         valid: boolean;
         order: {
-            id: string;
-            orderCode: string;
+            id: any;
+            orderCode: any;
             receiptNo: string;
             verificationCode: string;
             shippingResi: string;
-            shippedToExpedition: true;
-            expeditionResi: string;
-            expeditionName: string | null;
-            shippedAt: Date | null;
-            productTitle: string;
-            amount: number;
-            paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-            createdAt: Date;
+            shippedToExpedition: any;
+            expeditionResi: any;
+            expeditionName: any;
+            shippedAt: any;
+            productTitle: any;
+            amount: any;
+            paymentStatus: any;
+            createdAt: any;
         };
         reason?: undefined;
     }>;
@@ -241,94 +110,15 @@ export declare class OrdersService {
         customerCity: string;
         customerPostalCode: string;
         notes?: string;
-    }): Promise<{
-        snapToken: any;
-        publicToken: string;
-        product: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            category: string | null;
-            status: import("@prisma/client").$Enums.ProductStatus;
-            description: string | null;
-            title: string;
-            slug: string;
-            price: number;
-            stock: number;
-            createdById: string | null;
-        };
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        createdById: string | null;
-        productId: string;
-        customerEmail: string;
-        customerName: string;
-        orderCode: string;
-        amount: number;
-        customerPhone: string;
-        customerAddress: string;
-        customerCity: string;
-        customerPostalCode: string;
-        notes: string | null;
-        paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-        midtransTransactionId: string | null;
-        midtransOrderId: string | null;
-        shippedToExpedition: boolean;
-        expeditionResi: string | null;
-        expeditionName: string | null;
-        shippedAt: Date | null;
-        paidAt: Date | null;
-    }>;
-    updateStatus(id: string, status: PaymentStatus): Promise<{
-        product: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            category: string | null;
-            status: import("@prisma/client").$Enums.ProductStatus;
-            description: string | null;
-            title: string;
-            slug: string;
-            price: number;
-            stock: number;
-            createdById: string | null;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        createdById: string | null;
-        productId: string;
-        customerEmail: string;
-        customerName: string;
-        orderCode: string;
-        amount: number;
-        customerPhone: string;
-        customerAddress: string;
-        customerCity: string;
-        customerPostalCode: string;
-        notes: string | null;
-        paymentStatus: import("@prisma/client").$Enums.PaymentStatus;
-        midtransTransactionId: string | null;
-        midtransOrderId: string | null;
-        snapToken: string | null;
-        shippedToExpedition: boolean;
-        expeditionResi: string | null;
-        expeditionName: string | null;
-        shippedAt: Date | null;
-        paidAt: Date | null;
-    }>;
+        shippingCost?: number;
+        shippingProvider?: string;
+        shippingRegion?: string;
+    }): Promise<any>;
+    updateStatus(id: string, status: PaymentStatus): Promise<any>;
     handleWebhook(payload: {
         order_id: string;
         transaction_status: string;
         transaction_id?: string;
         status_code?: string;
-    }): Promise<{
-        success: boolean;
-        message: string;
-    } | {
-        success: boolean;
-        message?: undefined;
-    }>;
+    }): Promise<any>;
 }

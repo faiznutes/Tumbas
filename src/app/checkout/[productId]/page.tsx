@@ -39,6 +39,13 @@ export default function CheckoutPage() {
     customerName: "", customerEmail: "", customerPhone: "", customerAddress: "", customerCity: "", customerPostalCode: "", notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [shippingConfig, setShippingConfig] = useState({
+    minFreeShipping: 200000,
+    estimateJawa: 15000,
+    estimateLuarJawa: 30000,
+    providers: ["JNE", "J&T", "SiCepat"],
+  });
+  const [shippingProvider, setShippingProvider] = useState("JNE");
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
 
@@ -58,7 +65,27 @@ export default function CheckoutPage() {
     }
   }, [productId]);
 
-  const shipping = 15000;
+  useEffect(() => {
+    async function fetchShipping() {
+      try {
+        const data = await api.settings.getShipping();
+        setShippingConfig(data);
+        if (data.providers.length > 0) {
+          setShippingProvider(data.providers[0]);
+        }
+      } catch {
+        // use defaults
+      }
+    }
+    fetchShipping();
+  }, []);
+
+  const cityLower = formData.customerCity.trim().toLowerCase();
+  const jawaKeywords = ["jakarta", "bandung", "bogor", "depok", "bekasi", "semarang", "yogyakarta", "solo", "surabaya", "malang", "kediri", "cirebon", "tegal"];
+  const isJawa = jawaKeywords.some((key) => cityLower.includes(key));
+  const shippingRegion = isJawa ? "Jawa" : "Luar Jawa";
+  const baseShipping = isJawa ? shippingConfig.estimateJawa : shippingConfig.estimateLuarJawa;
+  const shipping = (product?.price || 0) >= shippingConfig.minFreeShipping ? 0 : baseShipping;
   const total = (product?.price || 0) + shipping;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,6 +97,9 @@ export default function CheckoutPage() {
       const order = await api.orders.create({
         productId: product.id,
         ...formData,
+        shippingCost: shipping,
+        shippingProvider,
+        shippingRegion,
       });
       
       if (order.snapToken) {
@@ -198,6 +228,14 @@ export default function CheckoutPage() {
                   <h2 className="text-lg font-bold text-[#0d141b] mb-4">Data Pengiriman</h2>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Kurir</label>
+                      <select value={shippingProvider} onChange={(e) => setShippingProvider(e.target.value)} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]">
+                        {shippingConfig.providers.map((provider) => (
+                          <option key={provider} value={provider}>{provider}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-[#0d141b] mb-2">Nama Lengkap</label>
                       <input required name="customerName" value={formData.customerName} onChange={handleChange} className="w-full px-4 py-3 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]" placeholder="Nama lengkap Anda" />
                     </div>
@@ -264,13 +302,14 @@ export default function CheckoutPage() {
                     <span className="text-[#4c739a]">Subtotal</span>
                     <span className="text-[#0d141b]">{formatPrice(product.price)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#4c739a]">Ongkir</span>
-                    <span className="text-[#0d141b]">{formatPrice(shipping)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t border-[#e7edf3]">
-                    <span className="text-[#0d141b]">Total</span>
-                    <span className="text-[#137fec]">{formatPrice(total)}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#4c739a]">Ongkir</span>
+                      <span className="text-[#0d141b]">{formatPrice(shipping)}</span>
+                    </div>
+                    <p className="text-xs text-[#4c739a]">Estimasi wilayah: {shippingRegion} via {shippingProvider}</p>
+                    <div className="flex justify-between font-bold text-lg pt-2 border-t border-[#e7edf3]">
+                      <span className="text-[#0d141b]">Total</span>
+                      <span className="text-[#137fec]">{formatPrice(total)}</span>
                   </div>
                 </div>
               </div>

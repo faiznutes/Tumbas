@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { setAuthToken } from "@/lib/api";
@@ -19,6 +19,7 @@ const navItems = [
 export default function AdminSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const role = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -58,7 +59,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f6f7f8]">
       {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r border-slate-200 bg-white overflow-y-auto">
+      <aside className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200 bg-white overflow-y-auto transition-transform md:static md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center gap-3 p-6">
           <Link href="/admin/dashboard" className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#137fec] text-white">
@@ -76,6 +77,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
             <Link 
               key={item.href}
               href={item.href} 
+              onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                 pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href))
                   ? "bg-[#137fec]/10 text-[#137fec]" 
@@ -106,29 +108,23 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
         </div>
       </aside>
 
+      {sidebarOpen && (
+        <button className="fixed inset-0 z-20 bg-black/30 md:hidden" onClick={() => setSidebarOpen(false)} aria-label="Tutup menu" />
+      )}
+
       {/* Main Content */}
       <main className="flex flex-1 flex-col overflow-y-auto bg-[#f6f7f8]">
         {/* Top Header */}
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur">
           <div className="flex items-center gap-4">
+            <button className="rounded-lg p-2 text-[#4c739a] hover:bg-slate-100 hover:text-[#137fec]" onClick={() => setSidebarOpen((prev) => !prev)} aria-label="Toggle menu">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
             <h2 className="text-xl font-bold tracking-tight text-[#0d141b]">
               {navItems.find(item => pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href)))?.label || 'Dashboard'}
             </h2>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative hidden sm:block">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#4c739a]">search</span>
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="h-10 w-64 rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#137fec]"
-              />
-            </div>
-            <button className="relative p-2 text-[#4c739a] hover:text-[#137fec] hover:bg-slate-100 rounded-lg transition-colors">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-            </button>
-          </div>
+          <div className="w-10" />
         </header>
         {children}
       </main>

@@ -103,6 +103,62 @@ __decorate([
     (0, class_validator_1.Max)(8),
     __metadata("design:type", Number)
 ], UpdateHomepageFeaturedSettingsDto.prototype, "maxItems", void 0);
+class UpdatePaymentSettingsDto {
+    midtransEnabled;
+    midtransClientKey;
+    midtransServerKey;
+    midtransIsProduction;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdatePaymentSettingsDto.prototype, "midtransEnabled", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdatePaymentSettingsDto.prototype, "midtransClientKey", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdatePaymentSettingsDto.prototype, "midtransServerKey", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdatePaymentSettingsDto.prototype, "midtransIsProduction", void 0);
+class UpdateShippingSettingsDto {
+    minFreeShipping;
+    estimateJawa;
+    estimateLuarJawa;
+    providers;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateShippingSettingsDto.prototype, "minFreeShipping", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateShippingSettingsDto.prototype, "estimateJawa", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateShippingSettingsDto.prototype, "estimateLuarJawa", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], UpdateShippingSettingsDto.prototype, "providers", void 0);
 let SettingsController = class SettingsController {
     settingsService;
     constructor(settingsService) {
@@ -126,6 +182,18 @@ let SettingsController = class SettingsController {
     }
     async updateHomepageFeaturedSettings(data) {
         return this.settingsService.setHomepageFeaturedSettings(data);
+    }
+    async getPaymentSettings() {
+        return this.settingsService.getPaymentSettings();
+    }
+    async updatePaymentSettings(data) {
+        return this.settingsService.setPaymentSettings(data);
+    }
+    async getShippingSettings() {
+        return this.settingsService.getShippingSettings();
+    }
+    async updateShippingSettings(data) {
+        return this.settingsService.setShippingSettings(data);
     }
     async getAllSettings() {
         return this.settingsService.getAllSettings();
@@ -180,6 +248,38 @@ __decorate([
     __metadata("design:paramtypes", [UpdateHomepageFeaturedSettingsDto]),
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "updateHomepageFeaturedSettings", null);
+__decorate([
+    (0, common_1.Get)('payment'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "getPaymentSettings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.Post)('payment'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [UpdatePaymentSettingsDto]),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "updatePaymentSettings", null);
+__decorate([
+    (0, common_1.Get)('shipping'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "getShippingSettings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.Post)('shipping'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [UpdateShippingSettingsDto]),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "updateShippingSettings", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),

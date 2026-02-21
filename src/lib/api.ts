@@ -332,6 +332,9 @@ export const api = {
       customerCity: string;
       customerPostalCode: string;
       notes?: string;
+      shippingCost?: number;
+      shippingProvider?: string;
+      shippingRegion?: string;
     }) => fetchApi<Order>('/orders', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -522,6 +525,50 @@ export const api = {
       manualSlugs: string[];
       maxItems: number;
     }>('/settings/homepage-featured', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getPayment: () => fetchApi<{
+      midtransEnabled: boolean;
+      midtransClientKey: string;
+      midtransServerKey: string;
+      midtransIsProduction: boolean;
+    }>('/settings/payment'),
+
+    updatePayment: (data: {
+      midtransEnabled?: boolean;
+      midtransClientKey?: string;
+      midtransServerKey?: string;
+      midtransIsProduction?: boolean;
+    }) => fetchApi<{
+      midtransEnabled: boolean;
+      midtransClientKey: string;
+      midtransServerKey: string;
+      midtransIsProduction: boolean;
+    }>('/settings/payment', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getShipping: () => fetchApi<{
+      minFreeShipping: number;
+      estimateJawa: number;
+      estimateLuarJawa: number;
+      providers: string[];
+    }>('/settings/shipping'),
+
+    updateShipping: (data: {
+      minFreeShipping?: number;
+      estimateJawa?: number;
+      estimateLuarJawa?: number;
+      providers?: string[];
+    }) => fetchApi<{
+      minFreeShipping: number;
+      estimateJawa: number;
+      estimateLuarJawa: number;
+      providers: string[];
+    }>('/settings/shipping', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

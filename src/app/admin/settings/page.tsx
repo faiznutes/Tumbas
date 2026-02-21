@@ -44,6 +44,19 @@ export default function AdminSettings() {
     maxItems: 3,
   });
   const [manualSlugsInput, setManualSlugsInput] = useState('');
+  const [paymentSettings, setPaymentSettings] = useState({
+    midtransEnabled: true,
+    midtransClientKey: '',
+    midtransServerKey: '',
+    midtransIsProduction: false,
+  });
+  const [shippingSettings, setShippingSettings] = useState({
+    minFreeShipping: 200000,
+    estimateJawa: 15000,
+    estimateLuarJawa: 30000,
+    providers: ['JNE', 'J&T', 'SiCepat'],
+  });
+  const [shippingProvidersInput, setShippingProvidersInput] = useState('JNE, J&T, SiCepat');
 
   useEffect(() => {
     if (activeTab === 'promo') {
@@ -52,6 +65,10 @@ export default function AdminSettings() {
       fetchWeeklyDealSettings();
     } else if (activeTab === 'homepage-featured') {
       fetchHomepageFeaturedSettings();
+    } else if (activeTab === 'payment') {
+      fetchPaymentSettings();
+    } else if (activeTab === 'shipping') {
+      fetchShippingSettings();
     }
   }, [activeTab]);
 
@@ -80,6 +97,30 @@ export default function AdminSettings() {
       setManualSlugsInput(data.manualSlugs.join('\n'));
     } catch (error) {
       console.error('Failed to fetch homepage featured settings:', error);
+    }
+  }
+
+  async function fetchPaymentSettings() {
+    try {
+      const data = await api.settings.getPayment();
+      setPaymentSettings(data);
+    } catch (error) {
+      console.error('Failed to fetch payment settings:', error);
+    }
+  }
+
+  async function fetchShippingSettings() {
+    try {
+      const data = await api.settings.getShipping();
+      setShippingSettings(data);
+      setShippingProvidersInput(data.providers.join(', '));
+      setSettings((prev) => ({
+        ...prev,
+        shippingCost: String(data.estimateJawa),
+        minFreeShipping: String(data.minFreeShipping),
+      }));
+    } catch (error) {
+      console.error('Failed to fetch shipping settings:', error);
     }
   }
 
@@ -129,6 +170,40 @@ export default function AdminSettings() {
     } catch (error) {
       console.error('Failed to save homepage featured settings:', error);
       addToast('Gagal menyimpan pengaturan Kategori Pilihan', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function savePaymentSettings() {
+    setLoading(true);
+    try {
+      await api.settings.updatePayment(paymentSettings);
+      addToast('Pengaturan Midtrans berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save payment settings:', error);
+      addToast('Gagal menyimpan pengaturan Midtrans', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveShippingSettings() {
+    setLoading(true);
+    try {
+      const providers = shippingProvidersInput.split(/[\n,]/).map((v) => v.trim()).filter(Boolean);
+      const response = await api.settings.updateShipping({
+        minFreeShipping: shippingSettings.minFreeShipping,
+        estimateJawa: shippingSettings.estimateJawa,
+        estimateLuarJawa: shippingSettings.estimateLuarJawa,
+        providers,
+      });
+      setShippingSettings(response);
+      setShippingProvidersInput(response.providers.join(', '));
+      addToast('Pengaturan pengiriman berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save shipping settings:', error);
+      addToast('Gagal menyimpan pengaturan pengiriman', 'error');
     } finally {
       setLoading(false);
     }
@@ -710,15 +785,50 @@ export default function AdminSettings() {
                       <p className="font-medium text-[#0d141b]">Midtrans</p>
                       <p className="text-sm text-[#4c739a]">Konfigurasi pembayaran Midtrans</p>
                     </div>
-                    <span className="ml-auto px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktif</span>
+                    <span className={`ml-auto px-3 py-1 text-xs font-medium rounded-full ${paymentSettings.midtransEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {paymentSettings.midtransEnabled ? 'Aktif' : 'Nonaktif'}
+                    </span>
                   </div>
-                  <button className="text-[#137fec] text-sm font-medium hover:underline">
-                    Konfigurasi &rarr;
-                  </button>
+                  <div className="space-y-4">
+                    <label className="flex items-center justify-between py-2">
+                      <span className="text-sm font-medium text-[#0d141b]">Aktifkan Midtrans</span>
+                      <input
+                        type="checkbox"
+                        checked={paymentSettings.midtransEnabled}
+                        onChange={(e) => setPaymentSettings((prev) => ({ ...prev, midtransEnabled: e.target.checked }))}
+                      />
+                    </label>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Client Key</label>
+                      <input
+                        type="text"
+                        value={paymentSettings.midtransClientKey}
+                        onChange={(e) => setPaymentSettings((prev) => ({ ...prev, midtransClientKey: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Server Key</label>
+                      <input
+                        type="password"
+                        value={paymentSettings.midtransServerKey}
+                        onChange={(e) => setPaymentSettings((prev) => ({ ...prev, midtransServerKey: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                      />
+                    </div>
+                    <label className="flex items-center justify-between py-2">
+                      <span className="text-sm font-medium text-[#0d141b]">Mode Produksi</span>
+                      <input
+                        type="checkbox"
+                        checked={paymentSettings.midtransIsProduction}
+                        onChange={(e) => setPaymentSettings((prev) => ({ ...prev, midtransIsProduction: e.target.checked }))}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div className="pt-4">
-                  <button className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                    Simpan Perubahan
+                  <button onClick={savePaymentSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
               </div>
@@ -731,14 +841,24 @@ export default function AdminSettings() {
               <div className="space-y-6">
                 <div>
                   <label htmlFor="shippingCost" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Biaya Pengiriman (Rp)
+                    Estimasi Ongkir Jawa (Rp)
                   </label>
                   <input
                     type="number"
                     id="shippingCost"
-                    name="shippingCost"
-                    value={settings.shippingCost}
-                    onChange={handleChange}
+                    value={shippingSettings.estimateJawa}
+                    onChange={(e) => setShippingSettings((prev) => ({ ...prev, estimateJawa: Number(e.target.value) || 0 }))}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Estimasi Ongkir Luar Jawa (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    value={shippingSettings.estimateLuarJawa}
+                    onChange={(e) => setShippingSettings((prev) => ({ ...prev, estimateLuarJawa: Number(e.target.value) || 0 }))}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                   />
                 </div>
@@ -749,9 +869,8 @@ export default function AdminSettings() {
                   <input
                     type="number"
                     id="minFreeShipping"
-                    name="minFreeShipping"
-                    value={settings.minFreeShipping}
-                    onChange={handleChange}
+                    value={shippingSettings.minFreeShipping}
+                    onChange={(e) => setShippingSettings((prev) => ({ ...prev, minFreeShipping: Number(e.target.value) || 0 }))}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                   />
                 </div>
@@ -761,18 +880,21 @@ export default function AdminSettings() {
                       <span className="material-symbols-outlined text-purple-600">local_shipping</span>
                     </div>
                     <div>
-                      <p className="font-medium text-[#0d141b]">JNE Express</p>
-                      <p className="text-sm text-[#4c739a]">Integrasi pengiriman JNE</p>
+                      <p className="font-medium text-[#0d141b]">Kurir Aktif</p>
+                      <p className="text-sm text-[#4c739a]">Pisahkan dengan koma (contoh: JNE, J&T, SiCepat, AnterAja)</p>
                     </div>
-                    <span className="ml-auto px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Aktif</span>
+                    <span className="ml-auto px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">{shippingSettings.providers.length} kurir</span>
                   </div>
-                  <button className="text-[#137fec] text-sm font-medium hover:underline">
-                    Konfigurasi &rarr;
-                  </button>
+                  <textarea
+                    rows={2}
+                    value={shippingProvidersInput}
+                    onChange={(e) => setShippingProvidersInput(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                  />
                 </div>
                 <div className="pt-4">
-                  <button className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                    Simpan Perubahan
+                  <button onClick={saveShippingSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
               </div>

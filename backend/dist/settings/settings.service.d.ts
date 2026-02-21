@@ -2,22 +2,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export declare class SettingsService {
     private prisma;
     constructor(prisma: PrismaService);
-    getSetting(key: string): Promise<string | undefined>;
-    setSetting(key: string, value: string): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        key: string;
-        value: string;
-    }>;
+    getSetting(key: string): Promise<any>;
+    setSetting(key: string, value: string): Promise<any>;
     getAllSettings(): Promise<Record<string, string>>;
-    setSettings(data: object): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        key: string;
-        value: string;
-    }[]>;
+    setSettings(data: object): Promise<any>;
     getPromoSettings(): Promise<{
         heroImage: string;
         heroTitle: string;
@@ -29,6 +17,40 @@ export declare class SettingsService {
     getHomepageFeaturedSettings(): Promise<{
         manualSlugs: string[];
         maxItems: number;
+    }>;
+    getPaymentSettings(): Promise<{
+        midtransEnabled: boolean;
+        midtransClientKey: string;
+        midtransServerKey: string;
+        midtransIsProduction: boolean;
+    }>;
+    setPaymentSettings(data: {
+        midtransEnabled?: boolean;
+        midtransClientKey?: string;
+        midtransServerKey?: string;
+        midtransIsProduction?: boolean;
+    }): Promise<{
+        midtransEnabled: boolean;
+        midtransClientKey: string;
+        midtransServerKey: string;
+        midtransIsProduction: boolean;
+    }>;
+    getShippingSettings(): Promise<{
+        minFreeShipping: number;
+        estimateJawa: number;
+        estimateLuarJawa: number;
+        providers: string[];
+    }>;
+    setShippingSettings(data: {
+        minFreeShipping?: number;
+        estimateJawa?: number;
+        estimateLuarJawa?: number;
+        providers?: string[];
+    }): Promise<{
+        minFreeShipping: number;
+        estimateJawa: number;
+        estimateLuarJawa: number;
+        providers: string[];
     }>;
     setHomepageFeaturedSettings(data: {
         manualSlugs?: string[];
