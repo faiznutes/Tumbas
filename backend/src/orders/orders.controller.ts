@@ -147,12 +147,14 @@ export class OrdersController {
     @Query('limit') limit?: string,
     @Query('status') status?: PaymentStatus,
     @Query('search') search?: string,
+    @Query('includeExpired') includeExpired?: string,
   ) {
     return this.ordersService.findAll({
       page: page ? parseInt(page) : undefined,
       limit: limit ? parseInt(limit) : undefined,
       status,
       search,
+      includeExpired: includeExpired === 'true' || includeExpired === '1',
     });
   }
 

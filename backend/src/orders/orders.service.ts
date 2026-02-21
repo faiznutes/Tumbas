@@ -93,19 +93,43 @@ export class OrdersService {
     });
   }
 
+  private getPendingTimeoutMinutes() {
+    const raw = Number(this.configService.get<string>('ORDER_PENDING_TIMEOUT_MINUTES') || 120);
+    if (!Number.isFinite(raw)) return 120;
+    return Math.max(5, Math.floor(raw));
+  }
+
+  private async expireStalePendingOrders() {
+    const timeoutMinutes = this.getPendingTimeoutMinutes();
+    const cutoff = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+    await this.prisma.order.updateMany({
+      where: {
+        paymentStatus: 'PENDING',
+        createdAt: { lt: cutoff },
+        paidAt: null,
+      },
+      data: { paymentStatus: 'EXPIRED' },
+    });
+  }
+
   async findAll(params: {
     page?: number;
     limit?: number;
     status?: PaymentStatus;
     search?: string;
+    includeExpired?: boolean;
   }) {
-    const { page = 1, limit = 20, status, search } = params;
+    await this.expireStalePendingOrders();
+
+    const { page = 1, limit = 20, status, search, includeExpired = false } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.OrderWhereInput = {};
     
     if (status) {
       where.paymentStatus = status;
+    } else if (!includeExpired) {
+      where.paymentStatus = { notIn: ['EXPIRED', 'CANCELLED'] };
     }
     
     if (search) {
@@ -139,6 +163,8 @@ export class OrdersService {
   }
 
   async findById(id: string) {
+    await this.expireStalePendingOrders();
+
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: { product: true, orderItems: true },
@@ -155,6 +181,8 @@ export class OrdersService {
     if (!this.isValidPublicToken(id, token)) {
       throw new UnauthorizedException('Invalid order token');
     }
+
+    await this.expireStalePendingOrders();
 
     const order = await this.prisma.order.findUnique({
       where: { id },
@@ -193,6 +221,8 @@ export class OrdersService {
       throw new UnauthorizedException('Invalid order token');
     }
 
+    await this.expireStalePendingOrders();
+
     const order = await this.prisma.order.findUnique({
       where: { id },
       select: {
@@ -206,7 +236,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.paymentStatus === 'PAID' || order.paymentStatus === 'FAILED' || order.paymentStatus === 'EXPIRED' || order.paymentStatus === 'CANCELLED') {
+    if (order.paymentStatus === 'PAID' || order.paymentStatus === 'FAILED' || order.paymentStatus === 'CANCELLED') {
       return this.findPublicById(id, token);
     }
 

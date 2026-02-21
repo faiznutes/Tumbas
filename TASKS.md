@@ -88,6 +88,21 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Perbaiki fallback API base frontend ke `/api` agar login/dashboard tidak gagal saat diakses via reverse proxy/tunnel
 - [x] Aktifkan Quick Tunnel khusus Coolify dashboard untuk akses panel saat port 8000 tidak direct-access dari jaringan user
 
+## Tambahan Plan (User Request Lanjutan)
+- [~] Timeout order belum bayar: otomatis `PENDING -> EXPIRED` setelah 2 jam (strategi aman tanpa hard delete langsung)
+- [x] Exclude order `EXPIRED/CANCELLED` dari list/laporan default agar data pending lama tidak memenuhi laporan aktif
+- [ ] Tambah aksi hapus di `/admin/messages` (single + bulk)
+- [ ] Tambah manajemen permission granular oleh `SUPER_ADMIN` (view/edit per modul: produk, pesanan, laporan, pelanggan, pesan, pengaturan)
+- [ ] Perluas aksi operasional di `/admin/customers` (detail/filter/export)
+- [ ] Batasi pengaturan toko ke field yang dibutuhkan (nama toko + pajak)
+- [ ] Refactor form varian produk jadi custom dinamis (atribut bebas + sub-opsi)
+- [ ] Tambah upload gambar produk (file), kompresi, dan normalisasi rasio 1:1 tanpa stretch
+- [ ] Perbaiki responsive header: brand `TUMBAS` tetap tampil di mobile
+- [ ] Tambah menu header publik untuk cek status resi dan sinkronkan rute terkait
+- [ ] Perbaiki UX responsive `/admin/settings` (tab/icon + layout mobile agar form terbaca)
+- [ ] Audit full i18n: konsisten Bahasa Indonesia (contoh `Settings` -> `Pengaturan`)
+- [ ] Tambah pengaturan kategori pilihan beranda berbasis slug manual (multiline/koma) + kontrol aktif/hapus
+
 ## Verification Log
 - [x] `npm run build` backend (post RajaOngkir + Midtrans shipping item details): pass
 - [x] `npm run build` frontend (post cart realtime + checkout RajaOngkir): pass
@@ -189,6 +204,9 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Tambah banner health di `/admin/webhooks` untuk threshold operasional (`failed`/`invalid_signature`/`warning`)
 - [x] Tambah test backend untuk kompatibilitas `ORDER_PUBLIC_SECRET_PREVIOUS` pada public token order
 - [x] Tambah dokumen UAT final pembayaran/webhook: `UAT_CHECKLIST_PAYMENT_WEBHOOK.md`
+- [x] `npm test` backend (post pending-timeout auto-expire + includeExpired filter): pass
+- [x] `npm run build` backend (post pending-timeout auto-expire): pass
+- [x] `npm run build` frontend (post includeExpired API param typing): pass
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)

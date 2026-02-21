@@ -7,6 +7,7 @@ describe('OrdersService', () => {
   const prisma = {
     order: {
       findUnique: jest.fn(),
+      updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
   } as any;
