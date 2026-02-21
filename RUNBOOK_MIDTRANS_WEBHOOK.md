@@ -72,3 +72,8 @@ Ambang perhatian (rekomendasi):
 - Mode Midtrans sesuai key:
   - sandbox key (`SB-*`) <-> `MIDTRANS_IS_PRODUCTION=false`
   - production key (non `SB-*`) <-> `MIDTRANS_IS_PRODUCTION=true`
+
+## 7) Secret Rotation Notes
+
+- Jika melakukan rotasi `ORDER_PUBLIC_SECRET`, set sementara `ORDER_PUBLIC_SECRET_PREVIOUS` untuk kompatibilitas link order lama.
+- Setelah masa transisi selesai (mis. 7-14 hari), hapus `ORDER_PUBLIC_SECRET_PREVIOUS` agar hanya secret baru yang aktif.
