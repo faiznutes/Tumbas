@@ -267,4 +267,100 @@ export class SettingsService {
     await Promise.all(updates);
     return this.getWeeklyDealSettings();
   }
+
+  async getGeneralSettings() {
+    const defaults = {
+      storeName: 'Tumbas',
+      storeEmail: 'admin@tumbas.id',
+      storePhone: '',
+      storeAddress: '',
+    };
+
+    const keys = ['general_store_name', 'general_store_email', 'general_store_phone', 'general_store_address'];
+    const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
+    const result = { ...defaults };
+
+    settings.forEach((setting) => {
+      if (setting.key === 'general_store_name') result.storeName = setting.value;
+      if (setting.key === 'general_store_email') result.storeEmail = setting.value;
+      if (setting.key === 'general_store_phone') result.storePhone = setting.value;
+      if (setting.key === 'general_store_address') result.storeAddress = setting.value;
+    });
+
+    return result;
+  }
+
+  async setGeneralSettings(data: {
+    storeName?: string;
+    storeEmail?: string;
+    storePhone?: string;
+    storeAddress?: string;
+  }) {
+    const updates: Promise<any>[] = [];
+    if (data.storeName !== undefined) updates.push(this.setSetting('general_store_name', data.storeName));
+    if (data.storeEmail !== undefined) updates.push(this.setSetting('general_store_email', data.storeEmail));
+    if (data.storePhone !== undefined) updates.push(this.setSetting('general_store_phone', data.storePhone));
+    if (data.storeAddress !== undefined) updates.push(this.setSetting('general_store_address', data.storeAddress));
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getGeneralSettings();
+  }
+
+  async getStoreSettings() {
+    const defaults = {
+      currency: 'IDR',
+      taxRate: 11,
+    };
+
+    const keys = ['store_currency', 'store_tax_rate'];
+    const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
+    const result = { ...defaults };
+
+    settings.forEach((setting) => {
+      if (setting.key === 'store_currency') result.currency = setting.value || defaults.currency;
+      if (setting.key === 'store_tax_rate') result.taxRate = parseInt(setting.value, 10) || defaults.taxRate;
+    });
+
+    return result;
+  }
+
+  async setStoreSettings(data: { currency?: string; taxRate?: number }) {
+    const updates: Promise<any>[] = [];
+    if (data.currency !== undefined) updates.push(this.setSetting('store_currency', data.currency));
+    if (data.taxRate !== undefined) updates.push(this.setSetting('store_tax_rate', String(Math.max(0, data.taxRate))));
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getStoreSettings();
+  }
+
+  async getNotificationSettings() {
+    const defaults = {
+      emailNotifications: true,
+      orderNotifications: true,
+      marketingEmails: false,
+    };
+
+    const keys = ['notif_email', 'notif_order', 'notif_marketing'];
+    const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
+    const result = { ...defaults };
+
+    settings.forEach((setting) => {
+      if (setting.key === 'notif_email') result.emailNotifications = setting.value === 'true';
+      if (setting.key === 'notif_order') result.orderNotifications = setting.value === 'true';
+      if (setting.key === 'notif_marketing') result.marketingEmails = setting.value === 'true';
+    });
+
+    return result;
+  }
+
+  async setNotificationSettings(data: {
+    emailNotifications?: boolean;
+    orderNotifications?: boolean;
+    marketingEmails?: boolean;
+  }) {
+    const updates: Promise<any>[] = [];
+    if (data.emailNotifications !== undefined) updates.push(this.setSetting('notif_email', String(data.emailNotifications)));
+    if (data.orderNotifications !== undefined) updates.push(this.setSetting('notif_order', String(data.orderNotifications)));
+    if (data.marketingEmails !== undefined) updates.push(this.setSetting('notif_marketing', String(data.marketingEmails)));
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getNotificationSettings();
+  }
 }

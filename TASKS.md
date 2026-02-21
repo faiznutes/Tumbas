@@ -106,6 +106,9 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Update Snap flow: `Bayar Sekarang` membuka popup langsung, `onSuccess` langsung ke `/success` (resi + nota)
 - [x] Perkuat readiness Snap popup sebelum create order agar error `popup belum siap` berkurang
 - [x] Tambah endpoint `GET /api/auth/me` (JWT protected) untuk verifikasi route auth runtime
+- [x] Audit error admin dari `Error.md`: perbaiki save settings tab Midtrans/Promo/Weekly/Shipping agar role `MANAGER` tidak lagi terblokir
+- [x] Implement endpoint settings tambahan agar tab `Umum`, `Toko`, `Notifikasi` benar-benar bisa simpan (`/api/settings/general|store|notifications`)
+- [x] Hilangkan data hardcoded pada `/admin/customers` dan ganti ke agregasi data pelanggan berbasis pesanan real
 - [x] `npm run build` frontend: pass
 - [x] `npm run build` backend: pass
 - [x] `npm test` backend: pass

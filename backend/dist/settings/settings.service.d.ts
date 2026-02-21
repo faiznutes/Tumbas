@@ -84,4 +84,46 @@ export declare class SettingsService {
         discount?: number;
         endDate?: string;
     }): Promise<Record<string, any>>;
+    getGeneralSettings(): Promise<{
+        storeName: string;
+        storeEmail: string;
+        storePhone: string;
+        storeAddress: string;
+    }>;
+    setGeneralSettings(data: {
+        storeName?: string;
+        storeEmail?: string;
+        storePhone?: string;
+        storeAddress?: string;
+    }): Promise<{
+        storeName: string;
+        storeEmail: string;
+        storePhone: string;
+        storeAddress: string;
+    }>;
+    getStoreSettings(): Promise<{
+        currency: string;
+        taxRate: number;
+    }>;
+    setStoreSettings(data: {
+        currency?: string;
+        taxRate?: number;
+    }): Promise<{
+        currency: string;
+        taxRate: number;
+    }>;
+    getNotificationSettings(): Promise<{
+        emailNotifications: boolean;
+        orderNotifications: boolean;
+        marketingEmails: boolean;
+    }>;
+    setNotificationSettings(data: {
+        emailNotifications?: boolean;
+        orderNotifications?: boolean;
+        marketingEmails?: boolean;
+    }): Promise<{
+        emailNotifications: boolean;
+        orderNotifications: boolean;
+        marketingEmails: boolean;
+    }>;
 }

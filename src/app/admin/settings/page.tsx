@@ -60,8 +60,15 @@ export default function AdminSettings() {
   });
   const [shippingProvidersInput, setShippingProvidersInput] = useState('jne, jnt, sicepat');
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+  };
+
   useEffect(() => {
-    if (activeTab === 'promo') {
+    if (activeTab === 'general') {
+      fetchGeneralSettings();
+    } else if (activeTab === 'promo') {
       fetchPromoSettings();
     } else if (activeTab === 'weekly') {
       fetchWeeklyDealSettings();
@@ -71,8 +78,27 @@ export default function AdminSettings() {
       fetchPaymentSettings();
     } else if (activeTab === 'shipping') {
       fetchShippingSettings();
+    } else if (activeTab === 'store') {
+      fetchStoreSettings();
+    } else if (activeTab === 'notifications') {
+      fetchNotificationSettings();
     }
   }, [activeTab]);
+
+  async function fetchGeneralSettings() {
+    try {
+      const data = await api.settings.getGeneral();
+      setSettings((prev) => ({
+        ...prev,
+        storeName: data.storeName,
+        storeEmail: data.storeEmail,
+        storePhone: data.storePhone,
+        storeAddress: data.storeAddress,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch general settings:', error);
+    }
+  }
 
   async function fetchPromoSettings() {
     try {
@@ -126,6 +152,58 @@ export default function AdminSettings() {
     }
   }
 
+  async function fetchStoreSettings() {
+    try {
+      const data = await api.settings.getStore();
+      setSettings((prev) => ({
+        ...prev,
+        currency: data.currency,
+        taxRate: String(data.taxRate),
+      }));
+    } catch (error) {
+      console.error('Failed to fetch store settings:', error);
+    }
+  }
+
+  async function fetchNotificationSettings() {
+    try {
+      const data = await api.settings.getNotifications();
+      setSettings((prev) => ({
+        ...prev,
+        emailNotifications: data.emailNotifications,
+        orderNotifications: data.orderNotifications,
+        marketingEmails: data.marketingEmails,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch notification settings:', error);
+    }
+  }
+
+  async function saveGeneralSettings() {
+    setLoading(true);
+    try {
+      const response = await api.settings.updateGeneral({
+        storeName: settings.storeName,
+        storeEmail: settings.storeEmail,
+        storePhone: settings.storePhone,
+        storeAddress: settings.storeAddress,
+      });
+      setSettings((prev) => ({
+        ...prev,
+        storeName: response.storeName,
+        storeEmail: response.storeEmail,
+        storePhone: response.storePhone,
+        storeAddress: response.storeAddress,
+      }));
+      addToast('Pengaturan umum berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save general settings:', error);
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan umum'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function savePromoSettings() {
     setLoading(true);
     try {
@@ -133,7 +211,7 @@ export default function AdminSettings() {
       addToast('Pengaturan promo berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save promo settings:', error);
-      addToast('Gagal menyimpan pengaturan promo', 'error');
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan promo'), 'error');
     } finally {
       setLoading(false);
     }
@@ -146,7 +224,7 @@ export default function AdminSettings() {
       addToast('Pengaturan penawaran mingguan berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save weekly deal settings:', error);
-      addToast('Gagal menyimpan pengaturan penawaran mingguan', 'error');
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan penawaran mingguan'), 'error');
     } finally {
       setLoading(false);
     }
@@ -171,7 +249,7 @@ export default function AdminSettings() {
       addToast('Pengaturan Kategori Pilihan berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save homepage featured settings:', error);
-      addToast('Gagal menyimpan pengaturan Kategori Pilihan', 'error');
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan Kategori Pilihan'), 'error');
     } finally {
       setLoading(false);
     }
@@ -184,7 +262,51 @@ export default function AdminSettings() {
       addToast('Pengaturan Midtrans berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save payment settings:', error);
-      addToast('Gagal menyimpan pengaturan Midtrans', 'error');
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan Midtrans'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveStoreSettings() {
+    setLoading(true);
+    try {
+      const response = await api.settings.updateStore({
+        currency: settings.currency,
+        taxRate: Number(settings.taxRate) || 0,
+      });
+      setSettings((prev) => ({
+        ...prev,
+        currency: response.currency,
+        taxRate: String(response.taxRate),
+      }));
+      addToast('Pengaturan toko berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save store settings:', error);
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan toko'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveNotificationSettings() {
+    setLoading(true);
+    try {
+      const response = await api.settings.updateNotifications({
+        emailNotifications: settings.emailNotifications,
+        orderNotifications: settings.orderNotifications,
+        marketingEmails: settings.marketingEmails,
+      });
+      setSettings((prev) => ({
+        ...prev,
+        emailNotifications: response.emailNotifications,
+        orderNotifications: response.orderNotifications,
+        marketingEmails: response.marketingEmails,
+      }));
+      addToast('Pengaturan notifikasi berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan notifikasi'), 'error');
     } finally {
       setLoading(false);
     }
@@ -207,7 +329,7 @@ export default function AdminSettings() {
       addToast('Pengaturan pengiriman berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save shipping settings:', error);
-      addToast('Gagal menyimpan pengaturan pengiriman', 'error');
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan pengiriman'), 'error');
     } finally {
       setLoading(false);
     }
@@ -387,8 +509,8 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                    Simpan Perubahan
+                  <button onClick={saveGeneralSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
               </div>
@@ -707,8 +829,8 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                    Simpan Perubahan
+                  <button onClick={saveStoreSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
               </div>
@@ -768,8 +890,8 @@ export default function AdminSettings() {
                   </label>
                 </div>
                 <div className="pt-4">
-                  <button className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                    Simpan Perubahan
+                  <button onClick={saveNotificationSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
               </div>

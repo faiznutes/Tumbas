@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SettingsController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
-const client_1 = require("@prisma/client");
 const settings_service_1 = require("./settings.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
@@ -173,6 +172,67 @@ __decorate([
     (0, class_validator_1.Min)(1),
     __metadata("design:type", Number)
 ], UpdateShippingSettingsDto.prototype, "defaultWeightGram", void 0);
+class UpdateGeneralSettingsDto {
+    storeName;
+    storeEmail;
+    storePhone;
+    storeAddress;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateGeneralSettingsDto.prototype, "storeName", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateGeneralSettingsDto.prototype, "storeEmail", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateGeneralSettingsDto.prototype, "storePhone", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateGeneralSettingsDto.prototype, "storeAddress", void 0);
+class UpdateStoreSettingsDto {
+    currency;
+    taxRate;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateStoreSettingsDto.prototype, "currency", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateStoreSettingsDto.prototype, "taxRate", void 0);
+class UpdateNotificationSettingsDto {
+    emailNotifications;
+    orderNotifications;
+    marketingEmails;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateNotificationSettingsDto.prototype, "emailNotifications", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateNotificationSettingsDto.prototype, "orderNotifications", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateNotificationSettingsDto.prototype, "marketingEmails", void 0);
 let SettingsController = class SettingsController {
     settingsService;
     constructor(settingsService) {
@@ -209,6 +269,24 @@ let SettingsController = class SettingsController {
     async updateShippingSettings(data) {
         return this.settingsService.setShippingSettings(data);
     }
+    async getGeneralSettings() {
+        return this.settingsService.getGeneralSettings();
+    }
+    async updateGeneralSettings(data) {
+        return this.settingsService.setGeneralSettings(data);
+    }
+    async getStoreSettings() {
+        return this.settingsService.getStoreSettings();
+    }
+    async updateStoreSettings(data) {
+        return this.settingsService.setStoreSettings(data);
+    }
+    async getNotificationSettings() {
+        return this.settingsService.getNotificationSettings();
+    }
+    async updateNotificationSettings(data) {
+        return this.settingsService.setNotificationSettings(data);
+    }
     async getAllSettings() {
         return this.settingsService.getAllSettings();
     }
@@ -221,9 +299,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "getPromoSettings", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
     (0, common_1.Post)('promo'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -237,9 +314,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "getWeeklyDealSettings", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
     (0, common_1.Post)('weekly-deal'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -253,9 +329,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "getHomepageFeaturedSettings", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
     (0, common_1.Post)('homepage-featured'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -269,9 +344,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "getPaymentSettings", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
     (0, common_1.Post)('payment'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -285,15 +359,59 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "getShippingSettings", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.MANAGER),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
     (0, common_1.Post)('shipping'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [UpdateShippingSettingsDto]),
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "updateShippingSettings", null);
+__decorate([
+    (0, common_1.Get)('general'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "getGeneralSettings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
+    (0, common_1.Post)('general'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [UpdateGeneralSettingsDto]),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "updateGeneralSettings", null);
+__decorate([
+    (0, common_1.Get)('store'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "getStoreSettings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
+    (0, common_1.Post)('store'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [UpdateStoreSettingsDto]),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "updateStoreSettings", null);
+__decorate([
+    (0, common_1.Get)('notifications'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "getNotificationSettings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
+    (0, common_1.Post)('notifications'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [UpdateNotificationSettingsDto]),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "updateNotificationSettings", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),

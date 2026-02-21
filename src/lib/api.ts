@@ -529,6 +529,63 @@ export const api = {
   },
 
   settings: {
+    getGeneral: () => fetchApi<{
+      storeName: string;
+      storeEmail: string;
+      storePhone: string;
+      storeAddress: string;
+    }>('/settings/general'),
+
+    updateGeneral: (data: {
+      storeName?: string;
+      storeEmail?: string;
+      storePhone?: string;
+      storeAddress?: string;
+    }) => fetchApi<{
+      storeName: string;
+      storeEmail: string;
+      storePhone: string;
+      storeAddress: string;
+    }>('/settings/general', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getStore: () => fetchApi<{
+      currency: string;
+      taxRate: number;
+    }>('/settings/store'),
+
+    updateStore: (data: {
+      currency?: string;
+      taxRate?: number;
+    }) => fetchApi<{
+      currency: string;
+      taxRate: number;
+    }>('/settings/store', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getNotifications: () => fetchApi<{
+      emailNotifications: boolean;
+      orderNotifications: boolean;
+      marketingEmails: boolean;
+    }>('/settings/notifications'),
+
+    updateNotifications: (data: {
+      emailNotifications?: boolean;
+      orderNotifications?: boolean;
+      marketingEmails?: boolean;
+    }) => fetchApi<{
+      emailNotifications: boolean;
+      orderNotifications: boolean;
+      marketingEmails: boolean;
+    }>('/settings/notifications', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
     getPromo: () => fetchApi<{
       heroImage: string;
       heroTitle: string;

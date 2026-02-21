@@ -31,6 +31,21 @@ declare class UpdateShippingSettingsDto {
     originCityId?: number;
     defaultWeightGram?: number;
 }
+declare class UpdateGeneralSettingsDto {
+    storeName?: string;
+    storeEmail?: string;
+    storePhone?: string;
+    storeAddress?: string;
+}
+declare class UpdateStoreSettingsDto {
+    currency?: string;
+    taxRate?: number;
+}
+declare class UpdateNotificationSettingsDto {
+    emailNotifications?: boolean;
+    orderNotifications?: boolean;
+    marketingEmails?: boolean;
+}
 export declare class SettingsController {
     private settingsService;
     constructor(settingsService: SettingsService);
@@ -85,6 +100,36 @@ export declare class SettingsController {
         providers: string[];
         originCityId: number;
         defaultWeightGram: number;
+    }>;
+    getGeneralSettings(): Promise<{
+        storeName: string;
+        storeEmail: string;
+        storePhone: string;
+        storeAddress: string;
+    }>;
+    updateGeneralSettings(data: UpdateGeneralSettingsDto): Promise<{
+        storeName: string;
+        storeEmail: string;
+        storePhone: string;
+        storeAddress: string;
+    }>;
+    getStoreSettings(): Promise<{
+        currency: string;
+        taxRate: number;
+    }>;
+    updateStoreSettings(data: UpdateStoreSettingsDto): Promise<{
+        currency: string;
+        taxRate: number;
+    }>;
+    getNotificationSettings(): Promise<{
+        emailNotifications: boolean;
+        orderNotifications: boolean;
+        marketingEmails: boolean;
+    }>;
+    updateNotificationSettings(data: UpdateNotificationSettingsDto): Promise<{
+        emailNotifications: boolean;
+        orderNotifications: boolean;
+        marketingEmails: boolean;
     }>;
     getAllSettings(): Promise<Record<string, string>>;
 }
