@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { api, Product, ShippingCity, ShippingRateService } from "@/lib/api";
@@ -56,6 +55,7 @@ export default function CheckoutPage() {
   const [loadingRates, setLoadingRates] = useState(false);
   const [shippingError, setShippingError] = useState("");
   const [snapReady, setSnapReady] = useState(false);
+  const [summaryImageSrc, setSummaryImageSrc] = useState("https://via.placeholder.com/400");
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
   const selectedVariantKey = searchParams.get("variantKey") || "";
@@ -304,6 +304,10 @@ export default function CheckoutPage() {
     ? product.images[0].url 
     : "https://via.placeholder.com/400";
 
+  useEffect(() => {
+    setSummaryImageSrc(productImage);
+  }, [productImage]);
+
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
       {midtransClientKey && (
@@ -455,12 +459,12 @@ export default function CheckoutPage() {
                 <h2 className="text-lg font-bold text-[#0d141b] mb-4">Ringkasan Pesanan</h2>
                 <div className="flex gap-4 mb-4">
                   <div className="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={productImage}
+                    <img
+                      src={summaryImageSrc}
                       alt={product.title}
-                      width={80}
-                      height={80}
                       className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={() => setSummaryImageSrc("https://via.placeholder.com/400?text=No+Image")}
                     />
                   </div>
                   <div>

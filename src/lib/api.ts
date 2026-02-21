@@ -467,6 +467,8 @@ export const api = {
   },
 
   auth: {
+    me: () => fetchApi<User>('/auth/me'),
+
     login: (email: string, password: string) => 
       fetchApi<{ accessToken: string; access_token?: string; user: User }>('/auth/login', {
         method: 'POST',

@@ -11,6 +11,21 @@ declare class RegisterDto {
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
+    me(req: {
+        user?: {
+            id: string;
+            email: string;
+            name?: string | null;
+            role?: string;
+            permissions?: string[];
+        };
+    }): Promise<{
+        id: string;
+        email: string;
+        name?: string | null;
+        role?: string;
+        permissions?: string[];
+    } | undefined>;
     login(dto: LoginDto): Promise<{
         accessToken: string;
         access_token: string;

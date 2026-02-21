@@ -1,6 +1,7 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req } from '@nestjs/common';
 import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 class LoginDto {
   @IsEmail()
@@ -27,6 +28,12 @@ class RegisterDto {
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async me(@Req() req: { user?: { id: string; email: string; name?: string | null; role?: string; permissions?: string[] } }) {
+    return req.user;
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
