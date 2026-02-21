@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api, Order } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-700",
@@ -51,6 +52,7 @@ export default function OrderDetailPage() {
   const [expeditionName, setExpeditionName] = useState("");
   const [expeditionResi, setExpeditionResi] = useState("");
   const { addToast } = useToast();
+  const canEditOrders = hasAdminPermission("orders.edit");
 
   const normalizeResiInput = (value: string) =>
     value
@@ -76,6 +78,10 @@ export default function OrderDetailPage() {
 
   const handleConfirmShipping = async () => {
     if (!order) return;
+    if (!canEditOrders) {
+      addToast("Anda tidak memiliki izin untuk mengubah pesanan", "warning");
+      return;
+    }
 
     const normalizedResi = normalizeResiInput(expeditionResi);
     if (!normalizedResi) {
@@ -276,15 +282,23 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleConfirmShipping}
-                disabled={savingShipping || order.paymentStatus !== "PAID"}
-                className="w-full rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
-              >
-                {savingShipping ? "Menyimpan..." : "Konfirmasi Kirim ke Ekspedisi"}
-              </button>
-              {order.paymentStatus !== "PAID" && (
-                <p className="text-xs text-red-600">Order harus berstatus PAID sebelum bisa dikonfirmasi ke ekspedisi.</p>
+              {canEditOrders ? (
+                <>
+                  <button
+                    onClick={handleConfirmShipping}
+                    disabled={savingShipping || order.paymentStatus !== "PAID"}
+                    className="w-full rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
+                  >
+                    {savingShipping ? "Menyimpan..." : "Konfirmasi Kirim ke Ekspedisi"}
+                  </button>
+                  {order.paymentStatus !== "PAID" && (
+                    <p className="text-xs text-red-600">Order harus berstatus PAID sebelum bisa dikonfirmasi ke ekspedisi.</p>
+                  )}
+                </>
+              ) : (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-[#4c739a]">
+                  Mode hanya lihat: Anda tidak memiliki izin untuk mengonfirmasi pengiriman.
+                </p>
               )}
             </div>
           </div>

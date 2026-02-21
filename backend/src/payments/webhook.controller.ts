@@ -160,7 +160,7 @@ export class WebhookController {
 
   @Get('midtrans/monitor')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Roles('SUPER_ADMIN')
   @Permissions('reports.view')
   async getMidtransMonitor(@Query('minutes') minutes?: string) {
     const durationMinutes = Math.max(parseInt(minutes || '60', 10) || 60, 1);

@@ -2,10 +2,8 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/co
 import { IsString, IsEmail, IsOptional, IsInt, Min, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OrdersService } from './orders.service';
-import { PaymentStatus, UserRole } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
 import { Permissions } from '../auth/permissions.decorator';
 import { PermissionsGuard } from '../auth/permissions.guard';
 
@@ -196,16 +194,14 @@ export class OrdersController {
     return this.ordersService.create(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('orders.edit')
   @Post('shipping/bulk-confirm')
   async bulkMarkShippedToExpedition(@Body() dto: BulkMarkShippedDto) {
     return this.ordersService.bulkMarkShippedToExpedition(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('orders.edit')
   @Post(':id/shipping/confirm')
   async markShippedToExpedition(@Param('id') id: string, @Body() dto: MarkShippedDto) {

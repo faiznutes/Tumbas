@@ -33,7 +33,7 @@ function canAccessAdminPath(pathname: string) {
     return hasAdminPermission("settings.view") || hasAdminPermission("settings.edit");
   }
   if (pathname.startsWith("/admin/webhooks")) {
-    return hasAdminPermission("reports.view");
+    return role === "SUPER_ADMIN";
   }
 
   return true;

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { setAuthToken } from "@/lib/api";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dasbor", icon: "dashboard" },
@@ -32,50 +33,19 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       return "";
     }
   });
-  const [permissions] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = localStorage.getItem("user");
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as { permissions?: unknown };
-      return Array.isArray(parsed.permissions)
-        ? parsed.permissions.filter((item): item is string => typeof item === "string")
-        : [];
-    } catch {
-      return [];
-    }
-  });
-
   const visibleNavItems = useMemo(() => {
-    const hasAnyPermission = (...required: string[]) =>
-      required.length === 0 || required.some((permission) => permissions.includes(permission));
-
     return navItems.filter((item) => {
-      if (role === "SUPER_ADMIN") {
-        return true;
-      }
-
-      if (item.href === '/admin/users') {
-        return false;
-      }
-      if (item.href === '/admin/settings') {
-        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('settings.view', 'settings.edit');
-      }
-      if (item.href === '/admin/messages') {
-        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('messages.view', 'messages.edit');
-      }
-      if (item.href === '/admin/webhooks') {
-        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('reports.view');
-      }
-      if (item.href === '/admin/orders' || item.href === '/admin/orders/report' || item.href === '/admin/customers') {
-        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('orders.view');
-      }
-      if (item.href === '/admin/products') {
-        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('products.edit');
-      }
+      if (item.href === "/admin/users") return role === "SUPER_ADMIN";
+      if (item.href === "/admin/webhooks") return role === "SUPER_ADMIN";
+      if (item.href === "/admin/settings") return hasAdminPermission("settings.view") || hasAdminPermission("settings.edit");
+      if (item.href === "/admin/messages") return hasAdminPermission("messages.view");
+      if (item.href === "/admin/orders") return hasAdminPermission("orders.view");
+      if (item.href === "/admin/orders/report") return hasAdminPermission("orders.view");
+      if (item.href === "/admin/customers") return hasAdminPermission("orders.view");
+      if (item.href === "/admin/products") return hasAdminPermission("products.edit");
       return true;
     });
-  }, [permissions, role]);
+  }, [role]);
 
   const currentTitle = useMemo(() => {
     const exact = navItems.find((item) => pathname === item.href);

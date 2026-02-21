@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { ContactMessageStatus, UserRole } from '@prisma/client';
+import { ContactMessageStatus } from '@prisma/client';
 import {
   IsArray,
   IsEmail,
@@ -12,8 +12,6 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Permissions } from '../auth/permissions.decorator';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
 import { ContactMessagesService } from './contact-messages.service';
 
 class CreateContactMessageDto {
@@ -87,8 +85,7 @@ export class ContactMessagesController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('messages.view')
   async findAll(
     @Query('page') page?: string,
@@ -105,8 +102,7 @@ export class ContactMessagesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('messages.edit')
   async updateById(
     @Param('id') id: string,
@@ -117,24 +113,21 @@ export class ContactMessagesController {
   }
 
   @Post('bulk')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('messages.edit')
   async bulkUpdate(@Body() dto: BulkUpdateContactMessageDto, @Req() req: { user?: { id?: string } }) {
     return this.contactMessagesService.bulkUpdate(dto.ids, dto.status, req.user?.id, dto.adminNotes);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('messages.edit')
   async deleteById(@Param('id') id: string) {
     return this.contactMessagesService.deleteById(id);
   }
 
   @Post('bulk-delete')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('messages.edit')
   async bulkDelete(@Body() dto: BulkDeleteContactMessageDto) {
     return this.contactMessagesService.bulkDelete(dto.ids);
