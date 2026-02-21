@@ -16,6 +16,37 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   
   app.use(helmet());
+
+  if (process.env.NODE_ENV === 'production') {
+    const warnings: string[] = [];
+    const jwtSecret = process.env.JWT_SECRET || '';
+    const orderPublicSecret = process.env.ORDER_PUBLIC_SECRET || '';
+    const databaseUrl = process.env.DATABASE_URL || '';
+    const midtransIsProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+    const midtransServerKey = process.env.MIDTRANS_SERVER_KEY || '';
+
+    if (!jwtSecret || jwtSecret.includes('change-me')) {
+      warnings.push('JWT_SECRET is missing or uses placeholder value.');
+    }
+
+    if (!orderPublicSecret) {
+      warnings.push('ORDER_PUBLIC_SECRET is not set. Public order token falls back to JWT_SECRET.');
+    }
+
+    if (!databaseUrl || databaseUrl.includes('change-me')) {
+      warnings.push('DATABASE_URL appears to use placeholder credentials.');
+    }
+
+    if (!midtransServerKey) {
+      warnings.push('MIDTRANS_SERVER_KEY is missing.');
+    }
+
+    if (midtransIsProduction && midtransServerKey.startsWith('SB-')) {
+      warnings.push('MIDTRANS_IS_PRODUCTION=true but Midtrans server key looks like sandbox key (SB-).');
+    }
+
+    warnings.forEach((message) => logger.warn(`[SECURITY_CONFIG] ${message}`));
+  }
   
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
