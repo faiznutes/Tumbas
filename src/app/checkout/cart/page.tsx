@@ -92,6 +92,15 @@ export default function CartCheckoutPage() {
     });
   };
 
+  const ensureSnapReady = async () => {
+    if (window.snap) return true;
+    for (let i = 0; i < 12; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      if (window.snap) return true;
+    }
+    return false;
+  };
+
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
   const estimatedWeight = useMemo(() => {
     const weightByItem = Math.max(1, shippingConfig.defaultWeightGram);
@@ -193,6 +202,13 @@ export default function CartCheckoutPage() {
 
     setSubmitting(true);
     try {
+      if (!midtransClientKey) {
+        throw new Error("Konfigurasi pembayaran belum lengkap. Hubungi admin.");
+      }
+      const snapAvailable = snapReady || (await ensureSnapReady());
+      if (!snapAvailable) {
+        throw new Error("Popup pembayaran belum siap. Tunggu sebentar lalu klik Bayar Sekarang lagi.");
+      }
       if (!destinationCityId) throw new Error("Pilih kelurahan dari daftar yang tersedia");
       if (!selectedService && shipping !== 0) throw new Error("Pilih layanan pengiriman terlebih dahulu");
 
@@ -330,10 +346,23 @@ export default function CartCheckoutPage() {
           <div className="space-y-3 text-sm">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between gap-2 border-b border-[#f2f4f7] pb-2">
-                <div>
+                <div className="flex gap-2">
+                  <div className="h-10 w-10 overflow-hidden rounded bg-slate-100">
+                    <img
+                      src={item.image || "https://via.placeholder.com/120?text=No+Image"}
+                      alt={item.title}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.src = "https://via.placeholder.com/120?text=No+Image";
+                      }}
+                    />
+                  </div>
+                  <div>
                   <p className="font-medium text-[#0d141b]">{item.title}</p>
                   {item.variantLabel && <p className="text-xs text-[#4c739a]">{item.variantLabel}</p>}
                   <p className="text-xs text-[#4c739a]">{item.quantity} x {formatPrice(item.price)}</p>
+                  </div>
                 </div>
                 <p className="font-semibold text-[#0d141b]">{formatPrice(item.price * item.quantity)}</p>
               </div>

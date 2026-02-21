@@ -102,6 +102,15 @@ export default function CheckoutPage() {
     });
   };
 
+  const ensureSnapReady = async () => {
+    if (window.snap) return true;
+    for (let i = 0; i < 12; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      if (window.snap) return true;
+    }
+    return false;
+  };
+
   useEffect(() => {
     async function fetchProduct() {
       try {
@@ -200,6 +209,13 @@ export default function CheckoutPage() {
     
     setSubmitting(true);
     try {
+      if (!midtransClientKey) {
+        throw new Error("Konfigurasi pembayaran belum lengkap. Hubungi admin.");
+      }
+      const snapAvailable = snapReady || (await ensureSnapReady());
+      if (!snapAvailable) {
+        throw new Error("Popup pembayaran belum siap. Tunggu sebentar lalu klik Bayar Sekarang lagi.");
+      }
       if (!destinationCityId) {
         throw new Error("Pilih kelurahan dari daftar yang tersedia");
       }
