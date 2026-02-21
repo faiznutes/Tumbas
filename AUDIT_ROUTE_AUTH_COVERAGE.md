@@ -39,8 +39,10 @@ Dokumen ini merangkum audit route utama (frontend App Router + backend API Nest)
 | `/api/orders` | GET | Protected | admin | JWT | OK |
 | `/api/orders` | POST | Public | - | server-side validations | OK |
 | `/api/orders/:id/public` | GET | Public tokenized | - | HMAC token check | OK |
+| `/api/orders/:id/sync-payment` | POST | Public tokenized | - | HMAC token check + Midtrans status sync | OK |
 | `/api/orders/verify-receipt` | GET | Public | - | validation + service checks | OK |
 | `/api/orders/verify-resi` | GET | Public | - | validation + service checks | OK |
+| `/api/orders/shipping/bulk-confirm` | POST | Protected | SUPER_ADMIN/ADMIN/MANAGER | JWT + Roles | OK |
 | `/api/orders/:id/shipping/confirm` | POST | Protected | SUPER_ADMIN/ADMIN/MANAGER | JWT + Roles | OK |
 | `/api/settings/*` GET | GET | Public | - | service defaults | OK |
 | `/api/settings/*` POST | POST | Protected | SUPER_ADMIN/ADMIN/MANAGER | JWT + Roles | OK |
@@ -57,7 +59,8 @@ Dokumen ini merangkum audit route utama (frontend App Router + backend API Nest)
 - **Authorization**: settings/messages/webhook monitor menggunakan role guard.
 - **Validation**: global `ValidationPipe` aktif (`whitelist`, `forbidNonWhitelisted`, `transform`).
 - **Rate limit**: global throttler aktif.
-- **Webhook security**: Midtrans signature validation + retries + logging.
+- **Webhook security**: Midtrans signature validation (header/body) + retries + logging.
+- **Payment resilience**: fallback `sync-payment` route menjaga status order tetap sinkron saat webhook Midtrans terlambat/tidak terkirim.
 - **Secret handling**: env keys tetap diperlukan untuk Midtrans/RajaOngkir; jangan commit secret file.
 
 ## E) No Route Left Behind Checklist

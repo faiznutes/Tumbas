@@ -170,6 +170,15 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Deploy Coolify commit `bb698d9`: pass (deployment `kcwcw88c4cogg0g4cgw4s08c`, status `finished`)
 - [x] Smoke production: `/checkout/iphone-promax` `200`, `/checkout/cart` `200`, `/admin/orders` `200`, `/admin/orders/report` `200`
 - [x] Smoke production API: `/api/settings/payment-public` `200`, `/api/settings/payment` `401`, `/api/settings/promo` payload clean (hanya key promo)
+- [x] Hardening webhook Midtrans: validasi signature mendukung header `x-signature-key` dan body `signature_key`
+- [x] Tambah fallback route `POST /api/orders/:id/sync-payment?token=...` untuk sinkronisasi status ke Midtrans saat webhook terlambat
+- [x] Integrasi fallback sync status di halaman `/payment/pending`, `/success`, dan `/orders`
+- [x] Tambah endpoint bulk konfirmasi ekspedisi `POST /api/orders/shipping/bulk-confirm` untuk operasi admin massal
+- [x] `npm run build` backend (post webhook + payment sync hardening): pass
+- [x] `npm test` backend (post webhook + payment sync hardening): pass
+- [x] `npm run build` frontend (post payment sync adoption di pending/success/orders): pass
+- [x] Smoke route auth: `POST /api/orders/:id/sync-payment` tanpa token `400`, token invalid `401`, token valid `200`
+- [x] Verifikasi DB: order uji `PENDING -> PAID` via `sync-payment` berhasil pada produksi
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)

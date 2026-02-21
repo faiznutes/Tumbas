@@ -86,7 +86,14 @@ function OrdersContent() {
       setWarning("");
 
       const settled = await Promise.allSettled(
-        refs.map(async (ref) => api.orders.getPublicById(ref.id, ref.token)),
+        refs.map(async (ref) => {
+          try {
+            await api.orders.syncPaymentStatus(ref.id, ref.token);
+          } catch {
+            // ignore sync failure and continue with cached/public read path
+          }
+          return api.orders.getPublicById(ref.id, ref.token);
+        }),
       );
 
       const resolved = settled
