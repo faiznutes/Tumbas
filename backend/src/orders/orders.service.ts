@@ -49,6 +49,18 @@ export class OrdersService {
     return `TMB-RESI-${compact}`;
   }
 
+  private normalizeResiInput(resi: string) {
+    return (resi || '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '')
+      .replace(/[^A-Z0-9-]/g, '');
+  }
+
+  private normalizeResiForCompare(resi: string) {
+    return this.normalizeResiInput(resi).replace(/-/g, '');
+  }
+
   private extractProductVariants(product: { variants: Prisma.JsonValue | null }) {
     if (!Array.isArray(product.variants)) return [] as Array<{ key: string; label: string; stock: number; price?: number; weightGram?: number }>;
     return product.variants as unknown as Array<{ key: string; label: string; stock: number; price?: number; weightGram?: number }>;
@@ -409,8 +421,9 @@ export class OrdersService {
   }
 
   async verifyByResi(resi: string) {
-    const normalizedResi = (resi || '').trim().toUpperCase();
-    if (!normalizedResi.startsWith('TMB-RESI-')) {
+    const normalizedResi = this.normalizeResiInput(resi);
+    const compareInput = this.normalizeResiForCompare(normalizedResi);
+    if (compareInput.length < 6) {
       return { valid: false, reason: 'invalid_resi_format' as const };
     }
 
@@ -438,7 +451,12 @@ export class OrdersService {
     });
 
     const matched = orders.find(
-      (order) => this.createShippingResi(order.orderCode) === normalizedResi,
+      (order) => {
+        const tumbasResi = this.createShippingResi(order.orderCode);
+        const tumbasCompare = this.normalizeResiForCompare(tumbasResi);
+        const expeditionCompare = this.normalizeResiForCompare(order.expeditionResi || '');
+        return compareInput === tumbasCompare || compareInput === expeditionCompare;
+      },
     );
 
     if (!matched) {
@@ -454,7 +472,7 @@ export class OrdersService {
           orderCode: matched.orderCode,
           receiptNo: `RCPT-${matched.orderCode}`,
           verificationCode: this.createVerificationCode(matched.orderCode),
-          shippingResi: normalizedResi,
+          shippingResi: matched.expeditionResi || this.createShippingResi(matched.orderCode),
           shippedToExpedition: matched.shippedToExpedition,
           expeditionResi: matched.expeditionResi,
           expeditionName: matched.expeditionName,
@@ -474,7 +492,7 @@ export class OrdersService {
         orderCode: matched.orderCode,
         receiptNo: `RCPT-${matched.orderCode}`,
         verificationCode: this.createVerificationCode(matched.orderCode),
-        shippingResi: normalizedResi,
+        shippingResi: matched.expeditionResi || this.createShippingResi(matched.orderCode),
         shippedToExpedition: matched.shippedToExpedition,
         expeditionResi: matched.expeditionResi,
         expeditionName: matched.expeditionName,

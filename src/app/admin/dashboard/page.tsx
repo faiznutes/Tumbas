@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-700",
@@ -29,9 +30,19 @@ function formatPrice(price: number) {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ totalRevenue: 0, totalOrders: 0, activeProducts: 0, avgOrderValue: 0 });
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Array<{
+    id: string;
+    orderCode: string;
+    customerName: string;
+    createdAt: string;
+    amount: number;
+    paymentStatus: string;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
+  const canViewOrders = hasAdminPermission("orders.view");
+  const canEditProducts = hasAdminPermission("products.edit");
+  const canViewSettings = hasAdminPermission("settings.view") || hasAdminPermission("settings.edit");
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -48,16 +59,16 @@ export default function AdminDashboard() {
     async function fetchData() {
       try {
         const [ordersData, productsData] = await Promise.all([
-          api.orders.getAll({ limit: 5 }),
-          api.products.getAll({ limit: 100, status: 'AVAILABLE' }),
+          canViewOrders ? api.orders.getAll({ limit: 5 }) : Promise.resolve({ data: [] }),
+          canEditProducts ? api.products.getAll({ limit: 100, status: 'AVAILABLE' }) : Promise.resolve({ data: [] }),
         ]);
 
         const orders = ordersData.data || [];
         const products = productsData.data || [];
 
         const totalRevenue = orders
-          .filter((o: any) => o.paymentStatus === 'PAID')
-          .reduce((sum: number, o: any) => sum + o.amount, 0);
+          .filter((o) => o.paymentStatus === 'PAID')
+          .reduce((sum: number, o) => sum + o.amount, 0);
 
         setStats({
           totalRevenue,
@@ -74,7 +85,7 @@ export default function AdminDashboard() {
       }
     }
     fetchData();
-  }, []);
+  }, [canEditProducts, canViewOrders]);
 
   const chartData = [45, 65, 50, 75, 60, 85, 70];
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -170,25 +181,38 @@ export default function AdminDashboard() {
         <div className="col-span-1 flex flex-col gap-6">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-lg font-bold text-[#0d141b]">Aksi Cepat</h3>
-            <div className="flex flex-col gap-3">
-              <Link href="/admin/products/create" className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                Tambah Produk Baru
-              </Link>
-              <Link href="/admin/orders" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-[#0d141b] hover:bg-slate-200 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">list_alt</span>
-                Lihat Pesanan
-              </Link>
-              <Link href="/admin/settings" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-[#0d141b] hover:bg-slate-200 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">settings</span>
-                Pengaturan
-              </Link>
-            </div>
+            {canEditProducts || canViewOrders || canViewSettings ? (
+              <div className="flex flex-col gap-3">
+                {canEditProducts && (
+                  <Link href="/admin/products/create" className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 transition-colors">
+                    <span className="material-symbols-outlined text-[20px]">add</span>
+                    Tambah Produk Baru
+                  </Link>
+                )}
+                {canViewOrders && (
+                  <Link href="/admin/orders" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-[#0d141b] hover:bg-slate-200 transition-colors">
+                    <span className="material-symbols-outlined text-[20px]">list_alt</span>
+                    Lihat Pesanan
+                  </Link>
+                )}
+                {canViewSettings && (
+                  <Link href="/admin/settings" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-[#0d141b] hover:bg-slate-200 transition-colors">
+                    <span className="material-symbols-outlined text-[20px]">settings</span>
+                    Pengaturan
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#4c739a]">
+                Mode terbatas: akun ini tidak memiliki akses modul lanjutan.
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Recent Orders Table */}
+      {canViewOrders ? (
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 p-6 flex justify-between items-center">
           <h3 className="text-lg font-bold text-[#0d141b]">Pesanan Terbaru</h3>
@@ -248,6 +272,11 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-[#4c739a] shadow-sm">
+          Anda tidak memiliki izin melihat data pesanan terbaru.
+        </div>
+      )}
     </div>
   );
 }

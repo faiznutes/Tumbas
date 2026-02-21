@@ -103,6 +103,11 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Perbaiki responsive navbar global: brand `TUMBAS` tampil di mobile (komponen `Navbar`)
 - [x] Tambah menu `Cek Resi` di navbar publik global (`Navbar`) desktop + mobile menuju `/receipt/verify`
 - [x] Sinkronkan link `Cek Resi` pada header custom halaman publik (checkout produk, detail produk, kontak)
+- [x] Samakan header halaman legal (`/terms`, `/privacy`) dengan template global `Navbar` agar konsisten desktop/mobile
+- [x] Guard route admin berbasis permission di level layout: akses tanpa izin diarahkan ke `/admin/dashboard?forbidden=1`
+- [x] Dashboard admin kini sembunyikan aksi cepat/card terkait modul tanpa permission, serta tampilkan mode terbatas untuk akun terbatas
+- [x] Verifikasi resi dilonggarkan agar menerima resi ekspedisi maupun resi Tumbas (normalisasi input lebih robust)
+- [x] Buat akun `SUPER_ADMIN` produksi: `superadmin@tumbas.id` (aktif)
 - [x] Implement backend `PermissionsGuard` + decorator `@Permissions(...)` untuk kontrol akses granular endpoint admin (orders/products/messages/settings/webhook monitor)
 - [x] Update login response agar `permissions` ikut tersimpan di user session frontend
 - [x] Tambah UI matrix permission di `/admin/users` (preset Viewer/Editor + checkbox per modul)

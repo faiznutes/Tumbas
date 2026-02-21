@@ -6,8 +6,8 @@ import { api, ReceiptVerificationResult } from "@/lib/api";
 import { formatDateTimeId, formatPriceIdr, getOrderProgressLabel } from "@/lib/order-presenter";
 
 const reasonLabel: Record<string, string> = {
-  invalid_receipt_format: "Format receipt tidak valid",
-  receipt_not_found: "Receipt tidak ditemukan",
+  invalid_receipt_format: "Format nomor bukti tidak valid",
+  receipt_not_found: "Nomor bukti tidak ditemukan",
   verification_code_mismatch: "Kode verifikasi tidak cocok",
   invalid_resi_format: "Format resi tidak valid",
   resi_not_found: "Resi tidak ditemukan",
@@ -27,10 +27,7 @@ export default function VerifyReceiptPage() {
       .replace(/[^A-Z0-9-]/g, "");
 
   const normalizedPreview = (() => {
-    const raw = normalizeResi(resi);
-    if (!raw) return "";
-    if (raw.startsWith("TMB-RESI-")) return raw;
-    return `TMB-RESI-${raw.replace(/^TMBRESI-?/, "")}`;
+    return normalizeResi(resi);
   })();
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -70,7 +67,7 @@ export default function VerifyReceiptPage() {
               className="w-full rounded-lg border border-slate-200 px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
               required
             />
-            <p className="mt-2 text-xs text-[#4c739a]">Ketik bebas. Sistem otomatis uppercase, hapus spasi, dan validasi format resi.</p>
+            <p className="mt-2 text-xs text-[#4c739a]">Bisa input resi Tumbas atau resi ekspedisi. Sistem otomatis uppercase dan hapus spasi.</p>
             {normalizedPreview && (
               <p className="mt-1 text-xs text-[#0d141b]">
                 Preview verifikasi: <span className="font-semibold">{normalizedPreview}</span>

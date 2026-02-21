@@ -14,16 +14,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     "settings.edit",
     "reports.view",
   ],
-  MANAGER: [
-    "orders.view",
-    "orders.edit",
-    "products.edit",
-    "messages.view",
-    "messages.edit",
-    "settings.view",
-    "settings.edit",
-    "reports.view",
-  ],
+  MANAGER: [],
 };
 
 export function getCurrentAdminUser(): AdminSessionUser {
