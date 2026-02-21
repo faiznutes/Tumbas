@@ -361,6 +361,7 @@ export default function CheckoutPage() {
               <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/">Beranda</Link>
               <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/shop">Belanja</Link>
               <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/about">Tentang</Link>
+              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/receipt/verify">Cek Resi</Link>
               <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/contact">Kontak</Link>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

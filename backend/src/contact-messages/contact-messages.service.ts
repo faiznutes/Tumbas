@@ -137,4 +137,26 @@ export class ContactMessagesService {
 
     return { updated: result.count };
   }
+
+  async deleteById(id: string) {
+    const existing = await this.prisma.contactMessage.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Contact message not found');
+    }
+
+    await this.prisma.contactMessage.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async bulkDelete(ids: string[]) {
+    if (ids.length === 0) {
+      return { deleted: 0 };
+    }
+
+    const result = await this.prisma.contactMessage.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    return { deleted: result.count };
+  }
 }

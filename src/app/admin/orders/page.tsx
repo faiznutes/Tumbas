@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -58,6 +59,7 @@ export default function AdminOrders() {
   const [expeditionNameInput, setExpeditionNameInput] = useState("");
   const [confirmingShipping, setConfirmingShipping] = useState(false);
   const { addToast } = useToast();
+  const canEditOrders = hasAdminPermission("orders.edit");
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -135,6 +137,11 @@ export default function AdminOrders() {
   };
 
   const openShippingModal = (ids: string[]) => {
+    if (!canEditOrders) {
+      addToast("Anda tidak memiliki izin untuk mengubah pesanan", "warning");
+      return;
+    }
+
     const eligible = orders.filter(
       (order) => ids.includes(order.id) && order.paymentStatus === "PAID" && !order.shippedToExpedition,
     );
@@ -218,13 +225,15 @@ export default function AdminOrders() {
           <p className="text-[#4c739a]">Pantau pembayaran, pengiriman, dan tindak lanjut order</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => openShippingModal(selectedIds)}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#0d141b] hover:bg-slate-50"
-          >
-            <span className="material-symbols-outlined text-base">local_shipping</span>
-            Konfirmasi Ekspedisi ({selectedIds.length})
-          </button>
+          {canEditOrders && (
+            <button
+              onClick={() => openShippingModal(selectedIds)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#0d141b] hover:bg-slate-50"
+            >
+              <span className="material-symbols-outlined text-base">local_shipping</span>
+              Konfirmasi Ekspedisi ({selectedIds.length})
+            </button>
+          )}
           <button
             onClick={copySelectedOrderCodes}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#0d141b] hover:bg-slate-50"
@@ -314,6 +323,7 @@ export default function AdminOrders() {
                       type="checkbox"
                       checked={allFilteredSelected}
                       onChange={toggleSelectAllFiltered}
+                      disabled={!canEditOrders}
                       className="h-4 w-4 rounded border-slate-300"
                     />
                   </th>
@@ -334,6 +344,7 @@ export default function AdminOrders() {
                         type="checkbox"
                         checked={selectedIds.includes(order.id)}
                         onChange={() => toggleSelect(order.id)}
+                        disabled={!canEditOrders}
                         className="h-4 w-4 rounded border-slate-300"
                       />
                     </td>
@@ -371,7 +382,7 @@ export default function AdminOrders() {
                         >
                           <span className="material-symbols-outlined">visibility</span>
                         </button>
-                        {order.paymentStatus === "PAID" && !order.shippedToExpedition && (
+                        {canEditOrders && order.paymentStatus === "PAID" && !order.shippedToExpedition && (
                           <button
                             onClick={() => openShippingModal([order.id])}
                             className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"

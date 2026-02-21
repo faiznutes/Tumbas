@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Permissions } from '../auth/permissions.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 
@@ -166,8 +168,9 @@ export class SettingsController {
     return this.settingsService.getPromoSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('promo')
   async updatePromoSettings(@Body() data: UpdatePromoSettingsDto) {
     return this.settingsService.setPromoSettings(data);
@@ -178,8 +181,9 @@ export class SettingsController {
     return this.settingsService.getWeeklyDealSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('weekly-deal')
   async updateWeeklyDealSettings(@Body() data: UpdateWeeklyDealSettingsDto) {
     return this.settingsService.setWeeklyDealSettings(data);
@@ -190,16 +194,18 @@ export class SettingsController {
     return this.settingsService.getHomepageFeaturedSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('homepage-featured')
   async updateHomepageFeaturedSettings(@Body() data: UpdateHomepageFeaturedSettingsDto) {
     return this.settingsService.setHomepageFeaturedSettings(data);
   }
 
   @Get('payment')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.view')
   async getPaymentSettings() {
     return this.settingsService.getPaymentSettings();
   }
@@ -214,8 +220,9 @@ export class SettingsController {
     };
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('payment')
   async updatePaymentSettings(@Body() data: UpdatePaymentSettingsDto) {
     return this.settingsService.setPaymentSettings(data);
@@ -226,8 +233,9 @@ export class SettingsController {
     return this.settingsService.getShippingSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('shipping')
   async updateShippingSettings(@Body() data: UpdateShippingSettingsDto) {
     return this.settingsService.setShippingSettings(data);
@@ -238,8 +246,9 @@ export class SettingsController {
     return this.settingsService.getGeneralSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('general')
   async updateGeneralSettings(@Body() data: UpdateGeneralSettingsDto) {
     return this.settingsService.setGeneralSettings(data);
@@ -250,8 +259,9 @@ export class SettingsController {
     return this.settingsService.getStoreSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('store')
   async updateStoreSettings(@Body() data: UpdateStoreSettingsDto) {
     return this.settingsService.setStoreSettings(data);
@@ -262,8 +272,9 @@ export class SettingsController {
     return this.settingsService.getNotificationSettings();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Permissions('settings.edit')
   @Post('notifications')
   async updateNotificationSettings(@Body() data: UpdateNotificationSettingsDto) {
     return this.settingsService.setNotificationSettings(data);

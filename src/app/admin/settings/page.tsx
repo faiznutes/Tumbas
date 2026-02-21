@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const { addToast } = useToast();
+  const canEditSettings = hasAdminPermission('settings.edit');
   const [loading, setLoading] = useState(false);
   
   const [settings, setSettings] = useState({
@@ -44,6 +46,10 @@ export default function AdminSettings() {
     maxItems: 3,
   });
   const [manualSlugsInput, setManualSlugsInput] = useState('');
+  const manualSlugList = manualSlugsInput
+    .split(/\r?\n|,/)
+    .map((slug) => slug.trim())
+    .filter(Boolean);
   const [paymentSettings, setPaymentSettings] = useState({
     midtransEnabled: true,
     midtransClientKey: '',
@@ -180,6 +186,11 @@ export default function AdminSettings() {
   }
 
   async function saveGeneralSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await api.settings.updateGeneral({
@@ -205,6 +216,11 @@ export default function AdminSettings() {
   }
 
   async function savePromoSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.settings.updatePromo(promoSettings);
@@ -218,6 +234,11 @@ export default function AdminSettings() {
   }
 
   async function saveWeeklyDealSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.settings.updateWeeklyDeal(weeklyDealSettings);
@@ -231,6 +252,11 @@ export default function AdminSettings() {
   }
 
   async function saveHomepageFeaturedSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       const manualSlugs = manualSlugsInput
@@ -256,6 +282,11 @@ export default function AdminSettings() {
   }
 
   async function savePaymentSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.settings.updatePayment(paymentSettings);
@@ -269,16 +300,23 @@ export default function AdminSettings() {
   }
 
   async function saveStoreSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await api.settings.updateStore({
-        currency: settings.currency,
+      const general = await api.settings.updateGeneral({
+        storeName: settings.storeName,
+      });
+      const store = await api.settings.updateStore({
         taxRate: Number(settings.taxRate) || 0,
       });
       setSettings((prev) => ({
         ...prev,
-        currency: response.currency,
-        taxRate: String(response.taxRate),
+        storeName: general.storeName || prev.storeName,
+        taxRate: String(store.taxRate),
       }));
       addToast('Pengaturan toko berhasil disimpan', 'success');
     } catch (error) {
@@ -290,6 +328,11 @@ export default function AdminSettings() {
   }
 
   async function saveNotificationSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await api.settings.updateNotifications({
@@ -313,6 +356,11 @@ export default function AdminSettings() {
   }
 
   async function saveShippingSettings() {
+    if (!canEditSettings) {
+      addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       const providers = shippingProvidersInput.split(/[\n,]/).map((v) => v.trim()).filter(Boolean);
@@ -353,98 +401,112 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      <div className="flex gap-8">
+      {!canEditSettings && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Mode hanya lihat: akun ini tidak memiliki izin untuk mengubah pengaturan.
+        </div>
+      )}
+
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         {/* Sidebar Tabs */}
-        <div className="w-64 shrink-0">
+        <div className="w-full shrink-0 lg:w-64">
           <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <nav className="space-y-1">
+            <nav className="grid grid-cols-4 gap-2 lg:block lg:space-y-1">
               <button
                 onClick={() => setActiveTab("general")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Umum"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "general" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">store</span>
-                <span className="text-sm font-medium">Umum</span>
+                <span className="hidden text-sm font-medium lg:inline">Umum</span>
               </button>
               <button
                 onClick={() => setActiveTab("promo")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Promo"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "promo" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">campaign</span>
-                <span className="text-sm font-medium">Promo</span>
+                <span className="hidden text-sm font-medium lg:inline">Promo</span>
               </button>
               <button
                 onClick={() => setActiveTab("weekly")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Penawaran Mingguan"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "weekly" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">local_offer</span>
-                <span className="text-sm font-medium">Penawaran Mingguan</span>
+                <span className="hidden text-sm font-medium lg:inline">Penawaran Mingguan</span>
               </button>
               <button
                 onClick={() => setActiveTab("homepage-featured")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Kategori Pilihan"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "homepage-featured"
                     ? "bg-[#137fec]/10 text-[#137fec]"
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">star</span>
-                <span className="text-sm font-medium">Kategori Pilihan</span>
+                <span className="hidden text-sm font-medium lg:inline">Kategori Pilihan</span>
               </button>
               <button
                 onClick={() => setActiveTab("store")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Toko"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "store" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">inventory_2</span>
-                <span className="text-sm font-medium">Toko</span>
+                <span className="hidden text-sm font-medium lg:inline">Toko</span>
               </button>
               <button
                 onClick={() => setActiveTab("notifications")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Notifikasi"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "notifications" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">notifications</span>
-                <span className="text-sm font-medium">Notifikasi</span>
+                <span className="hidden text-sm font-medium lg:inline">Notifikasi</span>
               </button>
               <button
                 onClick={() => setActiveTab("payment")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Pembayaran"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "payment" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">payments</span>
-                <span className="text-sm font-medium">Pembayaran</span>
+                <span className="hidden text-sm font-medium lg:inline">Pembayaran</span>
               </button>
               <button
                 onClick={() => setActiveTab("shipping")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                title="Pengiriman"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "shipping" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
                     : "text-[#4c739a] hover:bg-slate-100"
                 }`}
               >
                 <span className="material-symbols-outlined">local_shipping</span>
-                <span className="text-sm font-medium">Pengiriman</span>
+                <span className="hidden text-sm font-medium lg:inline">Pengiriman</span>
               </button>
             </nav>
           </div>
@@ -509,7 +571,7 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveGeneralSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveGeneralSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -608,7 +670,7 @@ export default function AdminSettings() {
                 <div className="pt-4">
                   <button 
                     onClick={savePromoSettings}
-                    disabled={loading}
+                    disabled={loading || !canEditSettings}
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -708,7 +770,7 @@ export default function AdminSettings() {
                 <div className="pt-4">
                   <button 
                     onClick={saveWeeklyDealSettings}
-                    disabled={loading}
+                    disabled={loading || !canEditSettings}
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -771,12 +833,54 @@ export default function AdminSettings() {
                   <p className="mt-2 text-xs text-[#4c739a]">
                     Contoh: isi 1 slug manual, maka slot sisanya otomatis dari produk populer. Isi 2 slug manual juga bisa.
                   </p>
+
+                  {manualSlugList.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#4c739a]">Slug aktif</p>
+                        {canEditSettings && (
+                          <button
+                            type="button"
+                            onClick={() => setManualSlugsInput('')}
+                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                          >
+                            Hapus semua
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {manualSlugList.map((slug) => (
+                          <span key={slug} className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs text-[#0d141b] border border-slate-200">
+                            {slug}
+                            {canEditSettings && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setManualSlugsInput((prev) =>
+                                    prev
+                                      .split(/\r?\n|,/)
+                                      .map((item) => item.trim())
+                                      .filter((item) => item && item !== slug)
+                                      .join("\n"),
+                                  );
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                                title="Hapus slug"
+                              >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4">
                   <button
                     onClick={saveHomepageFeaturedSettings}
-                    disabled={loading}
+                    disabled={loading || !canEditSettings}
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -801,19 +905,17 @@ export default function AdminSettings() {
               <h2 className="text-lg font-bold text-[#0d141b] mb-6">Pengaturan Toko</h2>
               <div className="space-y-6">
                 <div>
-                  <label htmlFor="currency" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Mata Uang
+                  <label htmlFor="storeName" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Nama Toko
                   </label>
-                  <select
-                    id="currency"
-                    name="currency"
-                    value={settings.currency}
+                  <input
+                    type="text"
+                    id="storeName"
+                    name="storeName"
+                    value={settings.storeName}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                  >
-                    <option value="IDR">Rupiah (IDR)</option>
-                    <option value="USD">Dollar (USD)</option>
-                  </select>
+                  />
                 </div>
                 <div>
                   <label htmlFor="taxRate" className="block text-sm font-medium text-[#0d141b] mb-2">
@@ -829,7 +931,7 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveStoreSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveStoreSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -890,7 +992,7 @@ export default function AdminSettings() {
                   </label>
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveNotificationSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveNotificationSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -953,7 +1055,7 @@ export default function AdminSettings() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <button onClick={savePaymentSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={savePaymentSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -1037,7 +1139,7 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveShippingSettings} disabled={loading} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveShippingSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { api, Product } from "@/lib/api";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 const statusColors: Record<string, string> = {
   AVAILABLE: "bg-green-100 text-green-700",
@@ -22,14 +22,10 @@ export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const router = useRouter();
   const { addToast } = useToast();
+  const canEditProducts = hasAdminPermission("products.edit");
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  async function fetchProducts() {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.products.getAll({ limit: 100 });
@@ -40,7 +36,11 @@ export default function AdminProducts() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [addToast]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -85,7 +85,7 @@ export default function AdminProducts() {
       }
       setSelectedProducts([]);
       fetchProducts();
-    } catch (error) {
+    } catch {
       addToast('Gagal melakukan aksi', 'error');
     }
   };
@@ -96,7 +96,7 @@ export default function AdminProducts() {
         await api.products.delete(id);
         addToast('Produk dihapus', 'success');
         fetchProducts();
-      } catch (error) {
+      } catch {
         addToast('Gagal menghapus produk', 'error');
       }
     }
@@ -111,10 +111,12 @@ export default function AdminProducts() {
             <h1 className="text-2xl font-bold text-[#0d141b]">Kelola Produk</h1>
             <p className="text-[#4c739a]">Kelola semua produk di toko Anda</p>
           </div>
+          {canEditProducts && (
           <Link href="/admin/products/create" className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-4 py-2 rounded-lg flex items-center gap-2">
             <span className="material-symbols-outlined">add</span>
             Tambah Produk
           </Link>
+          )}
         </div>
 
         {/* Filters */}
@@ -146,7 +148,7 @@ export default function AdminProducts() {
         </div>
 
         {/* Bulk Actions */}
-        {selectedProducts.length > 0 && (
+        {canEditProducts && selectedProducts.length > 0 && (
           <div className="bg-[#137fec] text-white rounded-lg p-4 mb-6 flex items-center justify-between">
             <span>{selectedProducts.length} produk dipilih</span>
             <div className="flex gap-2">
@@ -160,7 +162,7 @@ export default function AdminProducts() {
                 onClick={() => handleBulkAction('MARK_SOLD')}
                 className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
               >
-                Tandai Sold
+                Tandai Terjual
               </button>
               <button
                 onClick={() => handleBulkAction('DELETE')}
@@ -188,6 +190,7 @@ export default function AdminProducts() {
                         type="checkbox"
                         checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
                         onChange={handleSelectAll}
+                        disabled={!canEditProducts}
                         className="w-4 h-4 rounded border-gray-300"
                       />
                     </th>
@@ -203,12 +206,13 @@ export default function AdminProducts() {
                   {filteredProducts.map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.includes(product.id)}
-                          onChange={() => handleSelectProduct(product.id)}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
+                          <input
+                            type="checkbox"
+                            checked={selectedProducts.includes(product.id)}
+                            onChange={() => handleSelectProduct(product.id)}
+                            disabled={!canEditProducts}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -229,26 +233,32 @@ export default function AdminProducts() {
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[product.status]}`}>
                           {product.status === "AVAILABLE" && "Aktif"}
-                          {product.status === "SOLD" && "Sold"}
+                          {product.status === "SOLD" && "Terjual"}
                           {product.status === "ARCHIVED" && "Arsip"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/products/${product.id}`}
-                            className="p-2 text-[#137fec] hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <span className="material-symbols-outlined">edit</span>
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Hapus"
-                          >
-                            <span className="material-symbols-outlined">delete</span>
-                          </button>
+                          {canEditProducts ? (
+                            <>
+                              <Link
+                                href={`/admin/products/${product.id}`}
+                                className="p-2 text-[#137fec] hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Ubah"
+                              >
+                                <span className="material-symbols-outlined">edit</span>
+                              </Link>
+                              <button
+                                onClick={() => handleDelete(product.id)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Hapus"
+                              >
+                                <span className="material-symbols-outlined">delete</span>
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-[#4c739a]">Hanya lihat</span>
+                          )}
                         </div>
                       </td>
                     </tr>

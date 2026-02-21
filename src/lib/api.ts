@@ -216,6 +216,7 @@ export interface User {
   email: string;
   name: string | null;
   role?: string;
+  permissions?: string[];
 }
 
 export interface AdminUser {
@@ -490,6 +491,17 @@ export const api = {
       fetchApi<{ updated: number }>('/contact-messages/bulk', {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+
+    deleteById: (id: string) =>
+      fetchApi<{ success: boolean }>(`/contact-messages/${id}`, {
+        method: 'DELETE',
+      }),
+
+    bulkDelete: (ids: string[]) =>
+      fetchApi<{ deleted: number }>('/contact-messages/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
       }),
   },
 

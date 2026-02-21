@@ -3,6 +3,8 @@ import { IsString, IsNumber, IsOptional, IsArray, Min, IsEnum } from 'class-vali
 import { ProductsService } from './products.service';
 import { ProductStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Permissions } from '../auth/permissions.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
 
 class CreateProductDto {
   @IsString()
@@ -130,25 +132,29 @@ export class ProductsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
   async create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
   async update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
   async delete(@Param('id') id: string) {
     return this.productsService.delete(id);
   }
 
   @Post('bulk')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
   async bulkAction(@Body() dto: BulkActionDto) {
     return this.productsService.bulkAction(dto.action, dto.ids, { status: dto.status });
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 
@@ -18,11 +18,65 @@ interface User {
   };
 }
 
+const permissionGroups = [
+  {
+    key: "orders",
+    label: "Pesanan",
+    permissions: [
+      { key: "orders.view", label: "Lihat pesanan" },
+      { key: "orders.edit", label: "Ubah/konfirmasi pesanan" },
+    ],
+  },
+  {
+    key: "products",
+    label: "Produk",
+    permissions: [{ key: "products.edit", label: "Kelola produk" }],
+  },
+  {
+    key: "messages",
+    label: "Pesan",
+    permissions: [
+      { key: "messages.view", label: "Lihat pesan" },
+      { key: "messages.edit", label: "Balas/update/hapus pesan" },
+    ],
+  },
+  {
+    key: "settings",
+    label: "Pengaturan",
+    permissions: [
+      { key: "settings.view", label: "Lihat pengaturan sensitif" },
+      { key: "settings.edit", label: "Ubah pengaturan" },
+    ],
+  },
+  {
+    key: "reports",
+    label: "Laporan & Monitor",
+    permissions: [{ key: "reports.view", label: "Lihat laporan & monitor webhook" }],
+  },
+] as const;
+
+const defaultEditorPermissions = [
+  "orders.view",
+  "orders.edit",
+  "products.edit",
+  "messages.view",
+  "messages.edit",
+  "settings.view",
+  "settings.edit",
+  "reports.view",
+];
+
+const defaultViewerPermissions = [
+  "orders.view",
+  "messages.view",
+  "reports.view",
+];
+
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Admin',
   MANAGER: 'Manager',
-  STAFF: 'Staff',
+  STAFF: 'Staf',
 };
 
 const roleColors: Record<string, string> = {
@@ -48,11 +102,7 @@ export default function AdminUsers() {
   });
   const { addToast } = useToast();
 
-  useEffect(() => {
-    fetchUsers();
-  }, [searchQuery, roleFilter]);
-
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const params: { limit: number; search?: string; role?: string } = { limit: 100 };
@@ -66,7 +116,11 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [roleFilter, searchQuery]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,21 +146,38 @@ export default function AdminUsers() {
       setEditingUser(null);
       resetForm();
       fetchUsers();
-    } catch (error) {
-      addToast('Gagal menyimpan pengguna', 'error');
-    }
+      } catch {
+        addToast('Gagal menyimpan pengguna', 'error');
+      }
   };
 
   const handleEdit = (user: User) => {
+    let parsedPermissions: string[] = [];
+    try {
+      const raw = JSON.parse(user.permissions || "[]");
+      parsedPermissions = Array.isArray(raw) ? raw : [];
+    } catch {
+      parsedPermissions = [];
+    }
+
     setEditingUser(user);
     setFormData({
       email: user.email,
       password: '',
       name: user.name || '',
       role: user.role,
-      permissions: JSON.parse(user.permissions || '[]'),
+      permissions: parsedPermissions,
     });
     setShowModal(true);
+  };
+
+  const togglePermission = (permission: string) => {
+    setFormData((prev) => {
+      if (prev.permissions.includes(permission)) {
+        return { ...prev, permissions: prev.permissions.filter((item) => item !== permission) };
+      }
+      return { ...prev, permissions: [...prev.permissions, permission] };
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -115,7 +186,7 @@ export default function AdminUsers() {
         await api.users.delete(id);
         addToast('Pengguna dihapus', 'success');
         fetchUsers();
-      } catch (error) {
+      } catch {
         addToast('Gagal menghapus pengguna', 'error');
       }
     }
@@ -126,7 +197,7 @@ export default function AdminUsers() {
       await api.users.toggleActive(id);
       addToast('Status pengguna diperbarui', 'success');
       fetchUsers();
-    } catch (error) {
+    } catch {
       addToast('Gagal memperbarui status', 'error');
     }
   };
@@ -146,7 +217,7 @@ export default function AdminUsers() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[#0d141b]">Kelola Pengguna</h1>
-          <p className="text-[#4c739a]">Kelola semua pengguna dan权限</p>
+          <p className="text-[#4c739a]">Kelola semua pengguna dan hak akses</p>
         </div>
         <button 
           onClick={() => { resetForm(); setEditingUser(null); setShowModal(true); }}
@@ -181,7 +252,7 @@ export default function AdminUsers() {
             <option value="SUPER_ADMIN">Super Admin</option>
             <option value="ADMIN">Admin</option>
             <option value="MANAGER">Manager</option>
-            <option value="STAFF">Staff</option>
+            <option value="STAFF">Staf</option>
           </select>
         </div>
       </div>
@@ -314,9 +385,56 @@ export default function AdminUsers() {
                   <option value="SUPER_ADMIN">Super Admin</option>
                   <option value="ADMIN">Admin</option>
                   <option value="MANAGER">Manager</option>
-                  <option value="STAFF">Staff</option>
+                  <option value="STAFF">Staf</option>
                 </select>
               </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-medium text-[#0d141b]">Permission Modul</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, permissions: defaultViewerPermissions }))}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs text-[#0d141b] hover:bg-slate-50"
+                    >
+                      Preset Viewer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, permissions: defaultEditorPermissions }))}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs text-[#0d141b] hover:bg-slate-50"
+                    >
+                      Preset Editor
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-52 space-y-3 overflow-y-auto rounded-lg border border-[#e7edf3] p-3">
+                  {permissionGroups.map((group) => (
+                    <div key={group.key}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#4c739a]">{group.label}</p>
+                      <div className="space-y-2">
+                        {group.permissions.map((permission) => (
+                          <label key={permission.key} className="flex items-center gap-2 text-sm text-[#0d141b]">
+                            <input
+                              type="checkbox"
+                              checked={formData.permissions.includes(permission.key)}
+                              onChange={() => togglePermission(permission.key)}
+                              className="h-4 w-4 rounded border-slate-300"
+                            />
+                            <span>{permission.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-[#4c739a]">
+                  Super Admin otomatis punya akses penuh. Pengguna lain mengikuti permission yang dipilih.
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"

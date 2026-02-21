@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, WebhookMonitorResponse } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 
@@ -83,7 +83,7 @@ export default function AdminWebhookMonitorPage() {
     lines.push(`Total Received,${data.summary.totalReceived}`);
     lines.push(`Processed,${data.summary.processed}`);
     lines.push(`Warning,${data.summary.warning}`);
-    lines.push(`Failed,${data.summary.failed}`);
+    lines.push(`Gagal,${data.summary.failed}`);
     lines.push(`Invalid Signature,${data.summary.invalidSignature}`);
     lines.push("");
     lines.push("Recent Issues");
@@ -112,7 +112,7 @@ export default function AdminWebhookMonitorPage() {
     addToast("Export CSV berhasil", "success");
   };
 
-  const loadData = async (showToast = false) => {
+  const loadData = useCallback(async (showToast = false) => {
     try {
       setLoading(true);
       const response = await api.webhooks.getMidtransMonitor(minutes);
@@ -120,16 +120,16 @@ export default function AdminWebhookMonitorPage() {
       if (showToast) {
         addToast("Data webhook diperbarui", "success");
       }
-    } catch (error: any) {
-      addToast(error?.message || "Gagal memuat monitor webhook", "error");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Gagal memuat monitor webhook", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast, minutes]);
 
   useEffect(() => {
     loadData();
-  }, [minutes]);
+  }, [loadData]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -137,13 +137,13 @@ export default function AdminWebhookMonitorPage() {
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [minutes]);
+  }, [loadData]);
 
   return (
     <div className="flex flex-col gap-6 p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0d141b]">Webhook Monitor</h1>
+          <h1 className="text-2xl font-bold text-[#0d141b]">Monitor Webhook</h1>
           <p className="text-[#4c739a]">Monitoring kesehatan webhook Midtrans secara real-time.</p>
         </div>
 
@@ -163,13 +163,13 @@ export default function AdminWebhookMonitorPage() {
             onClick={() => loadData(true)}
             className="rounded-lg bg-[#137fec] px-4 py-2 text-sm font-medium text-white hover:bg-[#0f65bd]"
           >
-            Refresh
+            Muat Ulang
           </button>
           <button
             onClick={exportCsv}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#0d141b] hover:bg-slate-50"
           >
-            Export CSV
+            Ekspor CSV
           </button>
         </div>
       </div>
@@ -199,7 +199,7 @@ export default function AdminWebhookMonitorPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[#4c739a]">Min Attempts</label>
+          <label className="mb-1 block text-xs font-medium text-[#4c739a]">Minimum Percobaan</label>
           <input
             type="number"
             min={0}
@@ -232,30 +232,30 @@ export default function AdminWebhookMonitorPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-[#4c739a]">Total Received</p>
+              <p className="text-xs text-[#4c739a]">Total Diterima</p>
               <p className="text-2xl font-bold text-[#0d141b]">{data?.summary.totalReceived ?? 0}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-[#4c739a]">Processed</p>
+              <p className="text-xs text-[#4c739a]">Diproses</p>
               <p className="text-2xl font-bold text-green-700">{data?.summary.processed ?? 0}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-[#4c739a]">Warning</p>
+              <p className="text-xs text-[#4c739a]">Peringatan</p>
               <p className="text-2xl font-bold text-yellow-700">{data?.summary.warning ?? 0}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-[#4c739a]">Failed</p>
+              <p className="text-xs text-[#4c739a]">Gagal</p>
               <p className="text-2xl font-bold text-red-700">{data?.summary.failed ?? 0}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-[#4c739a]">Invalid Signature</p>
+              <p className="text-xs text-[#4c739a]">Signature Tidak Valid</p>
               <p className="text-2xl font-bold text-red-700">{data?.summary.invalidSignature ?? 0}</p>
             </div>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white">
             <div className="border-b border-slate-200 px-6 py-4">
-              <h2 className="text-lg font-bold text-[#0d141b]">Recent Issues</h2>
+              <h2 className="text-lg font-bold text-[#0d141b]">Isu Terbaru</h2>
               <p className="text-sm text-[#4c739a]">
                 Menampilkan status warning/failure dalam {data?.rangeMinutes ?? minutes} menit terakhir.
               </p>
@@ -271,7 +271,7 @@ export default function AdminWebhookMonitorPage() {
                       <th className="px-6 py-3">Waktu</th>
                       <th className="px-6 py-3">Order ID</th>
                       <th className="px-6 py-3">Status</th>
-                      <th className="px-6 py-3">Attempts</th>
+                      <th className="px-6 py-3">Percobaan</th>
                       <th className="px-6 py-3">Error</th>
                     </tr>
                   </thead>

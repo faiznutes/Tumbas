@@ -7,10 +7,12 @@ import { getCartCount, onCartUpdated } from "@/lib/cart";
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount, setCartCount] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return getCartCount();
+  });
 
   useEffect(() => {
-    setCartCount(getCartCount());
     return onCartUpdated(() => {
       setCartCount(getCartCount());
     });
@@ -26,8 +28,8 @@ export default function Navbar() {
               <div className="text-primary">
                 <span className="material-symbols-outlined text-3xl">shopping_bag</span>
               </div>
-              <h1 className="text-xl font-bold tracking-tight hidden sm:block">
-                Tumbas
+              <h1 className="text-lg font-bold tracking-tight sm:text-xl">
+                TUMBAS
               </h1>
             </Link>
           </div>
@@ -42,7 +44,7 @@ export default function Navbar() {
               </div>
               <input
                 className="block w-full pl-10 pr-3 py-2.5 border border-[#e7edf3] rounded-lg leading-5 bg-[#f6f7f8] placeholder-[#4c739a] focus:outline-none focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec] sm:text-sm transition-all"
-                placeholder="Search for products, brands and more..."
+                placeholder="Cari produk, merek, atau kategori..."
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -70,6 +72,12 @@ export default function Navbar() {
                 href="/about"
               >
                 Tentang
+              </Link>
+              <Link
+                className="hover:text-[#137fec] transition-colors"
+                href="/receipt/verify"
+              >
+                Cek Resi
               </Link>
               <Link
                 className="hover:text-[#137fec] transition-colors"
@@ -118,7 +126,7 @@ export default function Navbar() {
             </div>
             <input
               className="block w-full pl-10 pr-3 py-2 border border-[#e7edf3] rounded-lg bg-[#f6f7f8] text-sm placeholder-[#4c739a] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
-              placeholder="Search..."
+              placeholder="Cari produk..."
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -147,6 +155,12 @@ export default function Navbar() {
                 href="/about"
               >
                 Tentang
+              </Link>
+              <Link
+                className="hover:text-[#137fec] transition-colors py-2"
+                href="/receipt/verify"
+              >
+                Cek Resi
               </Link>
               <Link
                 className="hover:text-[#137fec] transition-colors py-2"

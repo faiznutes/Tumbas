@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ContactMessage } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 const statusLabels: Record<ContactMessage["status"], string> = {
   NEW: "Baru",
@@ -38,6 +39,7 @@ export default function AdminMessagesPage() {
   const [detailStatus, setDetailStatus] = useState<ContactMessage["status"]>("NEW");
   const [detailNotes, setDetailNotes] = useState("");
   const { addToast } = useToast();
+  const canEditMessages = hasAdminPermission("messages.edit");
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -119,6 +121,44 @@ export default function AdminMessagesPage() {
     }
   };
 
+  const handleDeleteById = async (id: string) => {
+    const confirmed = window.confirm("Hapus pesan ini secara permanen?");
+    if (!confirmed) return;
+
+    try {
+      await api.contactMessages.deleteById(id);
+      setMessages((prev) => prev.filter((message) => message.id !== id));
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
+      if (activeMessage?.id === id) {
+        setActiveMessage(null);
+      }
+      addToast("Pesan berhasil dihapus", "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal menghapus pesan";
+      addToast(message, "error");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    const confirmed = window.confirm(`Hapus ${selectedIds.length} pesan terpilih secara permanen?`);
+    if (!confirmed) return;
+
+    try {
+      const result = await api.contactMessages.bulkDelete(selectedIds);
+      setMessages((prev) => prev.filter((message) => !selectedIds.includes(message.id)));
+      setSelectedIds([]);
+      if (activeMessage && selectedIds.includes(activeMessage.id)) {
+        setActiveMessage(null);
+      }
+      addToast(`${result.deleted} pesan berhasil dihapus`, "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal menghapus pesan terpilih";
+      addToast(message, "error");
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -155,7 +195,7 @@ export default function AdminMessagesPage() {
         </div>
       </div>
 
-      {selectedIds.length > 0 && (
+      {canEditMessages && selectedIds.length > 0 && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#137fec] p-4 text-white">
           <span>{selectedIds.length} pesan dipilih</span>
           <div className="flex flex-wrap gap-2">
@@ -167,6 +207,9 @@ export default function AdminMessagesPage() {
             </button>
             <button onClick={() => handleBulkStatus("SPAM")} className="rounded-lg bg-red-500 px-3 py-2 hover:bg-red-600">
               Tandai Spam
+            </button>
+            <button onClick={handleBulkDelete} className="rounded-lg bg-red-700 px-3 py-2 hover:bg-red-800">
+              Hapus
             </button>
           </div>
         </div>
@@ -232,6 +275,15 @@ export default function AdminMessagesPage() {
                       >
                         <span className="material-symbols-outlined">visibility</span>
                       </button>
+                      {canEditMessages && (
+                        <button
+                          onClick={() => handleDeleteById(message.id)}
+                          className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50"
+                          title="Hapus pesan"
+                        >
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -289,6 +341,7 @@ export default function AdminMessagesPage() {
                   <select
                     value={detailStatus}
                     onChange={(e) => setDetailStatus(e.target.value as ContactMessage["status"])}
+                    disabled={!canEditMessages}
                     className="w-full rounded-lg border border-[#e7edf3] px-3 py-2 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
                   >
                     <option value="NEW">Baru</option>
@@ -303,20 +356,33 @@ export default function AdminMessagesPage() {
                     rows={3}
                     value={detailNotes}
                     onChange={(e) => setDetailNotes(e.target.value)}
+                    disabled={!canEditMessages}
                     className="w-full rounded-lg border border-[#e7edf3] px-3 py-2 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
                     placeholder="Catatan proses pesan"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSaveDetail}
-                  className="rounded-lg bg-[#137fec] px-4 py-2 font-medium text-white hover:bg-[#0f65bd]"
-                >
-                  Simpan Perubahan
-                </button>
-              </div>
+              {canEditMessages ? (
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => handleDeleteById(activeMessage.id)}
+                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-medium text-red-700 hover:bg-red-100"
+                  >
+                    Hapus Pesan
+                  </button>
+                  <button
+                    onClick={handleSaveDetail}
+                    className="rounded-lg bg-[#137fec] px-4 py-2 font-medium text-white hover:bg-[#0f65bd]"
+                  >
+                    Simpan Perubahan
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#4c739a]">
+                  Mode hanya lihat: Anda tidak memiliki izin untuk mengubah pesan.
+                </div>
+              )}
             </div>
           </div>
         </div>

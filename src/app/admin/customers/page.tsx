@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+
+type CustomerOrderPreview = {
+  id: string;
+  orderCode: string;
+  amount: number;
+  paymentStatus: string;
+  createdAt: string;
+};
 
 type CustomerSummary = {
   id: string;
@@ -12,6 +21,7 @@ type CustomerSummary = {
   totalSpent: number;
   lastOrderAt: string;
   status: "ACTIVE" | "INACTIVE";
+  recentOrders: CustomerOrderPreview[];
 };
 
 function formatPrice(price: number) {
@@ -28,6 +38,8 @@ export default function AdminCustomers() {
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "ACTIVE" | "INACTIVE">("all");
+  const [activeCustomer, setActiveCustomer] = useState<CustomerSummary | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     async function fetchCustomers() {
@@ -41,24 +53,41 @@ export default function AdminCustomers() {
           const key = order.customerEmail?.toLowerCase() || order.id;
           const existing = map.get(key);
           if (!existing) {
-            map.set(key, {
-              id: key,
-              name: order.customerName || "-",
-              email: order.customerEmail || "-",
-              phone: order.customerPhone || "-",
-              orders: 1,
-              totalSpent: order.amount || 0,
-              lastOrderAt: order.createdAt,
-              status: "ACTIVE",
-            });
-            return;
-          }
+              map.set(key, {
+                id: key,
+                name: order.customerName || "-",
+                email: order.customerEmail || "-",
+                phone: order.customerPhone || "-",
+                orders: 1,
+                totalSpent: order.amount || 0,
+                lastOrderAt: order.createdAt,
+                status: "ACTIVE",
+                recentOrders: [
+                  {
+                    id: order.id,
+                    orderCode: order.orderCode,
+                    amount: order.amount || 0,
+                    paymentStatus: order.paymentStatus,
+                    createdAt: order.createdAt,
+                  },
+                ],
+              });
+              return;
+            }
 
           existing.orders += 1;
           existing.totalSpent += order.amount || 0;
           if (new Date(order.createdAt).getTime() > new Date(existing.lastOrderAt).getTime()) {
             existing.lastOrderAt = order.createdAt;
           }
+
+          existing.recentOrders.push({
+            id: order.id,
+            orderCode: order.orderCode,
+            amount: order.amount || 0,
+            paymentStatus: order.paymentStatus,
+            createdAt: order.createdAt,
+          });
         });
 
         const now = Date.now();
@@ -67,6 +96,9 @@ export default function AdminCustomers() {
           return {
             ...customer,
             status: (inactive ? "INACTIVE" : "ACTIVE") as CustomerSummary["status"],
+            recentOrders: customer.recentOrders
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .slice(0, 5),
           };
         });
 
@@ -95,6 +127,39 @@ export default function AdminCustomers() {
     });
   }, [customers, searchQuery, statusFilter]);
 
+  const exportCsv = () => {
+    if (filteredCustomers.length === 0) {
+      addToast("Tidak ada data pelanggan untuk diekspor", "warning");
+      return;
+    }
+
+    const header = ["nama", "email", "telepon", "status", "jumlah_pesanan", "total_belanja", "pesanan_terakhir"];
+    const rows = filteredCustomers.map((customer) => {
+      const escaped = [
+        customer.name,
+        customer.email,
+        customer.phone,
+        customer.status,
+        String(customer.orders),
+        String(customer.totalSpent),
+        customer.lastOrderAt,
+      ].map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`);
+      return escaped.join(",");
+    });
+
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.setAttribute("download", `pelanggan-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    addToast("Export pelanggan berhasil", "success");
+  };
+
   return (
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
@@ -102,6 +167,12 @@ export default function AdminCustomers() {
           <h1 className="text-2xl font-bold text-[#0d141b]">Kelola Pelanggan</h1>
           <p className="text-[#4c739a]">Data pelanggan dibangun dari riwayat pesanan nyata.</p>
         </div>
+        <button
+          onClick={exportCsv}
+          className="rounded-lg bg-[#137fec] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f65bd]"
+        >
+          Export CSV
+        </button>
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -160,6 +231,7 @@ export default function AdminCustomers() {
                   <th className="px-6 py-4 text-left">Total Belanja</th>
                   <th className="px-6 py-4 text-left">Pesanan Terakhir</th>
                   <th className="px-6 py-4 text-left">Status</th>
+                  <th className="px-6 py-4 text-left">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -178,6 +250,14 @@ export default function AdminCustomers() {
                         {customer.status === "ACTIVE" ? "Aktif" : "Tidak Aktif"}
                       </span>
                     </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => setActiveCustomer(customer)}
+                        className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-[#0d141b] hover:bg-slate-200"
+                      >
+                        Detail
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -185,6 +265,76 @@ export default function AdminCustomers() {
           </div>
         )}
       </div>
+
+      {activeCustomer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[#0d141b]">Detail Pelanggan</h2>
+              <button onClick={() => setActiveCustomer(null)} className="text-[#4c739a] hover:text-[#0d141b]">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="mb-6 grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-[#4c739a]">Nama</p>
+                <p className="font-medium text-[#0d141b]">{activeCustomer.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#4c739a]">Email</p>
+                <p className="font-medium text-[#0d141b]">{activeCustomer.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#4c739a]">Telepon</p>
+                <p className="font-medium text-[#0d141b]">{activeCustomer.phone}</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#4c739a]">Status</p>
+                <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusColors[activeCustomer.status]}`}>
+                  {activeCustomer.status === "ACTIVE" ? "Aktif" : "Tidak Aktif"}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs text-[#4c739a]">Jumlah Pesanan</p>
+                <p className="font-medium text-[#0d141b]">{activeCustomer.orders}</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#4c739a]">Total Belanja</p>
+                <p className="font-medium text-[#0d141b]">{formatPrice(activeCustomer.totalSpent)}</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-[#0d141b]">5 Pesanan Terbaru</h3>
+              {activeCustomer.recentOrders.length === 0 ? (
+                <p className="text-sm text-[#4c739a]">Belum ada pesanan tercatat.</p>
+              ) : (
+                <div className="space-y-2">
+                  {activeCustomer.recentOrders.map((order) => (
+                    <div key={order.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0d141b]">{order.orderCode}</p>
+                        <p className="text-xs text-[#4c739a]">
+                          {new Date(order.createdAt).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-[#0d141b]">{formatPrice(order.amount)}</p>
+                        <p className="text-xs text-[#4c739a]">{order.paymentStatus}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

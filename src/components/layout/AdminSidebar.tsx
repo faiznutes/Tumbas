@@ -6,14 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { setAuthToken } from "@/lib/api";
 
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/admin/dashboard", label: "Dasbor", icon: "dashboard" },
   { href: "/admin/products", label: "Produk", icon: "inventory_2" },
   { href: "/admin/orders", label: "Pesanan", icon: "shopping_cart" },
   { href: "/admin/orders/report", label: "Laporan Pesanan", icon: "assessment" },
   { href: "/admin/messages", label: "Pesan", icon: "mail" },
   { href: "/admin/customers", label: "Pelanggan", icon: "group" },
   { href: "/admin/users", label: "Pengguna", icon: "admin_panel_settings" },
-  { href: "/admin/webhooks", label: "Webhook Monitor", icon: "monitor_heart" },
+  { href: "/admin/webhooks", label: "Monitor Webhook", icon: "monitor_heart" },
   { href: "/admin/settings", label: "Pengaturan", icon: "settings" },
 ];
 
@@ -21,36 +21,61 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const role = useMemo(() => {
-    if (typeof window === 'undefined') return '';
+  const [role] = useState(() => {
+    if (typeof window === "undefined") return "";
     try {
-      const raw = localStorage.getItem('user');
-      if (!raw) return '';
+      const raw = localStorage.getItem("user");
+      if (!raw) return "";
       const parsed = JSON.parse(raw) as { role?: string };
-      return parsed.role || '';
+      return parsed.role || "";
     } catch {
-      return '';
+      return "";
     }
-  }, []);
+  });
+  const [permissions] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as { permissions?: unknown };
+      return Array.isArray(parsed.permissions)
+        ? parsed.permissions.filter((item): item is string => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  });
 
   const visibleNavItems = useMemo(() => {
+    const hasAnyPermission = (...required: string[]) =>
+      required.length === 0 || required.some((permission) => permissions.includes(permission));
+
     return navItems.filter((item) => {
+      if (role === "SUPER_ADMIN") {
+        return true;
+      }
+
       if (item.href === '/admin/users') {
-        return role === 'SUPER_ADMIN';
+        return false;
       }
       if (item.href === '/admin/settings') {
-        return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'MANAGER';
+        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('settings.view', 'settings.edit');
       }
       if (item.href === '/admin/messages') {
-        return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'MANAGER';
+        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('messages.view', 'messages.edit');
       }
       if (item.href === '/admin/webhooks') {
-        return role === 'SUPER_ADMIN' || role === 'ADMIN';
+        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('reports.view');
+      }
+      if (item.href === '/admin/orders' || item.href === '/admin/orders/report' || item.href === '/admin/customers') {
+        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('orders.view');
+      }
+      if (item.href === '/admin/products') {
+        return (role === 'ADMIN' || role === 'MANAGER') && hasAnyPermission('products.edit');
       }
       return true;
     });
-  }, [role]);
+  }, [permissions, role]);
 
   const currentTitle = useMemo(() => {
     const exact = navItems.find((item) => pathname === item.href);
@@ -60,7 +85,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       .filter((item) => item.href !== '/admin/dashboard' && pathname.startsWith(item.href))
       .sort((a, b) => b.href.length - a.href.length)[0];
 
-    return matched?.label || 'Dashboard';
+    return matched?.label || 'Dasbor';
   }, [pathname]);
 
   const handleLogout = () => {
@@ -78,8 +103,8 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
               <span className="material-symbols-outlined">shopping_bag</span>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-base font-bold leading-normal text-[#0d141b]">Admin Panel</h1>
-              <p className="text-xs font-medium text-[#4c739a]">E-commerce Manager</p>
+              <h1 className="text-base font-bold leading-normal text-[#0d141b]">Panel Admin</h1>
+              <p className="text-xs font-medium text-[#4c739a]">Manajemen Toko</p>
             </div>
           </Link>
         </div>

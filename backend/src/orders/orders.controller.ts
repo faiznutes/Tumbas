@@ -6,6 +6,8 @@ import { PaymentStatus, UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { Permissions } from '../auth/permissions.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
 
 class CreateOrderItemDto {
   @IsString()
@@ -141,7 +143,8 @@ export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('orders.view')
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -169,7 +172,8 @@ export class OrdersController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('orders.view')
   async findById(@Param('id') id: string) {
     return this.ordersService.findById(id);
   }
@@ -192,15 +196,17 @@ export class OrdersController {
     return this.ordersService.create(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @Permissions('orders.edit')
   @Post('shipping/bulk-confirm')
   async bulkMarkShippedToExpedition(@Body() dto: BulkMarkShippedDto) {
     return this.ordersService.bulkMarkShippedToExpedition(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @Permissions('orders.edit')
   @Post(':id/shipping/confirm')
   async markShippedToExpedition(@Param('id') id: string, @Body() dto: MarkShippedDto) {
     return this.ordersService.markShippedToExpedition(id, dto);

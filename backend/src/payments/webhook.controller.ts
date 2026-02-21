@@ -14,6 +14,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { MidtransService } from './midtrans.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Permissions } from '../auth/permissions.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
@@ -157,8 +159,9 @@ export class WebhookController {
   }
 
   @Get('midtrans/monitor')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')
+  @Permissions('reports.view')
   async getMidtransMonitor(@Query('minutes') minutes?: string) {
     const durationMinutes = Math.max(parseInt(minutes || '60', 10) || 60, 1);
     const since = new Date(Date.now() - durationMinutes * 60_000);
@@ -185,14 +188,15 @@ export class WebhookController {
       .filter((log) => ['failed', 'invalid_signature', 'processed_with_warning'].includes(this.getProcessingStatus(log.payload)))
       .slice(0, 20)
       .map((log) => {
-        const payload = log.payload as Record<string, any>;
+        const payload = log.payload as Record<string, unknown>;
+        const processing = (payload.processing as Record<string, unknown> | undefined) || {};
         return {
           id: log.id,
           createdAt: log.createdAt,
-          orderId: payload?.order_id,
+          orderId: typeof payload.order_id === 'string' ? payload.order_id : null,
           status: this.getProcessingStatus(payload),
-          attempts: payload?.processing?.attempts ?? 0,
-          error: payload?.processing?.error ?? null,
+          attempts: typeof processing.attempts === 'number' ? processing.attempts : 0,
+          error: typeof processing.error === 'string' ? processing.error : null,
         };
       });
 
@@ -216,7 +220,8 @@ export class WebhookController {
 
   private getProcessingStatus(payload: unknown): string {
     if (!payload || typeof payload !== 'object') return 'unknown';
-    const record = payload as Record<string, any>;
-    return record?.processing?.status || 'unknown';
+    const record = payload as Record<string, unknown>;
+    const processing = (record.processing as Record<string, unknown> | undefined) || {};
+    return typeof processing.status === 'string' ? processing.status : 'unknown';
   }
 }

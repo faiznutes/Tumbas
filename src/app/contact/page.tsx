@@ -64,8 +64,9 @@ export default function Contact() {
             </div>
             <div className="hidden lg:flex items-center gap-8 flex-1 justify-center">
               <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/">Beranda</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/">Belanja</Link>
+              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/shop">Belanja</Link>
               <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/about">Tentang</Link>
+              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/receipt/verify">Cek Resi</Link>
               <Link className="text-sm font-medium text-[#137fec]" href="/contact">Kontak</Link>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

@@ -10,11 +10,24 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string): Promise<{
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+    permissions: string;
+    isActive: boolean;
+  } | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (user && await bcrypt.compare(password, user.passwordHash)) {
-      const { passwordHash, ...result } = user;
-      return result;
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions,
+        isActive: user.isActive,
+      };
     }
     return null;
   }
@@ -40,6 +53,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        permissions: JSON.parse(user.permissions || '[]'),
       },
     };
   }
@@ -66,6 +80,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        permissions: [],
       },
     };
   }

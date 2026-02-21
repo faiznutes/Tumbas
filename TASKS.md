@@ -90,18 +90,30 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 
 ## Tambahan Plan (User Request Lanjutan)
 - [~] Timeout order belum bayar: otomatis `PENDING -> EXPIRED` setelah 2 jam (strategi aman tanpa hard delete langsung)
+- [x] Timeout order belum bayar: otomatis `PENDING -> EXPIRED` setelah 2 jam (strategi aman tanpa hard delete langsung)
 - [x] Exclude order `EXPIRED/CANCELLED` dari list/laporan default agar data pending lama tidak memenuhi laporan aktif
-- [ ] Tambah aksi hapus di `/admin/messages` (single + bulk)
-- [ ] Tambah manajemen permission granular oleh `SUPER_ADMIN` (view/edit per modul: produk, pesanan, laporan, pelanggan, pesan, pengaturan)
-- [ ] Perluas aksi operasional di `/admin/customers` (detail/filter/export)
-- [ ] Batasi pengaturan toko ke field yang dibutuhkan (nama toko + pajak)
-- [ ] Refactor form varian produk jadi custom dinamis (atribut bebas + sub-opsi)
-- [ ] Tambah upload gambar produk (file), kompresi, dan normalisasi rasio 1:1 tanpa stretch
+- [x] Tambah aksi hapus di `/admin/messages` (single + bulk)
+- [x] Tambah manajemen permission granular oleh `SUPER_ADMIN` (view/edit per modul: produk, pesanan, laporan, pelanggan, pesan, pengaturan)
+- [x] Perluas aksi operasional di `/admin/customers` (detail/filter/export)
+- [x] Batasi pengaturan toko ke field yang dibutuhkan (nama toko + pajak)
+- [x] Refactor form varian produk jadi custom dinamis (atribut bebas + sub-opsi) pada halaman tambah/edit produk
+- [x] Tambah upload gambar produk (file), kompresi, dan normalisasi rasio 1:1 tanpa stretch (client-side processing)
 - [ ] Perbaiki responsive header: brand `TUMBAS` tetap tampil di mobile
 - [ ] Tambah menu header publik untuk cek status resi dan sinkronkan rute terkait
-- [ ] Perbaiki UX responsive `/admin/settings` (tab/icon + layout mobile agar form terbaca)
-- [ ] Audit full i18n: konsisten Bahasa Indonesia (contoh `Settings` -> `Pengaturan`)
-- [ ] Tambah pengaturan kategori pilihan beranda berbasis slug manual (multiline/koma) + kontrol aktif/hapus
+- [x] Perbaiki responsive navbar global: brand `TUMBAS` tampil di mobile (komponen `Navbar`)
+- [x] Tambah menu `Cek Resi` di navbar publik global (`Navbar`) desktop + mobile menuju `/receipt/verify`
+- [x] Sinkronkan link `Cek Resi` pada header custom halaman publik (checkout produk, detail produk, kontak)
+- [x] Implement backend `PermissionsGuard` + decorator `@Permissions(...)` untuk kontrol akses granular endpoint admin (orders/products/messages/settings/webhook monitor)
+- [x] Update login response agar `permissions` ikut tersimpan di user session frontend
+- [x] Tambah UI matrix permission di `/admin/users` (preset Viewer/Editor + checkbox per modul)
+- [x] Sidebar admin kini menghormati permission user (non-super-admin hanya lihat menu yang diizinkan)
+- [x] Enforcement permission granular di endpoint backend admin utama (orders/products/messages/settings/webhook monitor)
+- [x] UI admin produk/pesanan/pesan/pengaturan menghormati mode read-only (aksi edit/hapus/konfirmasi disembunyikan atau dinonaktifkan)
+- [x] Tambah helper frontend `admin-permissions` untuk konsistensi cek hak akses lintas halaman admin
+- [x] Perbaiki UX responsive `/admin/settings` (tab/icon mobile agar navigasi tab tetap terlihat di layar kecil)
+- [~] Audit full i18n: konsisten Bahasa Indonesia (contoh `Settings` -> `Pengaturan`)
+- [x] Konsistensi label utama admin/public diperbarui (Dasbor/Monitor Webhook/Terjual/Staf/Cek Resi/Cari)
+- [x] Tambah pengaturan kategori pilihan beranda berbasis slug manual (multiline/koma) + kontrol hapus slug aktif di UI pengaturan
 
 ## Verification Log
 - [x] `npm run build` backend (post RajaOngkir + Midtrans shipping item details): pass
