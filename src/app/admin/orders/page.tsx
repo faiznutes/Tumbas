@@ -179,18 +179,13 @@ export default function AdminOrders() {
         });
         addToast("Order berhasil dikonfirmasi ke ekspedisi", "success");
       } else {
-        const selectedOrders = orders.filter((order) => shippingTargetIds.includes(order.id));
-        const prefix = trimmedResi.toUpperCase().replace(/\s+/g, "-");
-        const results = await Promise.allSettled(
-          selectedOrders.map((order) =>
-            api.orders.confirmShipping(order.id, {
-              expeditionResi: `${prefix}-${order.orderCode}`,
-              expeditionName: trimmedExpedition || undefined,
-            }),
-          ),
-        );
-        const successCount = results.filter((result) => result.status === "fulfilled").length;
-        const failedCount = results.length - successCount;
+        const result = await api.orders.bulkConfirmShipping({
+          orderIds: shippingTargetIds,
+          expeditionResi: trimmedResi,
+          expeditionName: trimmedExpedition || undefined,
+        });
+        const successCount = result.successCount;
+        const failedCount = result.failedCount;
         if (successCount > 0) {
           addToast(
             failedCount > 0

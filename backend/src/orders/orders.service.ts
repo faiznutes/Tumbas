@@ -200,6 +200,83 @@ export class OrdersService {
     });
   }
 
+  async bulkMarkShippedToExpedition(data: {
+    orderIds: string[];
+    expeditionResi: string;
+    expeditionName?: string;
+  }) {
+    const orderIds = Array.from(new Set((data.orderIds || []).map((id) => id?.trim()).filter(Boolean)));
+    if (orderIds.length === 0) {
+      throw new BadRequestException('At least one order id is required');
+    }
+    if (orderIds.length > 100) {
+      throw new BadRequestException('Maximum 100 orders per bulk shipping confirmation');
+    }
+
+    const expeditionResiRaw = data.expeditionResi.trim();
+    if (!expeditionResiRaw) {
+      throw new BadRequestException('Expedition resi is required');
+    }
+
+    const expeditionName = data.expeditionName?.trim() || null;
+    const normalizedPrefix = expeditionResiRaw.toUpperCase().replace(/\s+/g, '-');
+
+    const orders = await this.prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: {
+        id: true,
+        orderCode: true,
+        paymentStatus: true,
+        shippedToExpedition: true,
+      },
+    });
+
+    const orderMap = new Map(orders.map((order) => [order.id, order]));
+    const success: Array<{ id: string; orderCode: string; expeditionResi: string }> = [];
+    const failed: Array<{ id: string; reason: string }> = [];
+
+    for (const id of orderIds) {
+      const order = orderMap.get(id);
+      if (!order) {
+        failed.push({ id, reason: 'not_found' });
+        continue;
+      }
+      if (order.paymentStatus !== 'PAID') {
+        failed.push({ id, reason: 'not_paid' });
+        continue;
+      }
+      if (order.shippedToExpedition) {
+        failed.push({ id, reason: 'already_shipped' });
+        continue;
+      }
+
+      const expeditionResi =
+        orderIds.length === 1 ? expeditionResiRaw : `${normalizedPrefix}-${order.orderCode}`;
+
+      try {
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: {
+            shippedToExpedition: true,
+            expeditionResi,
+            expeditionName,
+            shippedAt: new Date(),
+          },
+        });
+        success.push({ id: order.id, orderCode: order.orderCode, expeditionResi });
+      } catch {
+        failed.push({ id: order.id, reason: 'update_failed' });
+      }
+    }
+
+    return {
+      successCount: success.length,
+      failedCount: failed.length,
+      success,
+      failed,
+    };
+  }
+
   async verifyReceipt(receiptNo: string, verificationCode: string) {
     const trimmedReceipt = (receiptNo || '').trim().toUpperCase();
     const trimmedCode = (verificationCode || '').trim().toUpperCase();

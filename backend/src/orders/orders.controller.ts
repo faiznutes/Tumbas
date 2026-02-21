@@ -118,6 +118,19 @@ class MarkShippedDto {
   expeditionName?: string;
 }
 
+class BulkMarkShippedDto {
+  @IsArray()
+  @IsString({ each: true })
+  orderIds: string[];
+
+  @IsString()
+  expeditionResi: string;
+
+  @IsOptional()
+  @IsString()
+  expeditionName?: string;
+}
+
 @Controller('orders')
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
@@ -162,6 +175,13 @@ export class OrdersController {
   @Post()
   async create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
+  @Post('shipping/bulk-confirm')
+  async bulkMarkShippedToExpedition(@Body() dto: BulkMarkShippedDto) {
+    return this.ordersService.bulkMarkShippedToExpedition(dto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

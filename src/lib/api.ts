@@ -429,6 +429,17 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    bulkConfirmShipping: (data: { orderIds: string[]; expeditionResi: string; expeditionName?: string }) =>
+      fetchApi<{
+        successCount: number;
+        failedCount: number;
+        success: Array<{ id: string; orderCode: string; expeditionResi: string }>;
+        failed: Array<{ id: string; reason: string }>;
+      }>('/orders/shipping/bulk-confirm', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   contactMessages: {
