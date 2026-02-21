@@ -669,6 +669,12 @@ export const api = {
       midtransIsProduction: boolean;
     }>('/settings/payment'),
 
+    getPaymentPublic: () => fetchApi<{
+      midtransEnabled: boolean;
+      midtransClientKey: string;
+      midtransIsProduction: boolean;
+    }>('/settings/payment-public'),
+
     updatePayment: (data: {
       midtransEnabled?: boolean;
       midtransClientKey?: string;

@@ -111,6 +111,9 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] Hilangkan data hardcoded pada `/admin/customers` dan ganti ke agregasi data pelanggan berbasis pesanan real
 - [x] Sinkronkan UI multi-item di `/orders`, `/success`, dan `/admin/orders/[id]` agar tidak lagi fallback hard single-product
 - [x] Perbarui template receipt TXT/print untuk mendukung daftar item (qty + varian) pada order multi-item
+- [x] Perbaiki checkout city picker agar opsi kelurahan tidak muncul ulang setelah dipilih
+- [x] Perbaiki checkout payment key loading: gunakan endpoint publik `settings/payment-public` untuk Snap client key
+- [x] Upgrade notifikasi toast ke UI popup yang lebih rapi dan konsisten dengan desain aplikasi
 - [x] `npm run build` frontend: pass
 - [x] `npm run build` backend: pass
 - [x] `npm test` backend: pass

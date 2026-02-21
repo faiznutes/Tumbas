@@ -75,41 +75,71 @@ function ToastContainer({
     ),
   };
 
-  const colors = {
-    success: "bg-green-500 border-green-600",
-    error: "bg-red-500 border-red-600",
-    warning: "bg-yellow-500 border-yellow-600",
-    info: "bg-primary border-blue-600",
+  const themes = {
+    success: {
+      icon: "text-emerald-600",
+      ring: "ring-emerald-100",
+      progress: "bg-emerald-500",
+      badge: "Sukses",
+    },
+    error: {
+      icon: "text-rose-600",
+      ring: "ring-rose-100",
+      progress: "bg-rose-500",
+      badge: "Error",
+    },
+    warning: {
+      icon: "text-amber-600",
+      ring: "ring-amber-100",
+      progress: "bg-amber-500",
+      badge: "Perhatian",
+    },
+    info: {
+      icon: "text-sky-600",
+      ring: "ring-sky-100",
+      progress: "bg-sky-500",
+      badge: "Info",
+    },
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`
-            flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg 
-            bg-white border-l-4 
-            ${colors[toast.type]}
-            animate-in slide-in-from-right duration-300
-          `}
-        >
-          <span className={colors[toast.type].replace("bg-", "text-")}>
-            {icons[toast.type]}
-          </span>
-          <p className="text-sm font-medium text-[#0d141b] flex-1">
-            {toast.message}
-          </p>
-          <button
-            onClick={() => removeToast(toast.id)}
-            className="text-[#4c739a] hover:text-[#0d141b]"
+    <div className="fixed bottom-4 right-4 z-50 flex w-[92vw] max-w-sm flex-col gap-3 sm:w-full">
+      {toasts.map((toast) => {
+        const theme = themes[toast.type];
+        return (
+          <div
+            key={toast.id}
+            className={`relative overflow-hidden rounded-2xl border border-[#e7edf3] bg-white/95 p-4 shadow-xl backdrop-blur ${theme.ring} ring-1 animate-in slide-in-from-right duration-300`}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      ))}
+            <div className="flex items-start gap-3">
+              <div className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 ${theme.icon}`}>
+                {icons[toast.type]}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#4c739a]">{theme.badge}</p>
+                <p className="mt-0.5 text-sm font-medium text-[#0d141b] leading-snug">{toast.message}</p>
+              </div>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="rounded-md p-1 text-[#4c739a] hover:bg-slate-100 hover:text-[#0d141b]"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full ${theme.progress} animate-[toastbar_4s_linear_forwards]`} />
+            </div>
+          </div>
+        );
+      })}
+      <style jsx global>{`
+        @keyframes toastbar {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 }

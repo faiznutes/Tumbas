@@ -260,6 +260,14 @@ let SettingsController = class SettingsController {
     async getPaymentSettings() {
         return this.settingsService.getPaymentSettings();
     }
+    async getPublicPaymentSettings() {
+        const settings = await this.settingsService.getPaymentSettings();
+        return {
+            midtransEnabled: settings.midtransEnabled,
+            midtransClientKey: settings.midtransClientKey,
+            midtransIsProduction: settings.midtransIsProduction,
+        };
+    }
     async updatePaymentSettings(data) {
         return this.settingsService.setPaymentSettings(data);
     }
@@ -339,10 +347,18 @@ __decorate([
 ], SettingsController.prototype, "updateHomepageFeaturedSettings", null);
 __decorate([
     (0, common_1.Get)('payment'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "getPaymentSettings", null);
+__decorate([
+    (0, common_1.Get)('payment-public'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SettingsController.prototype, "getPublicPaymentSettings", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('SUPER_ADMIN', 'ADMIN', 'MANAGER'),

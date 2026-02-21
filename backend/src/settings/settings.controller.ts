@@ -199,8 +199,20 @@ export class SettingsController {
   }
 
   @Get('payment')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
   async getPaymentSettings() {
     return this.settingsService.getPaymentSettings();
+  }
+
+  @Get('payment-public')
+  async getPublicPaymentSettings() {
+    const settings = await this.settingsService.getPaymentSettings();
+    return {
+      midtransEnabled: settings.midtransEnabled,
+      midtransClientKey: settings.midtransClientKey,
+      midtransIsProduction: settings.midtransIsProduction,
+    };
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

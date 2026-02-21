@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/Navbar";
 import { api, ShippingCity, ShippingRateService } from "@/lib/api";
 import { clearCart, getCartItems, CartItem } from "@/lib/cart";
 import { savePublicOrderRef } from "@/lib/order-tracking";
+import { useToast } from "@/components/ui/Toast";
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ function formatPrice(price: number) {
 
 export default function CartCheckoutPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [snapReady, setSnapReady] = useState(false);
@@ -54,13 +56,16 @@ export default function CartCheckoutPage() {
   });
   const [shippingProvider, setShippingProvider] = useState("jne");
   const [destinationCityId, setDestinationCityId] = useState("");
+  const [selectedCityLabel, setSelectedCityLabel] = useState("");
   const [cityOptions, setCityOptions] = useState<ShippingCity[]>([]);
   const [shippingServices, setShippingServices] = useState<ShippingRateService[]>([]);
   const [selectedShippingService, setSelectedShippingService] = useState("");
   const [loadingRates, setLoadingRates] = useState(false);
   const [shippingError, setShippingError] = useState("");
+  const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
 
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
+  const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
 
   const openSnapPayment = async (
@@ -79,8 +84,8 @@ export default function CartCheckoutPage() {
     };
 
     const isReady = snapReady || (await waitUntilReady());
-    if (!isReady || !window.snap || !midtransClientKey) {
-      alert("Popup pembayaran belum siap. Pastikan pop-up diizinkan, lalu klik Bayar Sekarang lagi.");
+    if (!isReady || !window.snap || !effectiveClientKey) {
+      addToast("Popup pembayaran belum siap. Pastikan pop-up diizinkan lalu klik Bayar Sekarang lagi.", "warning");
       return;
     }
 
@@ -138,7 +143,25 @@ export default function CartCheckoutPage() {
   }, []);
 
   useEffect(() => {
+    async function fetchPaymentSettings() {
+      try {
+        const payment = await api.settings.getPaymentPublic();
+        if (payment.midtransEnabled && payment.midtransClientKey) {
+          setRuntimePaymentClientKey(payment.midtransClientKey);
+        }
+      } catch {
+        // ignore and rely on env fallback
+      }
+    }
+    fetchPaymentSettings();
+  }, []);
+
+  useEffect(() => {
     const query = formData.customerCity.trim();
+    if (destinationCityId && selectedCityLabel && query.toLowerCase() === selectedCityLabel.toLowerCase()) {
+      setCityOptions([]);
+      return;
+    }
     if (query.length < 3) {
       setCityOptions([]);
       return;
@@ -152,7 +175,7 @@ export default function CartCheckoutPage() {
       }
     }, 300);
     return () => clearTimeout(timeout);
-  }, [formData.customerCity]);
+  }, [destinationCityId, formData.customerCity, selectedCityLabel]);
 
   useEffect(() => {
     async function fetchRates() {
@@ -187,6 +210,7 @@ export default function CartCheckoutPage() {
     const { name, value } = e.target;
     if (name === "customerCity") {
       setDestinationCityId("");
+      setSelectedCityLabel("");
       setShippingServices([]);
       setSelectedShippingService("");
     }
@@ -196,13 +220,13 @@ export default function CartCheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
-      alert("Keranjang kosong");
+      addToast("Keranjang kosong", "warning");
       return;
     }
 
     setSubmitting(true);
     try {
-      if (!midtransClientKey) {
+      if (!effectiveClientKey) {
         throw new Error("Konfigurasi pembayaran belum lengkap. Hubungi admin.");
       }
       const snapAvailable = snapReady || (await ensureSnapReady());
@@ -257,7 +281,7 @@ export default function CartCheckoutPage() {
         router.push(successUrl);
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal membuat pesanan");
+      addToast(error instanceof Error ? error.message : "Gagal membuat pesanan", "error");
       setSubmitting(false);
     }
   };
@@ -281,10 +305,10 @@ export default function CartCheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f8]">
-      {midtransClientKey && (
+      {effectiveClientKey && (
         <Script
           src={snapUrl}
-          data-client-key={midtransClientKey}
+          data-client-key={effectiveClientKey}
           strategy="afterInteractive"
           onLoad={() => setSnapReady(Boolean(window.snap))}
         />
@@ -312,6 +336,7 @@ export default function CartCheckoutPage() {
                         className="block w-full border-b border-[#f2f4f7] px-3 py-2 text-left text-sm hover:bg-[#f6f7f8]"
                         onClick={() => {
                           setDestinationCityId(city.cityId);
+                          setSelectedCityLabel(city.label);
                           setFormData((prev) => ({ ...prev, customerCity: city.label, customerPostalCode: city.postalCode || prev.customerPostalCode }));
                           setCityOptions([]);
                         }}

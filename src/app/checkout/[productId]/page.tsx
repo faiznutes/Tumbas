@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { api, Product, ShippingCity, ShippingRateService } from "@/lib/api";
 import { savePublicOrderRef } from "@/lib/order-tracking";
+import { useToast } from "@/components/ui/Toast";
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ export default function CheckoutPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { addToast } = useToast();
   const productId = params?.productId as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,7 @@ export default function CheckoutPage() {
   });
   const [shippingProvider, setShippingProvider] = useState("jne");
   const [destinationCityId, setDestinationCityId] = useState("");
+  const [selectedCityLabel, setSelectedCityLabel] = useState("");
   const [cityOptions, setCityOptions] = useState<ShippingCity[]>([]);
   const [shippingServices, setShippingServices] = useState<ShippingRateService[]>([]);
   const [selectedShippingService, setSelectedShippingService] = useState("");
@@ -56,7 +59,9 @@ export default function CheckoutPage() {
   const [shippingError, setShippingError] = useState("");
   const [snapReady, setSnapReady] = useState(false);
   const [summaryImageSrc, setSummaryImageSrc] = useState("https://via.placeholder.com/400");
+  const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
+  const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
   const selectedVariantKey = searchParams.get("variantKey") || "";
   const selectedVariantLabel = searchParams.get("variantLabel") || "";
@@ -81,8 +86,8 @@ export default function CheckoutPage() {
     };
 
     const isReady = snapReady || (await waitUntilReady());
-    if (!isReady || !window.snap || !midtransClientKey) {
-      alert("Popup pembayaran belum siap. Pastikan pop-up diizinkan, lalu klik Bayar Sekarang lagi.");
+    if (!isReady || !window.snap || !effectiveClientKey) {
+      addToast("Popup pembayaran belum siap. Pastikan pop-up diizinkan lalu klik Bayar Sekarang lagi.", "warning");
       return;
     }
 
@@ -143,7 +148,25 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    async function fetchPaymentSettings() {
+      try {
+        const payment = await api.settings.getPaymentPublic();
+        if (payment.midtransEnabled && payment.midtransClientKey) {
+          setRuntimePaymentClientKey(payment.midtransClientKey);
+        }
+      } catch {
+        // ignore and rely on env fallback
+      }
+    }
+    fetchPaymentSettings();
+  }, []);
+
+  useEffect(() => {
     const query = formData.customerCity.trim();
+    if (destinationCityId && selectedCityLabel && query.toLowerCase() === selectedCityLabel.toLowerCase()) {
+      setCityOptions([]);
+      return;
+    }
     if (query.length < 3) {
       setCityOptions([]);
       return;
@@ -159,7 +182,7 @@ export default function CheckoutPage() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [formData.customerCity]);
+  }, [destinationCityId, formData.customerCity, selectedCityLabel]);
 
   useEffect(() => {
     async function fetchRates() {
@@ -209,7 +232,7 @@ export default function CheckoutPage() {
     
     setSubmitting(true);
     try {
-      if (!midtransClientKey) {
+      if (!effectiveClientKey) {
         throw new Error("Konfigurasi pembayaran belum lengkap. Hubungi admin.");
       }
       const snapAvailable = snapReady || (await ensureSnapReady());
@@ -268,7 +291,7 @@ export default function CheckoutPage() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Gagal membuat pesanan";
-      alert(message);
+      addToast(message, "error");
       setSubmitting(false);
     }
   };
@@ -277,6 +300,7 @@ export default function CheckoutPage() {
     const { name, value } = e.target;
     if (name === "customerCity") {
       setDestinationCityId("");
+      setSelectedCityLabel("");
       setShippingServices([]);
       setSelectedShippingService("");
     }
@@ -310,10 +334,10 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
-      {midtransClientKey && (
+      {effectiveClientKey && (
         <Script
           src={snapUrl}
-          data-client-key={midtransClientKey}
+          data-client-key={effectiveClientKey}
           strategy="afterInteractive"
           onLoad={() => setSnapReady(Boolean(window.snap))}
         />
@@ -393,9 +417,10 @@ export default function CheckoutPage() {
                               type="button"
                               onClick={() => {
                                 setDestinationCityId(city.cityId);
+                                setSelectedCityLabel(city.label);
                                 setFormData((prev) => ({
                                   ...prev,
-                                  customerCity: `${city.type} ${city.cityName}`,
+                                  customerCity: city.label,
                                   customerPostalCode: city.postalCode || prev.customerPostalCode,
                                 }));
                                 setCityOptions([]);

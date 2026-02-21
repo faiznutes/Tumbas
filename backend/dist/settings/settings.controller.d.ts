@@ -79,6 +79,11 @@ export declare class SettingsController {
         midtransServerKey: string;
         midtransIsProduction: boolean;
     }>;
+    getPublicPaymentSettings(): Promise<{
+        midtransEnabled: boolean;
+        midtransClientKey: string;
+        midtransIsProduction: boolean;
+    }>;
     updatePaymentSettings(data: UpdatePaymentSettingsDto): Promise<{
         midtransEnabled: boolean;
         midtransClientKey: string;
