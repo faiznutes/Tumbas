@@ -179,6 +179,8 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm run build` frontend (post payment sync adoption di pending/success/orders): pass
 - [x] Smoke route auth: `POST /api/orders/:id/sync-payment` tanpa token `400`, token invalid `401`, token valid `200`
 - [x] Verifikasi DB: order uji `PENDING -> PAID` via `sync-payment` berhasil pada produksi
+- [x] Verifikasi webhook Midtrans signature via body `signature_key`: request diterima (`is_valid=true`) dan diproses (`processed_with_warning` saat order tidak ditemukan)
+- [x] Verifikasi webhook Midtrans signature via header `x-signature-key` + payload numeric: request diterima (`is_valid=true`) dan diproses
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` atau `ADMIN`)
