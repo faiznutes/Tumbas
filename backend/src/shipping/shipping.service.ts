@@ -3,28 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
 
 type RajaOngkirCity = {
-  city_id: string;
-  province_id: string;
-  province: string;
-  type: string;
+  id: number;
+  label: string;
+  province_name: string;
   city_name: string;
-  postal_code: string;
-};
-
-type RajaOngkirCostService = {
-  service: string;
-  description: string;
-  cost: Array<{
-    value: number;
-    etd: string;
-    note: string;
-  }>;
+  district_name: string;
+  subdistrict_name: string;
+  zip_code: string;
 };
 
 @Injectable()
 export class ShippingService {
-  private readonly baseUrl = 'https://api.rajaongkir.com/starter';
-  private cityCache: { loadedAt: number; cities: RajaOngkirCity[] } | null = null;
+  private readonly cityEndpoint = 'https://rajaongkir.komerce.id/api/v1/destination/domestic-destination';
+  private cityCache = new Map<string, RajaOngkirCity>();
 
   constructor(
     private configService: ConfigService,
@@ -39,13 +30,8 @@ export class ShippingService {
     return key.trim();
   }
 
-  private async fetchCities() {
-    const now = Date.now();
-    if (this.cityCache && now - this.cityCache.loadedAt < 1000 * 60 * 30) {
-      return this.cityCache.cities;
-    }
-
-    const response = await fetch(`${this.baseUrl}/city`, {
+  private async fetchCities(query: string, limit: number) {
+    const response = await fetch(`${this.cityEndpoint}?search=${encodeURIComponent(query)}&limit=${limit}&offset=0`, {
       headers: {
         key: this.getApiKey(),
       },
@@ -56,16 +42,17 @@ export class ShippingService {
     }
 
     const payload = await response.json() as {
-      rajaongkir?: {
-        results?: RajaOngkirCity[];
+      data?: RajaOngkirCity[];
+      meta?: {
+        status?: string;
       };
     };
 
-    const cities = payload?.rajaongkir?.results || [];
-    this.cityCache = {
-      loadedAt: now,
-      cities,
-    };
+    const cities = payload?.data || [];
+    for (const city of cities) {
+      this.cityCache.set(String(city.id), city);
+    }
+
     return cities;
   }
 
@@ -73,21 +60,16 @@ export class ShippingService {
     const trimmed = query.trim().toLowerCase();
     if (trimmed.length < 2) return [];
 
-    const cities = await this.fetchCities();
+    const cities = await this.fetchCities(trimmed, Math.min(50, Math.max(1, limit)));
     return cities
-      .filter((city) => {
-        const full = `${city.type} ${city.city_name} ${city.province} ${city.postal_code}`.toLowerCase();
-        return full.includes(trimmed);
-      })
-      .slice(0, Math.min(50, Math.max(1, limit)))
       .map((city) => ({
-        cityId: city.city_id,
-        provinceId: city.province_id,
+        cityId: String(city.id),
+        provinceId: city.province_name,
         cityName: city.city_name,
-        type: city.type,
-        province: city.province,
-        postalCode: city.postal_code,
-        label: `${city.type} ${city.city_name}, ${city.province}`,
+        type: city.district_name || city.subdistrict_name || 'Kota',
+        province: city.province_name,
+        postalCode: city.zip_code,
+        label: city.label,
       }));
   }
 
@@ -114,43 +96,25 @@ export class ShippingService {
       throw new BadRequestException('Kurir tidak didukung');
     }
 
-    const fallbackByCourier: Record<string, string> = {
-      jne: 'jne',
-      jnt: 'jne',
-      sicepat: 'jne',
+    const destination = this.cityCache.get(params.destinationCityId);
+    const jawaProvinces = new Set([
+      'DKI JAKARTA',
+      'JAWA BARAT',
+      'JAWA TENGAH',
+      'DI YOGYAKARTA',
+      'JAWA TIMUR',
+      'BANTEN',
+    ]);
+    const destinationProvince = (destination?.province_name || '').toUpperCase();
+    const isJawa = jawaProvinces.has(destinationProvince);
+
+    const baseCost = isJawa ? shippingSettings.estimateJawa : shippingSettings.estimateLuarJawa;
+    const courierMultiplier: Record<string, number> = {
+      jne: 1,
+      jnt: 1.08,
+      sicepat: 1.05,
     };
 
-    const requestBody = new URLSearchParams({
-      origin: originCityId,
-      destination: params.destinationCityId,
-      weight: String(Math.max(1, Math.floor(params.weightGram))),
-      courier: fallbackByCourier[courier],
-    });
-
-    const response = await fetch(`${this.baseUrl}/cost`, {
-      method: 'POST',
-      headers: {
-        key: this.getApiKey(),
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: requestBody.toString(),
-    });
-
-    if (!response.ok) {
-      throw new ServiceUnavailableException('Gagal menghitung ongkir dari RajaOngkir');
-    }
-
-    const payload = await response.json() as {
-      rajaongkir?: {
-        results?: Array<{
-          code: string;
-          name: string;
-          costs: RajaOngkirCostService[];
-        }>;
-      };
-    };
-
-    const result = payload?.rajaongkir?.results?.[0];
     const services: Array<{
       courier: string;
       service: string;
@@ -159,17 +123,23 @@ export class ShippingService {
       etd: string;
     }> = [];
 
-    for (const service of result?.costs || []) {
-      const firstCost = service.cost?.[0];
-      if (!firstCost) continue;
-      services.push({
-        courier,
-        service: service.service,
-        description: service.description,
-        cost: firstCost.value,
-        etd: firstCost.etd,
-      });
-    }
+    const multiplier = courierMultiplier[courier] || 1;
+    const weightFactor = Math.max(1, Math.ceil(params.weightGram / 1000));
+    const regularCost = Math.round(baseCost * multiplier * weightFactor);
+    services.push({
+      courier,
+      service: 'REG',
+      description: `Estimasi ${courier.toUpperCase()} reguler`,
+      cost: regularCost,
+      etd: isJawa ? '1-3' : '3-7',
+    });
+    services.push({
+      courier,
+      service: 'YES',
+      description: `Estimasi ${courier.toUpperCase()} cepat`,
+      cost: Math.round(regularCost * 1.35),
+      etd: isJawa ? '1-2' : '2-4',
+    });
 
     return {
       originCityId,

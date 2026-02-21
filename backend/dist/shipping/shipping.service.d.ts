@@ -3,7 +3,7 @@ import { SettingsService } from '../settings/settings.service';
 export declare class ShippingService {
     private configService;
     private settingsService;
-    private readonly baseUrl;
+    private readonly cityEndpoint;
     private cityCache;
     constructor(configService: ConfigService, settingsService: SettingsService);
     private getApiKey;
