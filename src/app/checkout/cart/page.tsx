@@ -63,6 +63,35 @@ export default function CartCheckoutPage() {
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
 
+  const openSnapPayment = async (
+    snapToken: string,
+    orderId: string,
+    successUrl: string,
+    pendingUrl: string,
+  ) => {
+    const waitUntilReady = async () => {
+      if (window.snap) return true;
+      for (let i = 0; i < 10; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        if (window.snap) return true;
+      }
+      return false;
+    };
+
+    const isReady = snapReady || (await waitUntilReady());
+    if (!isReady || !window.snap || !midtransClientKey) {
+      alert("Popup pembayaran belum siap. Pastikan pop-up diizinkan, lalu klik Bayar Sekarang lagi.");
+      return;
+    }
+
+    window.snap.pay(snapToken, {
+      onSuccess: () => router.push(successUrl),
+      onPending: () => router.push(pendingUrl),
+      onError: () => router.push(`/payment/failed?orderId=${orderId}`),
+      onClose: () => router.push(pendingUrl),
+    });
+  };
+
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
   const estimatedWeight = useMemo(() => {
     const weightByItem = Math.max(1, shippingConfig.defaultWeightGram);
@@ -202,18 +231,8 @@ export default function CartCheckoutPage() {
           ? `/payment/pending?orderId=${order.id}&token=${encodeURIComponent(order.publicToken)}`
           : `/payment/pending?orderId=${order.id}`;
 
-        if (window.snap && midtransClientKey && snapReady) {
-          setSubmitting(false);
-          window.snap.pay(order.snapToken, {
-            onSuccess: () => router.push(successUrl),
-            onPending: () => router.push(pendingUrl),
-            onError: () => router.push(`/payment/failed?orderId=${order.id}`),
-            onClose: () => router.push(pendingUrl),
-          });
-        } else {
-          setSubmitting(false);
-          alert("Popup pembayaran diblokir atau belum siap. Izinkan pop-up lalu klik Bayar Sekarang lagi.");
-        }
+        setSubmitting(false);
+        await openSnapPayment(order.snapToken, order.id, successUrl, pendingUrl);
       } else {
         setSubmitting(false);
         const successUrl = order.publicToken

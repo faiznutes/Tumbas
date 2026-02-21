@@ -65,6 +65,43 @@ export default function CheckoutPage() {
   const unitPrice = selectedVariant && selectedVariant.price > 0 ? selectedVariant.price : (product?.price || 0);
   const effectiveWeight = selectedVariant?.weightGram || shippingConfig.defaultWeightGram;
 
+  const openSnapPayment = async (
+    snapToken: string,
+    orderId: string,
+    successUrl: string,
+    pendingUrl: string,
+  ) => {
+    const waitUntilReady = async () => {
+      if (window.snap) return true;
+      for (let i = 0; i < 10; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        if (window.snap) return true;
+      }
+      return false;
+    };
+
+    const isReady = snapReady || (await waitUntilReady());
+    if (!isReady || !window.snap || !midtransClientKey) {
+      alert("Popup pembayaran belum siap. Pastikan pop-up diizinkan, lalu klik Bayar Sekarang lagi.");
+      return;
+    }
+
+    window.snap.pay(snapToken, {
+      onSuccess: () => {
+        router.push(successUrl);
+      },
+      onPending: () => {
+        router.push(pendingUrl);
+      },
+      onError: () => {
+        router.push(`/payment/failed?orderId=${orderId}`);
+      },
+      onClose: () => {
+        router.push(pendingUrl);
+      },
+    });
+  };
+
   useEffect(() => {
     async function fetchProduct() {
       try {
@@ -201,26 +238,8 @@ export default function CheckoutPage() {
           ? `/success?orderId=${order.id}&token=${encodeURIComponent(order.publicToken)}`
           : `/success?orderId=${order.id}`;
 
-        if (window.snap && midtransClientKey && snapReady) {
-          setSubmitting(false);
-          window.snap.pay(order.snapToken, {
-            onSuccess: () => {
-              router.push(successUrl);
-            },
-            onPending: () => {
-              router.push(pendingUrl);
-            },
-            onError: () => {
-              router.push(`/payment/failed?orderId=${order.id}`);
-            },
-            onClose: () => {
-              router.push(pendingUrl);
-            },
-          });
-        } else {
-          setSubmitting(false);
-          alert("Popup pembayaran diblokir atau belum siap. Izinkan pop-up lalu klik Bayar Sekarang lagi.");
-        }
+        setSubmitting(false);
+        await openSnapPayment(order.snapToken, order.id, successUrl, pendingUrl);
       } else {
         setSubmitting(false);
         if (order.publicToken) {

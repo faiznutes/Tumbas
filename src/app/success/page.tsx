@@ -220,8 +220,8 @@ function SuccessContent() {
             <span className="material-symbols-outlined text-green-600 text-5xl">check_circle</span>
           </div>
           
-          <h1 className="text-3xl font-bold text-[#0d141b] mb-4">Pesanan Berhasil!</h1>
-          <p className="text-[#4c739a] mb-8">Terima kasih telah berbelanja di Tumbas. Pesanan Anda telah kami terima dan akan segera diproses.</p>
+          <h1 className="text-3xl font-bold text-[#0d141b] mb-4">{order?.paymentStatus === "PAID" ? "Pembayaran Berhasil!" : "Pesanan Berhasil!"}</h1>
+          <p className="text-[#4c739a] mb-8">{order?.paymentStatus === "PAID" ? "Pembayaran telah kami terima. Resi dan nota tersedia di bawah untuk disimpan." : "Pesanan telah dibuat. Sistem sedang sinkronisasi status pembayaran Anda."}</p>
           
           {orderId && (
             <div className="bg-white rounded-xl border border-[#e7edf3] p-6 mb-8">

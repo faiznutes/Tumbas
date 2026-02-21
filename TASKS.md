@@ -102,6 +102,8 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm run build` frontend (post `/checkout/cart` multi-item): pass
 - [x] `npm run build` backend (post `OrderItem` relation & stock deduction multi-item): pass
 - [x] `npm run test` backend (post multi-item order service): pass
+- [x] Update checkout UX: input lokasi pakai format `Kelurahan / Kecamatan` + validasi copy sesuai user test case
+- [x] Update Snap flow: `Bayar Sekarang` membuka popup langsung, `onSuccess` langsung ke `/success` (resi + nota)
 - [x] `npm run build` frontend: pass
 - [x] `npm run build` backend: pass
 - [x] `npm test` backend: pass
