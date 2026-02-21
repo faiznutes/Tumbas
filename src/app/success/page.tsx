@@ -151,6 +151,11 @@ function SuccessContent() {
       try {
         setLoadingOrder(true);
         setOrderError("");
+        try {
+          await api.orders.syncPaymentStatus(orderId, token);
+        } catch {
+          // ignore sync error and continue fetching public order data
+        }
         const data = await api.orders.getPublicById(orderId, token);
         setOrder(data);
       } catch (err: unknown) {
@@ -172,6 +177,11 @@ function SuccessContent() {
     const timer = setInterval(async () => {
       attempts += 1;
       try {
+        try {
+          await api.orders.syncPaymentStatus(orderId, token);
+        } catch {
+          // ignore sync error and keep polling public status
+        }
         const data = await api.orders.getPublicById(orderId, token);
         setOrder(data);
         if (data.paymentStatus === "PAID" || attempts >= 6) {

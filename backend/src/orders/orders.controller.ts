@@ -109,6 +109,11 @@ class VerifyResiQueryDto {
   resi: string;
 }
 
+class SyncPaymentQueryDto {
+  @IsString()
+  token: string;
+}
+
 class MarkShippedDto {
   @IsString()
   expeditionResi: string;
@@ -170,6 +175,14 @@ export class OrdersController {
   @Get(':id/public')
   async findPublicById(@Param('id') id: string, @Query('token') token?: string) {
     return this.ordersService.findPublicById(id, token);
+  }
+
+  @Post(':id/sync-payment')
+  async syncPaymentStatus(
+    @Param('id') id: string,
+    @Query() query: SyncPaymentQueryDto,
+  ) {
+    return this.ordersService.syncPaymentStatus(id, query.token);
   }
 
   @Post()

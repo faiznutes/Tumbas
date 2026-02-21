@@ -9,20 +9,21 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import * as crypto from 'crypto';
 import { OrdersService } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { MidtransService } from './midtrans.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 type MidtransPayload = {
   order_id: string;
-  status_code: string;
-  gross_amount: string;
+  status_code: string | number;
+  gross_amount: string | number;
   transaction_status: string;
   transaction_id?: string;
+  signature_key?: string;
 };
 
 @Controller('webhook')
@@ -31,22 +32,21 @@ export class WebhookController {
     private ordersService: OrdersService,
     private prisma: PrismaService,
     private configService: ConfigService,
+    private midtransService: MidtransService,
   ) {}
 
   @Post('midtrans')
   async handleMidtransWebhook(
     @Body() payload: MidtransPayload,
-    @Headers('x-signature-key') signatureKey: string,
+    @Headers('x-signature-key') signatureKeyHeader: string,
   ) {
-    const serverKey = this.configService.get('MIDTRANS_SERVER_KEY');
-    const expectedSignature = this.createSignature(
-      payload.order_id,
-      payload.status_code,
-      payload.gross_amount,
-      serverKey,
-    );
-
-    const isValid = signatureKey === expectedSignature;
+    const signatureKey = signatureKeyHeader || payload.signature_key;
+    const isValid = this.midtransService.verifyNotificationSignature({
+      signatureKey,
+      orderId: payload.order_id,
+      statusCode: String(payload.status_code),
+      grossAmount: payload.gross_amount,
+    });
 
     const webhookLog = await this.prisma.webhookLog.create({
       data: {
@@ -94,7 +94,7 @@ export class WebhookController {
           order_id: payload.order_id,
           transaction_status: payload.transaction_status,
           transaction_id: payload.transaction_id,
-          status_code: payload.status_code,
+          status_code: String(payload.status_code),
         });
 
         const status = result.success ? 'processed' : 'processed_with_warning';
@@ -208,14 +208,6 @@ export class WebhookController {
       },
       recentFailures,
     };
-  }
-
-  private createSignature(orderId: string, statusCode: string, grossAmount: string, serverKey: string): string {
-    const hash = crypto
-      .createHash('sha512')
-      .update(orderId + statusCode + grossAmount + serverKey)
-      .digest('hex');
-    return hash;
   }
 
   private async wait(ms: number) {

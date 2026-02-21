@@ -35,6 +35,12 @@ function PaymentPendingContent() {
             return;
           }
 
+          try {
+            await api.orders.syncPaymentStatus(orderId, token);
+          } catch {
+            // continue with public fetch fallback; webhook might still process asynchronously
+          }
+
           const data = await api.orders.getPublicById(orderId, token);
           setOrder(data);
 

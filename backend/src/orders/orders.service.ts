@@ -173,6 +173,43 @@ export class OrdersService {
     return order;
   }
 
+  async syncPaymentStatus(id: string, token?: string) {
+    if (!token || token !== this.createPublicToken(id)) {
+      throw new UnauthorizedException('Invalid order token');
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        paymentStatus: true,
+        midtransOrderId: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.paymentStatus === 'PAID' || order.paymentStatus === 'FAILED' || order.paymentStatus === 'EXPIRED' || order.paymentStatus === 'CANCELLED') {
+      return this.findPublicById(id, token);
+    }
+
+    if (!order.midtransOrderId) {
+      return this.findPublicById(id, token);
+    }
+
+    const transaction = await this.midtransService.getTransactionStatus(order.midtransOrderId);
+    await this.handleWebhook({
+      order_id: transaction.order_id,
+      transaction_status: transaction.transaction_status,
+      transaction_id: transaction.transaction_id,
+      status_code: transaction.status_code,
+    });
+
+    return this.findPublicById(id, token);
+  }
+
   async markShippedToExpedition(id: string, data: { expeditionResi: string; expeditionName?: string }) {
     const expeditionResi = data.expeditionResi.trim();
     if (!expeditionResi) {

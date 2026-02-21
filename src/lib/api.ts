@@ -385,6 +385,11 @@ export const api = {
 
     getPublicById: (id: string, token: string) => fetchApi<PublicOrder>(`/orders/${id}/public?token=${encodeURIComponent(token)}`),
 
+    syncPaymentStatus: (id: string, token: string) =>
+      fetchApi<PublicOrder>(`/orders/${id}/sync-payment?token=${encodeURIComponent(token)}`, {
+        method: 'POST',
+      }),
+
     create: (data: {
       productId?: string;
       items?: Array<{
