@@ -15,9 +15,24 @@ export class OrdersService {
     private shippingService: ShippingService,
   ) {}
 
+  private getPublicTokenSecrets() {
+    const primary = this.configService.get<string>('ORDER_PUBLIC_SECRET') || this.configService.get<string>('JWT_SECRET') || 'change-me';
+    const previous = this.configService.get<string>('ORDER_PUBLIC_SECRET_PREVIOUS');
+    return [primary, previous].filter((value): value is string => Boolean(value && value.trim()));
+  }
+
   private createPublicToken(orderId: string) {
-    const secret = this.configService.get<string>('ORDER_PUBLIC_SECRET') || this.configService.get<string>('JWT_SECRET') || 'change-me';
-    return crypto.createHmac('sha256', secret).update(orderId).digest('hex');
+    const [secret] = this.getPublicTokenSecrets();
+    return crypto.createHmac('sha256', secret || 'change-me').update(orderId).digest('hex');
+  }
+
+  private isValidPublicToken(orderId: string, token?: string) {
+    if (!token) return false;
+    const normalizedToken = token.trim();
+    return this.getPublicTokenSecrets().some((secret) => {
+      const expected = crypto.createHmac('sha256', secret).update(orderId).digest('hex');
+      return expected === normalizedToken;
+    });
   }
 
   private createVerificationCode(orderCode: string) {
@@ -137,7 +152,7 @@ export class OrdersService {
   }
 
   async findPublicById(id: string, token?: string) {
-    if (!token || token !== this.createPublicToken(id)) {
+    if (!this.isValidPublicToken(id, token)) {
       throw new UnauthorizedException('Invalid order token');
     }
 
@@ -174,7 +189,7 @@ export class OrdersService {
   }
 
   async syncPaymentStatus(id: string, token?: string) {
-    if (!token || token !== this.createPublicToken(id)) {
+    if (!this.isValidPublicToken(id, token)) {
       throw new UnauthorizedException('Invalid order token');
     }
 
