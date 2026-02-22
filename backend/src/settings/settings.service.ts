@@ -39,7 +39,7 @@ export class SettingsService {
   async getPromoSettings() {
     const defaults = {
       heroImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200',
-      heroTitle: 'Sale Musim Panas: Hasta 50% Off',
+      heroTitle: 'Sale Musim Panas: Hingga Diskon 50%',
       heroSubtitle: 'Tingkatkan gaya hidup Anda dengan koleksi eksklusif kami. Dari teknologi tinggi hingga fashion premium.',
       heroBadge: 'Penawaran Terbatas',
       discountText: '50% Off',
@@ -97,7 +97,7 @@ export class SettingsService {
   async getWeeklyDealSettings() {
     const defaults = {
       title: 'Penawaran Mingguan',
-      subtitle: 'Ambil ofertas especiais sebelum habis',
+      subtitle: 'Ambil promo spesial sebelum habis',
       enabled: true,
       discount: 20,
       endDate: '',
@@ -411,5 +411,34 @@ export class SettingsService {
     if (data.marketingEmails !== undefined) updates.push(this.setSetting('notif_marketing', String(data.marketingEmails)));
     if (updates.length > 0) await Promise.all(updates);
     return this.getNotificationSettings();
+  }
+
+  async getAdminNoticeSettings() {
+    const defaults = {
+      enabled: false,
+      title: 'Info Admin',
+      message: '',
+    };
+
+    const keys = ['admin_notice_enabled', 'admin_notice_title', 'admin_notice_message'];
+    const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
+    const result = { ...defaults };
+
+    settings.forEach((setting) => {
+      if (setting.key === 'admin_notice_enabled') result.enabled = setting.value === 'true';
+      if (setting.key === 'admin_notice_title') result.title = setting.value;
+      if (setting.key === 'admin_notice_message') result.message = setting.value;
+    });
+
+    return result;
+  }
+
+  async setAdminNoticeSettings(data: { enabled?: boolean; title?: string; message?: string }) {
+    const updates: Promise<any>[] = [];
+    if (data.enabled !== undefined) updates.push(this.setSetting('admin_notice_enabled', String(data.enabled)));
+    if (data.title !== undefined) updates.push(this.setSetting('admin_notice_title', data.title));
+    if (data.message !== undefined) updates.push(this.setSetting('admin_notice_message', data.message));
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getAdminNoticeSettings();
   }
 }

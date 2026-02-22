@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api, Product } from "@/lib/api";
 import { addToCart } from "@/lib/cart";
 import { useToast } from "@/components/ui/Toast";
+import Navbar from "@/components/layout/Navbar";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -113,32 +114,7 @@ export default function ProductDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
-      <nav className="sticky top-0 z-50 w-full border-b border-[#e7edf3] bg-white flex-shrink-0">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="text-[#137fec]">
-                  <span className="material-symbols-outlined text-3xl">shopping_bag</span>
-                </div>
-                <h1 className="text-xl font-bold tracking-tight text-[#0d141b] hidden sm:block">Tumbas</h1>
-              </Link>
-            </div>
-            <div className="hidden lg:flex items-center gap-8 flex-1 justify-center">
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/">Beranda</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/shop">Belanja</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/about">Tentang</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/receipt/verify">Cek Resi</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/contact">Kontak</Link>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/cart" className="p-2 text-[#4c739a] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-full relative">
-                <span className="material-symbols-outlined">shopping_cart</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex mb-8">

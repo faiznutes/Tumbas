@@ -300,6 +300,12 @@ export interface ContactMessage {
   } | null;
 }
 
+export interface AdminNoticeSettings {
+  enabled: boolean;
+  title: string;
+  message: string;
+}
+
 export const api = {
   products: {
     getAll: (params?: {
@@ -616,6 +622,19 @@ export const api = {
       orderNotifications: boolean;
       marketingEmails: boolean;
     }>('/settings/notifications'),
+
+    getAdminNotice: () => fetchApi<AdminNoticeSettings>('/settings/admin-notice'),
+
+    getAdminNoticePublic: () => fetchApi<AdminNoticeSettings>('/settings/admin-notice-public'),
+
+    updateAdminNotice: (data: {
+      enabled?: boolean;
+      title?: string;
+      message?: string;
+    }) => fetchApi<AdminNoticeSettings>('/settings/admin-notice', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
     updateNotifications: (data: {
       emailNotifications?: boolean;

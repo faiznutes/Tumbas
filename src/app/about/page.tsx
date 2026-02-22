@@ -1,52 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Navbar from "@/components/layout/Navbar";
 
 export default function About() {
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-[#e7edf3] bg-white flex-shrink-0">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo - KIRI */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="text-[#137fec]">
-                  <span className="material-symbols-outlined text-3xl">shopping_bag</span>
-                </div>
-                <h1 className="text-xl font-bold tracking-tight text-[#0d141b] hidden sm:block">
-                  Tumbas
-                </h1>
-              </Link>
-            </div>
-
-            {/* Navigation Links - TENGAH */}
-            <div className="hidden lg:flex items-center gap-8 flex-1 justify-center">
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/">
-                Beranda
-              </Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/">
-                Belanja
-              </Link>
-              <Link className="text-sm font-medium text-[#137fec]" href="/about">
-                Tentang
-              </Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec] transition-colors" href="/contact">
-                Kontak
-              </Link>
-            </div>
-
-            {/* Icons - KANAN */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/cart" className="p-2 text-[#4c739a] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-full relative">
-                <span className="material-symbols-outlined">shopping_cart</span>
-                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[#137fec] text-white text-[10px] font-bold rounded-full border-2 border-white">0</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">

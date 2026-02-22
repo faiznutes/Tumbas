@@ -4,6 +4,8 @@ import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Permissions } from '../auth/permissions.decorator';
 import { PermissionsGuard } from '../auth/permissions.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 class UpdatePromoSettingsDto {
   @IsOptional()
@@ -157,6 +159,20 @@ class UpdateNotificationSettingsDto {
   marketingEmails?: boolean;
 }
 
+class UpdateAdminNoticeSettingsDto {
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  message?: string;
+}
+
 @Controller('settings')
 export class SettingsController {
   constructor(private settingsService: SettingsService) {}
@@ -267,6 +283,30 @@ export class SettingsController {
   @Post('notifications')
   async updateNotificationSettings(@Body() data: UpdateNotificationSettingsDto) {
     return this.settingsService.setNotificationSettings(data);
+  }
+
+  @Get('admin-notice')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.view')
+  async getAdminNoticeSettings() {
+    return this.settingsService.getAdminNoticeSettings();
+  }
+
+  @Get('admin-notice-public')
+  async getPublicAdminNoticeSettings() {
+    const notice = await this.settingsService.getAdminNoticeSettings();
+    return {
+      enabled: notice.enabled,
+      title: notice.title,
+      message: notice.message,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  @Post('admin-notice')
+  async updateAdminNoticeSettings(@Body() data: UpdateAdminNoticeSettingsDto) {
+    return this.settingsService.setAdminNoticeSettings(data);
   }
 
   @Get()
