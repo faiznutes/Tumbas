@@ -4,6 +4,16 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 
+function parsePermissions(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -31,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email, 
       name: user.name,
       role: user.role,
-      permissions: JSON.parse(user.permissions || '[]'),
+      permissions: parsePermissions(user.permissions),
     };
   }
 }

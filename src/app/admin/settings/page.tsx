@@ -9,7 +9,9 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const { addToast } = useToast();
   const canEditSettings = hasAdminPermission('settings.edit');
+  const [currentRole, setCurrentRole] = useState('');
   const [loading, setLoading] = useState(false);
+  const canEditAdminNotice = currentRole === 'SUPER_ADMIN';
   
   const [settings, setSettings] = useState({
     storeName: "Tumbas",
@@ -65,11 +67,30 @@ export default function AdminSettings() {
     defaultWeightGram: 1000,
   });
   const [shippingProvidersInput, setShippingProvidersInput] = useState('jne, jnt, sicepat');
+  const [adminNoticeSettings, setAdminNoticeSettings] = useState({
+    enabled: false,
+    title: 'Info Admin',
+    message: '',
+  });
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
     return fallback;
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const rawUser = localStorage.getItem('user');
+      if (!rawUser) return;
+      const parsed = JSON.parse(rawUser) as { role?: unknown };
+      if (typeof parsed.role === 'string') {
+        setCurrentRole(parsed.role);
+      }
+    } catch {
+      setCurrentRole('');
+    }
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'general') {
@@ -88,6 +109,8 @@ export default function AdminSettings() {
       fetchStoreSettings();
     } else if (activeTab === 'notifications') {
       fetchNotificationSettings();
+    } else if (activeTab === 'admin-notice') {
+      fetchAdminNoticeSettings();
     }
   }, [activeTab]);
 
@@ -182,6 +205,15 @@ export default function AdminSettings() {
       }));
     } catch (error) {
       console.error('Failed to fetch notification settings:', error);
+    }
+  }
+
+  async function fetchAdminNoticeSettings() {
+    try {
+      const data = await api.settings.getAdminNotice();
+      setAdminNoticeSettings(data);
+    } catch (error) {
+      console.error('Failed to fetch admin notice settings:', error);
     }
   }
 
@@ -383,6 +415,25 @@ export default function AdminSettings() {
     }
   }
 
+  async function saveAdminNoticeSettings() {
+    if (!canEditAdminNotice) {
+      addToast('Hanya Super Admin yang dapat mengubah admin notice', 'warning');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.settings.updateAdminNotice(adminNoticeSettings);
+      setAdminNoticeSettings(response);
+      addToast('Admin notice berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save admin notice settings:', error);
+      addToast(getErrorMessage(error, 'Gagal menyimpan admin notice'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -483,6 +534,18 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">notifications</span>
                 <span className="hidden text-sm font-medium lg:inline">Notifikasi</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("admin-notice")}
+                title="Admin Notice"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
+                  activeTab === "admin-notice"
+                    ? "bg-[#137fec]/10 text-[#137fec]"
+                    : "text-[#4c739a] hover:bg-slate-100"
+                }`}
+              >
+                <span className="material-symbols-outlined">campaign</span>
+                <span className="hidden text-sm font-medium lg:inline">Admin Notice</span>
               </button>
               <button
                 onClick={() => setActiveTab("payment")}
@@ -1056,6 +1119,80 @@ export default function AdminSettings() {
                 </div>
                 <div className="pt-4">
                   <button onClick={savePaymentSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "admin-notice" && (
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h2 className="text-lg font-bold text-[#0d141b] mb-2">Admin Notice (Login Admin)</h2>
+              <p className="text-sm text-[#4c739a] mb-6">
+                Notice ini tampil di halaman login admin. Admin dapat melihat, tetapi hanya Super Admin yang dapat mengubah.
+              </p>
+
+              {!canEditAdminNotice && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Mode hanya lihat: hanya Super Admin yang dapat mengaktifkan, menonaktifkan, atau mengubah admin notice.
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between py-4 border-b border-slate-200">
+                  <div>
+                    <p className="font-medium text-[#0d141b]">Status Notice</p>
+                    <p className="text-sm text-[#4c739a]">Aktifkan untuk menampilkan notice di login admin</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={adminNoticeSettings.enabled}
+                      onChange={(e) => setAdminNoticeSettings((prev) => ({ ...prev, enabled: e.target.checked }))}
+                      disabled={!canEditAdminNotice}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-[#137fec] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#137fec]"></div>
+                  </label>
+                </div>
+
+                <div>
+                  <label htmlFor="adminNoticeTitle" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Judul Notice
+                  </label>
+                  <input
+                    type="text"
+                    id="adminNoticeTitle"
+                    value={adminNoticeSettings.title}
+                    onChange={(e) => setAdminNoticeSettings((prev) => ({ ...prev, title: e.target.value }))}
+                    disabled={!canEditAdminNotice}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b] disabled:bg-slate-100"
+                    placeholder="Contoh: Informasi Pemeliharaan"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="adminNoticeMessage" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Pesan Notice
+                  </label>
+                  <textarea
+                    id="adminNoticeMessage"
+                    rows={4}
+                    value={adminNoticeSettings.message}
+                    onChange={(e) => setAdminNoticeSettings((prev) => ({ ...prev, message: e.target.value }))}
+                    disabled={!canEditAdminNotice}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b] disabled:bg-slate-100"
+                    placeholder="Contoh: Akan ada maintenance pada pukul 02:00 WIB."
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    onClick={saveAdminNoticeSettings}
+                    disabled={loading || !canEditAdminNotice}
+                    className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  >
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
