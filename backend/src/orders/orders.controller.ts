@@ -207,4 +207,18 @@ export class OrdersController {
   async markShippedToExpedition(@Param('id') id: string, @Body() dto: MarkShippedDto) {
     return this.ordersService.markShippedToExpedition(id, dto);
   }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('orders.edit')
+  @Post(':id/shipping/return-to-warehouse')
+  async returnToWarehouse(@Param('id') id: string) {
+    return this.ordersService.returnToWarehouse(id);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('orders.edit')
+  @Post(':id/cancel-admin')
+  async cancelByAdmin(@Param('id') id: string) {
+    return this.ordersService.cancelByAdmin(id);
+  }
 }

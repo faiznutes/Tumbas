@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Permissions } from '../auth/permissions.decorator';
@@ -51,6 +51,24 @@ class UpdateWeeklyDealSettingsDto {
   @IsOptional()
   @IsString()
   endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  end_date?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  selectedProductIds?: string[];
+
+  @IsOptional()
+  @IsIn(['percentage', 'amount'])
+  discountType?: 'percentage' | 'amount';
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  discountValue?: number;
 }
 
 class UpdateHomepageFeaturedSettingsDto {
@@ -234,7 +252,10 @@ export class SettingsController {
   @Permissions('settings.weekly.edit')
   @Post('weekly-deal')
   async updateWeeklyDealSettings(@Body() data: UpdateWeeklyDealSettingsDto) {
-    return this.settingsService.setWeeklyDealSettings(data);
+    return this.settingsService.setWeeklyDealSettings({
+      ...data,
+      endDate: data.endDate ?? data.end_date,
+    });
   }
 
   @Get('homepage-featured')
@@ -336,6 +357,11 @@ export class SettingsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('settings.store.view')
   async getStoreSettings() {
+    return this.settingsService.getStoreSettings();
+  }
+
+  @Get('store-public')
+  async getStoreSettingsPublic() {
     return this.settingsService.getStoreSettings();
   }
 

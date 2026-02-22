@@ -14,6 +14,14 @@ const reasonLabel: Record<string, string> = {
   not_shipped_to_expedition: "Order belum dikonfirmasi dikirim ke ekspedisi",
 };
 
+const paymentStatusLabel: Record<string, string> = {
+  PENDING: "Menunggu pembayaran",
+  PAID: "Pembayaran diterima",
+  FAILED: "Pembayaran gagal",
+  EXPIRED: "Pembayaran kedaluwarsa",
+  CANCELLED: "Pesanan dibatalkan",
+};
+
 export default function VerifyReceiptPage() {
   const [resi, setResi] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +57,12 @@ export default function VerifyReceiptPage() {
 
   const order = result?.order;
   const isValidOrder = Boolean(result?.valid && order);
+  const orderItems = order?.items && order.items.length > 0
+    ? order.items
+    : order
+      ? [{ id: `${order.id}-fallback`, title: order.productTitle, quantity: 1 }]
+      : [];
+  const totalItems = order?.totalItems || orderItems.reduce((sum, item) => sum + Math.max(1, Number(item.quantity || 1)), 0);
 
   const steps = (() => {
     if (!order) return [] as Array<{ label: string; detail: string }>;
@@ -59,7 +73,7 @@ export default function VerifyReceiptPage() {
 
     return [
       { label: "Order Dibuat", detail: formatDateTimeId(order.createdAt) },
-      { label: "Pembayaran", detail: order.paymentStatus === "PAID" ? "Pembayaran diterima" : `Status: ${order.paymentStatus}` },
+      { label: "Pembayaran", detail: paymentStatusLabel[order.paymentStatus] || `Status: ${order.paymentStatus}` },
       { label: "Diproses Gudang", detail: order.paymentStatus === "PAID" ? "Pesanan sedang diproses" : "Menunggu pembayaran" },
       { label: "Dikirim ke Ekspedisi", detail: shippedLabel },
       { label: "Selesai", detail: "Menunggu konfirmasi diterima" },
@@ -69,7 +83,7 @@ export default function VerifyReceiptPage() {
   const activeStepIndex = (() => {
     if (!order) return -1;
     if (["FAILED", "EXPIRED", "CANCELLED"].includes(order.paymentStatus)) return 1;
-    if (order.paymentStatus !== "PAID") return 0;
+    if (order.paymentStatus !== "PAID") return 1;
     if (!order.shippedToExpedition || !order.expeditionResi) return 2;
     return 3;
   })();
@@ -120,11 +134,6 @@ export default function VerifyReceiptPage() {
         {result && !isValidOrder && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
             Resi tidak valid: {reasonLabel[result.reason || ""] || "Data tidak cocok"}
-            {result.order && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                Data order ditemukan, namun belum ada serah terima ekspedisi atau resi ekspedisi belum diinput.
-              </div>
-            )}
           </div>
         )}
 
@@ -136,6 +145,12 @@ export default function VerifyReceiptPage() {
                 {order.orderCode} • Dibuat {formatDateTimeId(order.createdAt)}
               </p>
             </div>
+
+            {!order.shippedToExpedition && (
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Data order ditemukan. Saat ini pesanan belum diserahkan ke ekspedisi.
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-1">
@@ -204,14 +219,24 @@ export default function VerifyReceiptPage() {
                       <span className="material-symbols-outlined text-[#137fec]">shopping_bag</span>
                       Detail Pembelian
                     </h3>
-                    <span className="rounded-full bg-[#137fec]/10 px-3 py-1 text-xs font-bold text-[#137fec]">1 Item</span>
+                    <span className="rounded-full bg-[#137fec]/10 px-3 py-1 text-xs font-bold text-[#137fec]">Total Item: {totalItems} pcs</span>
                   </div>
 
                   <div className="flex-1 p-6">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                      <p className="font-bold">{order.productTitle}</p>
-                      <p className="mt-1 text-sm text-[#4c739a]">Receipt: {order.receiptNo}</p>
-                      <p className="text-sm text-[#4c739a]">Kode Verifikasi: {order.verificationCode}</p>
+                    <div className="space-y-3">
+                      {orderItems.map((item) => (
+                        <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-bold">{item.title}</p>
+                            <p className="text-sm font-semibold text-[#137fec]">x{Math.max(1, Number(item.quantity || 1))} pcs</p>
+                          </div>
+                          {item.variantLabel && <p className="mt-1 text-xs text-[#4c739a]">Varian: {item.variantLabel}</p>}
+                        </div>
+                      ))}
+                      <div className="rounded-lg border border-slate-200 bg-white p-4">
+                        <p className="text-sm text-[#4c739a]">Receipt: {order.receiptNo}</p>
+                        <p className="text-sm text-[#4c739a]">Kode Verifikasi: {order.verificationCode}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -219,7 +244,7 @@ export default function VerifyReceiptPage() {
                     <div className="mb-4 space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[#4c739a]">Status Pembayaran</span>
-                        <span className="font-semibold">{order.paymentStatus}</span>
+                        <span className="font-semibold">{paymentStatusLabel[order.paymentStatus] || order.paymentStatus}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[#4c739a]">Dibuat</span>
@@ -237,6 +262,15 @@ export default function VerifyReceiptPage() {
                         <p className="text-2xl font-black text-[#137fec]">{formatPriceIdr(order.amount)}</p>
                       </div>
                     </div>
+
+                    {order.paymentStatus === "PENDING" && order.publicToken && (
+                      <Link
+                        href={`/payment/pending?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.publicToken)}`}
+                        className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0f65bd]"
+                      >
+                        Lanjutkan Pembayaran
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

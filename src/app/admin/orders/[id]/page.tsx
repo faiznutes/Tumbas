@@ -49,6 +49,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingShipping, setSavingShipping] = useState(false);
+  const [savingAction, setSavingAction] = useState(false);
   const [expeditionName, setExpeditionName] = useState("");
   const [expeditionResi, setExpeditionResi] = useState("");
   const { addToast } = useToast();
@@ -101,6 +102,41 @@ export default function OrderDetailPage() {
       addToast(err?.message || "Gagal menyimpan data pengiriman", "error");
     } finally {
       setSavingShipping(false);
+    }
+  };
+
+  const handleReturnToWarehouse = async () => {
+    if (!order || !canEditOrders) return;
+
+    try {
+      setSavingAction(true);
+      await api.orders.returnToWarehouse(order.id);
+      addToast("Order berhasil dikembalikan ke gudang", "success");
+      await fetchOrder();
+    } catch (err: any) {
+      addToast(err?.message || "Gagal mengembalikan order ke gudang", "error");
+    } finally {
+      setSavingAction(false);
+    }
+  };
+
+  const handleCancelByAdmin = async () => {
+    if (!order || !canEditOrders) return;
+
+    if (order.paymentStatus === "CANCELLED") {
+      addToast("Order sudah dibatalkan", "warning");
+      return;
+    }
+
+    try {
+      setSavingAction(true);
+      await api.orders.cancelByAdmin(order.id);
+      addToast("Order berhasil dibatalkan admin", "success");
+      await fetchOrder();
+    } catch (err: any) {
+      addToast(err?.message || "Gagal membatalkan order", "error");
+    } finally {
+      setSavingAction(false);
     }
   };
 
@@ -294,6 +330,22 @@ export default function OrderDetailPage() {
                   {order.paymentStatus !== "PAID" && (
                     <p className="text-xs text-red-600">Order harus berstatus PAID sebelum bisa dikonfirmasi ke ekspedisi.</p>
                   )}
+
+                  <button
+                    onClick={handleReturnToWarehouse}
+                    disabled={savingAction || !order.shippedToExpedition}
+                    className="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    {savingAction ? "Memproses..." : "Kembalikan ke Gudang"}
+                  </button>
+
+                  <button
+                    onClick={handleCancelByAdmin}
+                    disabled={savingAction || order.paymentStatus === "CANCELLED"}
+                    className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {savingAction ? "Memproses..." : "Batalkan Pesanan"}
+                  </button>
                 </>
               ) : (
                 <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-[#4c739a]">

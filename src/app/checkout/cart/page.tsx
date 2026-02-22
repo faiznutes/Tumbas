@@ -9,6 +9,7 @@ import { api, ShippingCity, ShippingRateService } from "@/lib/api";
 import { clearCart, getCartItems, CartItem } from "@/lib/cart";
 import { savePublicOrderRef } from "@/lib/order-tracking";
 import { useToast } from "@/components/ui/Toast";
+import { calculateCheckoutPricing, WeeklyDealPricing } from "@/lib/pricing";
 
 declare global {
   interface Window {
@@ -64,6 +65,8 @@ export default function CartCheckoutPage() {
   const [loadingRates, setLoadingRates] = useState(false);
   const [shippingError, setShippingError] = useState("");
   const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
+  const [taxRate, setTaxRate] = useState(11);
+  const [weeklyDeal, setWeeklyDeal] = useState<WeeklyDealPricing | null>(null);
 
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
@@ -121,7 +124,12 @@ export default function CartCheckoutPage() {
   const dynamicShipping = selectedService?.cost ?? 0;
   const fallbackShipping = isJawa ? shippingConfig.estimateJawa : shippingConfig.estimateLuarJawa;
   const shipping = subtotal >= shippingConfig.minFreeShipping ? 0 : (selectedService ? dynamicShipping : fallbackShipping);
-  const total = subtotal + shipping;
+  const pricing = useMemo(() => calculateCheckoutPricing({
+    lines: items.map((item) => ({ productId: item.productId, unitPrice: item.price, quantity: item.quantity })),
+    shipping,
+    taxRate,
+    weeklyDeal,
+  }), [items, shipping, taxRate, weeklyDeal]);
 
   useEffect(() => {
     setItems(getCartItems());
@@ -141,6 +149,22 @@ export default function CartCheckoutPage() {
       }
     }
     fetchShipping();
+  }, []);
+
+  useEffect(() => {
+    async function fetchPricingConfig() {
+      try {
+        const [store, weekly] = await Promise.all([
+          api.settings.getStorePublic(),
+          api.settings.getWeeklyDealPublic(),
+        ]);
+        setTaxRate(Number(store.taxRate || 0));
+        setWeeklyDeal(weekly);
+      } catch {
+        // fallback defaults
+      }
+    }
+    fetchPricingConfig();
   }, []);
 
   useEffect(() => {
@@ -405,9 +429,11 @@ export default function CartCheckoutPage() {
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
+            {pricing.discount > 0 && <div className="flex justify-between text-green-700"><span>Diskon Penawaran Mingguan</span><span>-{formatPrice(pricing.discount)}</span></div>}
             <div className="flex justify-between"><span>Ongkir</span><span>{formatPrice(shipping)}</span></div>
+            <div className="flex justify-between"><span>Pajak ({pricing.taxRate}%)</span><span>{formatPrice(pricing.tax)}</span></div>
             <div className="flex justify-between"><span>Berat</span><span>{estimatedWeight} gr</span></div>
-            <div className="mt-3 flex justify-between border-t border-[#e7edf3] pt-3 text-base font-bold"><span>Total</span><span>{formatPrice(total)}</span></div>
+            <div className="mt-3 flex justify-between border-t border-[#e7edf3] pt-3 text-base font-bold"><span>Total</span><span>{formatPrice(pricing.total)}</span></div>
           </div>
         </aside>
       </main>

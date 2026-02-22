@@ -24,20 +24,22 @@ export default function Beranda() {
   const [hours, setHours] = useState(14);
   const [minutes, setMinutes] = useState(52);
   const [promo, setPromo] = useState({
-    heroImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200',
-    heroTitle: 'Sale Musim Panas: Hingga Diskon 50%',
-    heroSubtitle: 'Tingkatkan gaya hidup Anda dengan koleksi eksklusif kami. Dari teknologi tinggi hingga fashion premium.',
-    heroBadge: 'Penawaran Terbatas',
-    discountText: '50% Off',
+    heroImage: '',
+    heroTitle: '',
+    heroSubtitle: '',
+    heroBadge: '',
+    discountText: '',
   });
+  const [promoReady, setPromoReady] = useState(false);
 
   const [weeklyDeal, setWeeklyDeal] = useState({
-    title: 'Penawaran Mingguan',
-    subtitle: 'Ambil promo spesial sebelum habis',
+    title: '',
+    subtitle: '',
     enabled: true,
     discount: 20,
     endDate: '',
   });
+  const [weeklyDealReady, setWeeklyDealReady] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -98,6 +100,8 @@ export default function Beranda() {
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
+        setPromoReady(true);
+        setWeeklyDealReady(true);
         setLoading(false);
       }
     }
@@ -118,24 +122,28 @@ export default function Beranda() {
       {/* Hero Banner */}
       <section className="relative bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-60">
-          <img 
-            alt="Summer Sale Banner" 
-            className="w-full h-full object-cover" 
-            src={promo.heroImage}
-          />
-        </div>
+              <img 
+                alt="Summer Sale Banner" 
+                className="w-full h-full object-cover" 
+                src={promo.heroImage || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200"}
+              />
+            </div>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent"></div>
         <div className="relative max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8 lg:py-40 flex flex-col items-start justify-center">
           <span className="inline-block px-3 py-1 bg-[#137fec]/20 text-[#137fec] border border-[#137fec]/30 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
-            {promo.heroBadge}
+            {promoReady ? (promo.heroBadge || "Penawaran Terbatas") : "Memuat promo"}
           </span>
           <h1 className="text-4xl md:text-6xl font-black text-white leading-tight mb-6 max-w-2xl">
-            {promo.heroTitle.split(':').map((part, i) => (
-              <span key={i}>{i > 0 ? ':' : ''}<br/>{i === 1 && <span className="text-[#137fec]">{part}</span>}{i === 0 && part}</span>
-            ))}
+            {!promoReady ? (
+              <span>Memuat promo...</span>
+            ) : (
+              (promo.heroTitle || "Sale Musim Panas: Hingga Diskon 50%").split(':').map((part, i) => (
+                <span key={i}>{i > 0 ? ':' : ''}<br/>{i === 1 && <span className="text-[#137fec]">{part}</span>}{i === 0 && part}</span>
+              ))
+            )}
           </h1>
           <p className="text-lg text-slate-300 mb-10 max-w-lg">
-            {promo.heroSubtitle}
+            {promoReady ? (promo.heroSubtitle || "Tingkatkan gaya hidup Anda dengan koleksi eksklusif kami.") : "Mohon tunggu..."}
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/shop" className="px-8 py-4 bg-[#137fec] hover:bg-[#137fec]/90 text-white rounded-lg font-bold text-lg transition-all shadow-lg shadow-[#137fec]/20 flex items-center gap-2">
@@ -189,8 +197,8 @@ export default function Beranda() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
             <div>
-              <h2 className="text-3xl font-extrabold text-slate-900">{weeklyDeal.title || "Penawaran Mingguan"}</h2>
-              <p className="text-slate-500 mt-2">{weeklyDeal.subtitle || "Promo spesial terbatas waktu"}</p>
+              <h2 className="text-3xl font-extrabold text-slate-900">{weeklyDealReady ? (weeklyDeal.title || "Penawaran Mingguan") : "Memuat..."}</h2>
+              <p className="text-slate-500 mt-2">{weeklyDealReady ? (weeklyDeal.subtitle || "Promo spesial terbatas waktu") : "Memuat penawaran mingguan..."}</p>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Berakhir Dalam:</span>

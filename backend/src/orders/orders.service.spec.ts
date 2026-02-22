@@ -283,7 +283,7 @@ describe('OrdersService', () => {
     );
   });
 
-  it('returns not shipped when expedition handover not confirmed', async () => {
+  it('still returns valid order data when expedition handover not confirmed', async () => {
     prisma.order.findMany = jest.fn().mockResolvedValue([
       {
         id: 'o1',
@@ -303,8 +303,11 @@ describe('OrdersService', () => {
 
     expect(result).toEqual(
       expect.objectContaining({
-        valid: false,
-        reason: 'not_shipped_to_expedition',
+        valid: true,
+        order: expect.objectContaining({
+          orderCode: 'TMB-ABC123',
+          shippedToExpedition: false,
+        }),
       }),
     );
   });

@@ -205,9 +205,17 @@ export interface ReceiptVerificationResult {
     expeditionName?: string | null;
     shippedAt?: string | null;
     productTitle: string;
+    items?: Array<{
+      id: string;
+      title: string;
+      quantity: number;
+      variantLabel?: string | null;
+    }>;
+    totalItems?: number;
     amount: number;
     paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
     createdAt: string;
+    publicToken?: string;
   };
 }
 
@@ -451,6 +459,16 @@ export const api = {
         body: JSON.stringify(data),
       }),
 
+    returnToWarehouse: (id: string) =>
+      fetchApi<Order>(`/orders/${id}/shipping/return-to-warehouse`, {
+        method: 'POST',
+      }),
+
+    cancelByAdmin: (id: string) =>
+      fetchApi<Order>(`/orders/${id}/cancel-admin`, {
+        method: 'POST',
+      }),
+
     bulkConfirmShipping: (data: { orderIds: string[]; expeditionResi: string; expeditionName?: string }) =>
       fetchApi<{
         successCount: number;
@@ -614,6 +632,11 @@ export const api = {
       taxRate: number;
     }>('/settings/store'),
 
+    getStorePublic: () => fetchApi<{
+      currency: string;
+      taxRate: number;
+    }>('/settings/store-public'),
+
     updateStore: (data: {
       currency?: string;
       taxRate?: number;
@@ -696,6 +719,9 @@ export const api = {
       enabled: boolean;
       discount: number;
       endDate: string;
+      selectedProductIds: string[];
+      discountType: 'percentage' | 'amount';
+      discountValue: number;
     }>('/settings/weekly-deal'),
 
     getWeeklyDealPublic: () => fetchApi<{
@@ -704,6 +730,9 @@ export const api = {
       enabled: boolean;
       discount: number;
       endDate: string;
+      selectedProductIds: string[];
+      discountType: 'percentage' | 'amount';
+      discountValue: number;
     }>('/settings/weekly-deal-public'),
 
     updateWeeklyDeal: (data: {
@@ -712,12 +741,18 @@ export const api = {
       enabled?: boolean;
       discount?: number;
       endDate?: string;
+      selectedProductIds?: string[];
+      discountType?: 'percentage' | 'amount';
+      discountValue?: number;
     }) => fetchApi<{
       title: string;
       subtitle: string;
       enabled: boolean;
       discount: number;
       endDate: string;
+      selectedProductIds: string[];
+      discountType: 'percentage' | 'amount';
+      discountValue: number;
     }>('/settings/weekly-deal', {
       method: 'POST',
       body: JSON.stringify(data),

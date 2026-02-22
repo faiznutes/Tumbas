@@ -101,25 +101,53 @@ export class SettingsService {
       enabled: true,
       discount: 20,
       endDate: '',
+      selectedProductIds: [] as string[],
+      discountType: 'percentage' as 'percentage' | 'amount',
+      discountValue: 0,
     };
-    
-    const weeklyDealKeys = ['weekly_deal_title', 'weekly_deal_subtitle', 'weekly_deal_enabled', 'weekly_deal_discount', 'weekly_deal_end_date'];
+
+    const weeklyDealKeys = [
+      'weekly_deal_title',
+      'weekly_deal_subtitle',
+      'weekly_deal_enabled',
+      'weekly_deal_discount',
+      'weekly_deal_end_date',
+      'weekly_deal_selected_product_ids',
+      'weekly_deal_discount_type',
+      'weekly_deal_discount_value',
+    ];
     const weeklyDealSettings = await this.prisma.siteSettings.findMany({
       where: { key: { in: weeklyDealKeys } },
     });
-    
+
     const result: Record<string, any> = { ...defaults };
     weeklyDealSettings.forEach(s => {
       if (s.key === 'weekly_deal_enabled') {
         result.enabled = s.value === 'true';
       } else if (s.key === 'weekly_deal_discount') {
         result.discount = parseInt(s.value) || 20;
+      } else if (s.key === 'weekly_deal_discount_type') {
+        result.discountType = s.value === 'amount' ? 'amount' : 'percentage';
+      } else if (s.key === 'weekly_deal_discount_value') {
+        result.discountValue = Math.max(0, parseInt(s.value, 10) || 0);
+      } else if (s.key === 'weekly_deal_selected_product_ids') {
+        result.selectedProductIds = s.value
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+          .slice(0, 100);
+      } else if (s.key === 'weekly_deal_end_date') {
+        result.endDate = s.value;
       } else {
         const key = s.key.replace('weekly_deal_', '');
         result[key] = s.value;
       }
     });
-    
+
+    if (!result.discountValue || result.discountValue <= 0) {
+      result.discountValue = result.discount;
+    }
+
     return result;
   }
 
@@ -294,9 +322,12 @@ export class SettingsService {
     enabled?: boolean;
     discount?: number;
     endDate?: string;
+    selectedProductIds?: string[];
+    discountType?: 'percentage' | 'amount';
+    discountValue?: number;
   }) {
     const updates: Promise<any>[] = [];
-    
+
     if (data.title !== undefined) {
       updates.push(this.setSetting('weekly_deal_title', data.title));
     }
@@ -312,7 +343,24 @@ export class SettingsService {
     if (data.endDate !== undefined) {
       updates.push(this.setSetting('weekly_deal_end_date', data.endDate));
     }
-    
+
+    if (data.selectedProductIds !== undefined) {
+      const selectedProductIds = data.selectedProductIds
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .slice(0, 100);
+      updates.push(this.setSetting('weekly_deal_selected_product_ids', selectedProductIds.join(',')));
+    }
+
+    if (data.discountType !== undefined) {
+      const safeDiscountType = data.discountType === 'amount' ? 'amount' : 'percentage';
+      updates.push(this.setSetting('weekly_deal_discount_type', safeDiscountType));
+    }
+
+    if (data.discountValue !== undefined) {
+      updates.push(this.setSetting('weekly_deal_discount_value', String(Math.max(0, Math.round(data.discountValue)))));
+    }
+
     await Promise.all(updates);
     return this.getWeeklyDealSettings();
   }

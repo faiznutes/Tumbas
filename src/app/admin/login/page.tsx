@@ -31,8 +31,23 @@ export default function AdminLogin() {
   useEffect(() => {
     async function loadNotice() {
       try {
-        const notice = await api.settings.getAdminNoticePublic();
-        setAdminNotice(notice);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/settings/admin-notice-public`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed");
+        }
+
+        const notice = await response.json();
+        setAdminNotice({
+          enabled: Boolean(notice?.enabled),
+          title: String(notice?.title || ""),
+          message: String(notice?.message || ""),
+        });
       } catch {
         setAdminNotice({ enabled: false, title: "", message: "" });
       }

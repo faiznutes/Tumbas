@@ -124,6 +124,69 @@ export class OrdersService {
     });
   }
 
+  private async getStoreTaxRate(tx: Prisma.TransactionClient) {
+    const setting = await tx.siteSettings.findUnique({ where: { key: 'store_tax_rate' } });
+    const parsed = parseInt(setting?.value || '', 10);
+    if (!Number.isFinite(parsed)) return 11;
+    return Math.max(0, parsed);
+  }
+
+  private async getActiveWeeklyDealConfig(tx: Prisma.TransactionClient) {
+    const keys = [
+      'weekly_deal_enabled',
+      'weekly_deal_end_date',
+      'weekly_deal_discount',
+      'weekly_deal_selected_product_ids',
+      'weekly_deal_discount_type',
+      'weekly_deal_discount_value',
+    ];
+    const settings = await tx.siteSettings.findMany({ where: { key: { in: keys } } });
+    const map = new Map(settings.map((setting) => [setting.key, setting.value]));
+
+    const enabled = (map.get('weekly_deal_enabled') || 'true') === 'true';
+    if (!enabled) return null;
+
+    const endDateRaw = (map.get('weekly_deal_end_date') || '').trim();
+    if (endDateRaw) {
+      const endDate = new Date(endDateRaw);
+      if (Number.isFinite(endDate.getTime())) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (Date.now() > endOfDay.getTime()) {
+          return null;
+        }
+      }
+    }
+
+    const selectedProductIds = (map.get('weekly_deal_selected_product_ids') || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (selectedProductIds.length === 0) {
+      return null;
+    }
+
+    const discountTypeRaw = (map.get('weekly_deal_discount_type') || 'percentage').trim().toLowerCase();
+    const discountType = discountTypeRaw === 'amount' ? 'amount' : 'percentage';
+    const discountValueRaw = parseInt(map.get('weekly_deal_discount_value') || '', 10);
+    const fallbackDiscountRaw = parseInt(map.get('weekly_deal_discount') || '', 10);
+    const discountValue = Math.max(
+      0,
+      Number.isFinite(discountValueRaw) && discountValueRaw > 0 ? discountValueRaw : (Number.isFinite(fallbackDiscountRaw) ? fallbackDiscountRaw : 0),
+    );
+
+    if (discountValue <= 0) {
+      return null;
+    }
+
+    return {
+      selectedProductIds: new Set(selectedProductIds),
+      discountType,
+      discountValue,
+    };
+  }
+
   async findAll(params: {
     page?: number;
     limit?: number;
@@ -294,6 +357,43 @@ export class OrdersService {
     });
   }
 
+  async returnToWarehouse(id: string) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.prisma.order.update({
+      where: { id },
+      data: {
+        shippedToExpedition: false,
+        expeditionResi: null,
+        expeditionName: null,
+        shippedAt: null,
+      },
+      include: { product: true },
+    });
+  }
+
+  async cancelByAdmin(id: string) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.prisma.order.update({
+      where: { id },
+      data: {
+        paymentStatus: 'CANCELLED',
+        shippedToExpedition: false,
+        expeditionResi: null,
+        expeditionName: null,
+        shippedAt: null,
+      },
+      include: { product: true },
+    });
+  }
+
   async bulkMarkShippedToExpedition(data: {
     orderIds: string[];
     expeditionResi: string;
@@ -438,6 +538,14 @@ export class OrdersService {
         expeditionName: true,
         shippedAt: true,
         createdAt: true,
+        orderItems: {
+          select: {
+            id: true,
+            productTitleSnapshot: true,
+            quantity: true,
+            selectedVariantLabel: true,
+          },
+        },
         product: {
           select: {
             title: true,
@@ -470,27 +578,15 @@ export class OrdersService {
       return { valid: false, reason: 'resi_not_found' as const };
     }
 
-    if (!matched.shippedToExpedition || !matched.expeditionResi) {
-      return {
-        valid: false,
-        reason: 'not_shipped_to_expedition' as const,
-        order: {
-          id: matched.id,
-          orderCode: matched.orderCode,
-          receiptNo: `RCPT-${matched.orderCode}`,
-          verificationCode: this.createVerificationCode(matched.orderCode),
-          shippingResi: matched.expeditionResi || this.createShippingResi(matched.orderCode),
-          shippedToExpedition: matched.shippedToExpedition,
-          expeditionResi: matched.expeditionResi,
-          expeditionName: matched.expeditionName,
-          shippedAt: matched.shippedAt,
-          productTitle: matched.product.title,
-          amount: matched.amount,
-          paymentStatus: matched.paymentStatus,
-          createdAt: matched.createdAt,
-        },
-      };
-    }
+    const mappedItems = (matched.orderItems || []).map((item) => ({
+      id: item.id,
+      title: item.productTitleSnapshot,
+      quantity: item.quantity,
+      variantLabel: item.selectedVariantLabel,
+    }));
+    const totalItems = mappedItems.length > 0
+      ? mappedItems.reduce((sum, item) => sum + Math.max(1, Number(item.quantity || 1)), 0)
+      : 1;
 
     return {
       valid: true,
@@ -505,9 +601,12 @@ export class OrdersService {
         expeditionName: matched.expeditionName,
         shippedAt: matched.shippedAt,
         productTitle: matched.product.title,
+        items: mappedItems,
+        totalItems,
         amount: matched.amount,
         paymentStatus: matched.paymentStatus,
         createdAt: matched.createdAt,
+        publicToken: this.createPublicToken(matched.id),
       },
     };
   }
@@ -631,6 +730,31 @@ export class OrdersService {
 
       const subtotal = normalizedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       const totalWeightGram = normalizedItems.reduce((sum, item) => sum + item.itemWeightGram * item.quantity, 0);
+      const weeklyDeal = await this.getActiveWeeklyDealConfig(tx);
+
+      const discountedItems = normalizedItems.map((item) => {
+        const eligibleForWeeklyDeal = Boolean(weeklyDeal?.selectedProductIds.has(item.productId));
+        if (!eligibleForWeeklyDeal || !weeklyDeal) {
+          return {
+            ...item,
+            discountedUnitPrice: item.unitPrice,
+            discountPerUnit: 0,
+          };
+        }
+
+        const rawDiscount = weeklyDeal.discountType === 'amount'
+          ? weeklyDeal.discountValue
+          : Math.round((item.unitPrice * weeklyDeal.discountValue) / 100);
+        const discountPerUnit = Math.min(item.unitPrice, Math.max(0, rawDiscount));
+        return {
+          ...item,
+          discountedUnitPrice: Math.max(0, item.unitPrice - discountPerUnit),
+          discountPerUnit,
+        };
+      });
+
+      const discountedSubtotal = discountedItems.reduce((sum, item) => sum + item.discountedUnitPrice * item.quantity, 0);
+      const discountTotal = discountedItems.reduce((sum, item) => sum + item.discountPerUnit * item.quantity, 0);
 
       const orderCode = `TMB-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       let shippingCost = Math.max(0, data.shippingCost ?? 0);
@@ -663,7 +787,10 @@ export class OrdersService {
         throw new BadRequestException('Kurir pengiriman wajib dipilih');
       }
 
-      const amount = subtotal + shippingCost;
+      const taxableBase = discountedSubtotal + shippingCost;
+      const taxRate = await this.getStoreTaxRate(tx);
+      const taxAmount = Math.round((taxableBase * taxRate) / 100);
+      const amount = taxableBase + taxAmount;
       const shippingNote = [
         data.shippingProvider ? `Courier: ${data.shippingProvider}` : null,
         resolvedShippingService ? `Service: ${resolvedShippingService}` : null,
@@ -671,7 +798,10 @@ export class OrdersService {
         data.shippingRegion ? `Region: ${data.shippingRegion}` : null,
         data.shippingDestinationCityId ? `Destination City ID: ${data.shippingDestinationCityId}` : null,
         `Weight: ${shippingWeightGram}g`,
+        `Subtotal: ${Math.round(subtotal)}`,
+        `Discount: ${Math.round(discountTotal)}`,
         `Shipping: ${shippingCost}`,
+        `Tax ${taxRate}%: ${taxAmount}`,
       ]
         .filter(Boolean)
         .join(' | ');
@@ -717,10 +847,10 @@ export class OrdersService {
         customerEmail: data.customerEmail,
         customerPhone: data.customerPhone,
         itemDetails: [
-          ...normalizedItems.map((item) => ({
+          ...discountedItems.map((item) => ({
             id: item.productId,
             name: `${item.productTitleSnapshot}${item.selectedVariantLabel ? ` (${item.selectedVariantLabel})` : ''}`.slice(0, 50),
-            price: Math.round(item.unitPrice),
+            price: Math.round(item.discountedUnitPrice),
             quantity: item.quantity,
           })),
           {
@@ -729,6 +859,12 @@ export class OrdersService {
             price: Math.round(shippingCost),
             quantity: 1,
           },
+          ...(taxAmount > 0 ? [{
+            id: 'tax',
+            name: `Pajak ${taxRate}%`,
+            price: Math.round(taxAmount),
+            quantity: 1,
+          }] : []),
         ],
       });
 

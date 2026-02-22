@@ -7,6 +7,7 @@ import Script from "next/script";
 import { api, Product, ShippingCity, ShippingRateService } from "@/lib/api";
 import { savePublicOrderRef } from "@/lib/order-tracking";
 import { useToast } from "@/components/ui/Toast";
+import { calculateCheckoutPricing, WeeklyDealPricing } from "@/lib/pricing";
 
 declare global {
   interface Window {
@@ -61,6 +62,8 @@ export default function CheckoutPage() {
   const [snapReady, setSnapReady] = useState(false);
   const [summaryImageSrc, setSummaryImageSrc] = useState("https://via.placeholder.com/400");
   const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
+  const [taxRate, setTaxRate] = useState(11);
+  const [weeklyDeal, setWeeklyDeal] = useState<WeeklyDealPricing | null>(null);
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
@@ -163,6 +166,22 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    async function fetchPricingConfig() {
+      try {
+        const [store, weekly] = await Promise.all([
+          api.settings.getStorePublic(),
+          api.settings.getWeeklyDealPublic(),
+        ]);
+        setTaxRate(Number(store.taxRate || 0));
+        setWeeklyDeal(weekly);
+      } catch {
+        // fallback defaults
+      }
+    }
+    fetchPricingConfig();
+  }, []);
+
+  useEffect(() => {
     const nextImage = product?.images?.[0]?.url || "https://via.placeholder.com/400";
     setSummaryImageSrc(nextImage);
   }, [product]);
@@ -238,7 +257,12 @@ export default function CheckoutPage() {
   const dynamicShipping = selectedService?.cost ?? 0;
   const fallbackShipping = isJawa ? shippingConfig.estimateJawa : shippingConfig.estimateLuarJawa;
   const shipping = unitPrice >= shippingConfig.minFreeShipping ? 0 : (selectedService ? dynamicShipping : fallbackShipping);
-  const total = unitPrice + shipping;
+  const pricing = calculateCheckoutPricing({
+    lines: product ? [{ productId: product.id, unitPrice, quantity: 1 }] : [],
+    shipping,
+    taxRate,
+    weeklyDeal,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -481,7 +505,7 @@ export default function CheckoutPage() {
                       Memproses...
                     </>
                   ) : (
-                    <>Bayar Sekarang ({formatPrice(total)})</>
+                    <>Bayar Sekarang ({formatPrice(pricing.total)})</>
                   )}
                 </button>
               </form>
@@ -511,14 +535,24 @@ export default function CheckoutPage() {
                     <span className="text-[#4c739a]">Subtotal</span>
                     <span className="text-[#0d141b]">{formatPrice(unitPrice)}</span>
                   </div>
+                    {pricing.discount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-700">Diskon Penawaran Mingguan</span>
+                        <span className="text-green-700">-{formatPrice(pricing.discount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-[#4c739a]">Ongkir</span>
                       <span className="text-[#0d141b]">{formatPrice(shipping)}</span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#4c739a]">Pajak ({pricing.taxRate}%)</span>
+                      <span className="text-[#0d141b]">{formatPrice(pricing.tax)}</span>
+                    </div>
                     <p className="text-xs text-[#4c739a]">Estimasi wilayah: {shippingRegion} via {shippingProvider.toUpperCase()} {selectedService ? `(${selectedService.service}, ETD ${selectedService.etd} hari)` : ""}</p>
                     <div className="flex justify-between font-bold text-lg pt-2 border-t border-[#e7edf3]">
                       <span className="text-[#0d141b]">Total</span>
-                      <span className="text-[#137fec]">{formatPrice(total)}</span>
+                      <span className="text-[#137fec]">{formatPrice(pricing.total)}</span>
                   </div>
                 </div>
               </div>

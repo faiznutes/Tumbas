@@ -43,7 +43,11 @@ export default function AdminSettings() {
     enabled: true,
     discount: 20,
     endDate: '',
+    selectedProductIds: [] as string[],
+    discountType: 'percentage' as 'percentage' | 'amount',
+    discountValue: 20,
   });
+  const [weeklyProductSearch, setWeeklyProductSearch] = useState('');
 
   const [homepageFeaturedSettings, setHomepageFeaturedSettings] = useState({
     manualSlugs: [] as string[],
@@ -193,7 +197,28 @@ export default function AdminSettings() {
   async function fetchWeeklyDealSettings() {
     try {
       const data = await api.settings.getWeeklyDeal();
-      setWeeklyDealSettings(data);
+      setWeeklyDealSettings({
+        title: data.title || '',
+        subtitle: data.subtitle || '',
+        enabled: Boolean(data.enabled),
+        discount: Number(data.discount) || 0,
+        endDate: (data as any).endDate || (data as any).end_date || '',
+        selectedProductIds: Array.isArray(data.selectedProductIds) ? data.selectedProductIds : [],
+        discountType: data.discountType === 'amount' ? 'amount' : 'percentage',
+        discountValue: Number(data.discountValue || data.discount || 0),
+      });
+
+      if (featuredProductsCatalog.length === 0) {
+        const products = await api.products.getAll({ limit: 300, status: 'AVAILABLE', sort: 'newest' });
+        setFeaturedProductsCatalog(
+          (products.data || []).map((item) => ({
+            id: item.id,
+            title: item.title,
+            slug: item.slug,
+            category: item.category,
+          })),
+        );
+      }
     } catch (error) {
       console.error('Failed to fetch weekly deal settings:', error);
     }
@@ -338,7 +363,16 @@ export default function AdminSettings() {
 
     setLoading(true);
     try {
-      await api.settings.updateWeeklyDeal(weeklyDealSettings);
+      await api.settings.updateWeeklyDeal({
+        title: weeklyDealSettings.title,
+        subtitle: weeklyDealSettings.subtitle,
+        enabled: weeklyDealSettings.enabled,
+        discount: weeklyDealSettings.discount,
+        endDate: weeklyDealSettings.endDate,
+        selectedProductIds: weeklyDealSettings.selectedProductIds,
+        discountType: weeklyDealSettings.discountType,
+        discountValue: weeklyDealSettings.discountValue,
+      });
       addToast('Pengaturan penawaran mingguan berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save weekly deal settings:', error);
@@ -397,21 +431,17 @@ export default function AdminSettings() {
 
     setLoading(true);
     try {
-      const general = await api.settings.updateGeneral({
-        storeName: settings.storeName,
-      });
       const store = await api.settings.updateStore({
         taxRate: Number(settings.taxRate) || 0,
       });
       setSettings((prev) => ({
         ...prev,
-        storeName: general.storeName || prev.storeName,
         taxRate: String(store.taxRate),
       }));
-      addToast('Pengaturan toko berhasil disimpan', 'success');
+      addToast('Pengaturan pajak berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save store settings:', error);
-      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan toko'), 'error');
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan pajak'), 'error');
     } finally {
       setLoading(false);
     }
@@ -943,17 +973,46 @@ export default function AdminSettings() {
                 </div>
 
                 <div>
-                  <label htmlFor="weeklyDiscount" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Diskon (%)
+                  <label htmlFor="weeklyDiscountType" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Jenis Diskon
+                  </label>
+                  <select
+                    id="weeklyDiscountType"
+                    value={weeklyDealSettings.discountType}
+                    onChange={(e) => setWeeklyDealSettings(prev => ({ ...prev, discountType: e.target.value as 'percentage' | 'amount' }))}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                  >
+                    <option value="percentage">Persentase (%)</option>
+                    <option value="amount">Nominal (Rp)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="weeklyDiscountValue" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Nilai Diskon
                   </label>
                   <input
                     type="number"
-                    id="weeklyDiscount"
-                    value={weeklyDealSettings.discount}
-                    onChange={(e) => setWeeklyDealSettings(prev => ({ ...prev, discount: parseInt(e.target.value) || 0 }))}
+                    id="weeklyDiscountValue"
+                    min={0}
+                    max={weeklyDealSettings.discountType === 'percentage' ? 100 : undefined}
+                    value={weeklyDealSettings.discountValue}
+                    onChange={(e) => {
+                      const value = Math.max(0, parseInt(e.target.value) || 0);
+                      setWeeklyDealSettings((prev) => ({
+                        ...prev,
+                        discount: value,
+                        discountValue: prev.discountType === 'percentage' ? Math.min(100, value) : value,
+                      }));
+                    }}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder="20"
+                    placeholder={weeklyDealSettings.discountType === 'percentage' ? '20' : '10000'}
                   />
+                  <p className="mt-1 text-xs text-[#4c739a]">
+                    {weeklyDealSettings.discountType === 'percentage'
+                      ? 'Masukkan diskon dalam persen (0-100).'
+                      : 'Masukkan diskon nominal rupiah per produk terpilih.'}
+                  </p>
                 </div>
 
                 <div>
@@ -967,6 +1026,100 @@ export default function AdminSettings() {
                     onChange={(e) => setWeeklyDealSettings(prev => ({ ...prev, endDate: e.target.value }))}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="weeklyProductsSearch" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Produk Terpilih untuk Diskon
+                  </label>
+                  <input
+                    id="weeklyProductsSearch"
+                    type="text"
+                    value={weeklyProductSearch}
+                    onChange={(e) => setWeeklyProductSearch(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                    placeholder="Cari nama produk atau slug"
+                  />
+
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#4c739a]">
+                        Produk diskon ({weeklyDealSettings.selectedProductIds.length})
+                      </p>
+                      {canEditTab('weekly') && weeklyDealSettings.selectedProductIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setWeeklyDealSettings((prev) => ({ ...prev, selectedProductIds: [] }))}
+                          className="text-xs font-medium text-red-600 hover:text-red-700"
+                        >
+                          Hapus semua
+                        </button>
+                      )}
+                    </div>
+
+                    {weeklyDealSettings.selectedProductIds.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {weeklyDealSettings.selectedProductIds.map((id) => {
+                          const product = featuredProductsCatalog.find((item) => item.id === id);
+                          return (
+                            <span key={id} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-[#0d141b]">
+                              {product?.title || id}
+                              {canEditTab('weekly') && (
+                                <button
+                                  type="button"
+                                  onClick={() => setWeeklyDealSettings((prev) => ({
+                                    ...prev,
+                                    selectedProductIds: prev.selectedProductIds.filter((item) => item !== id),
+                                  }))}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <span className="material-symbols-outlined text-sm">close</span>
+                                </button>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#4c739a]">Belum ada produk dipilih.</p>
+                    )}
+                  </div>
+
+                  <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-200">
+                    {featuredProductsCatalog
+                      .filter((item) => {
+                        const keyword = weeklyProductSearch.trim().toLowerCase();
+                        if (!keyword) return true;
+                        return item.title.toLowerCase().includes(keyword) || item.slug.toLowerCase().includes(keyword);
+                      })
+                      .slice(0, 100)
+                      .map((item) => {
+                        const selected = weeklyDealSettings.selectedProductIds.includes(item.id);
+                        return (
+                          <div key={item.id} className="flex items-center justify-between border-b border-slate-100 px-3 py-2 last:border-b-0">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-[#0d141b]">{item.title}</p>
+                              <p className="truncate text-xs text-[#4c739a]">{item.slug}{item.category ? ` - ${item.category}` : ''}</p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={!canEditTab('weekly')}
+                              onClick={() => {
+                                setWeeklyDealSettings((prev) => {
+                                  if (prev.selectedProductIds.includes(item.id)) {
+                                    return { ...prev, selectedProductIds: prev.selectedProductIds.filter((id) => id !== item.id) };
+                                  }
+                                  return { ...prev, selectedProductIds: [...prev.selectedProductIds, item.id] };
+                                });
+                              }}
+                              className={`ml-3 rounded-md px-3 py-1 text-xs font-medium ${selected ? 'bg-red-50 text-red-700' : 'bg-[#137fec]/10 text-[#137fec]'} disabled:opacity-50`}
+                            >
+                              {selected ? 'Hapus' : 'Pilih'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
 
                 <div className="pt-4">
@@ -1132,21 +1285,8 @@ export default function AdminSettings() {
 
           {activeTab === "store" && (
             <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h2 className="text-lg font-bold text-[#0d141b] mb-6">Pengaturan Toko</h2>
+              <h2 className="text-lg font-bold text-[#0d141b] mb-6">Pengaturan Pajak</h2>
               <div className="space-y-6">
-                <div>
-                  <label htmlFor="storeName" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Nama Toko
-                  </label>
-                  <input
-                    type="text"
-                    id="storeName"
-                    name="storeName"
-                    value={settings.storeName}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                  />
-                </div>
                 <div>
                   <label htmlFor="taxRate" className="block text-sm font-medium text-[#0d141b] mb-2">
                     Pajak (%)
@@ -1159,6 +1299,7 @@ export default function AdminSettings() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                   />
+                  <p className="mt-1 text-xs text-[#4c739a]">Contoh: nilai 11 berarti total pembayaran ditambah pajak 11%.</p>
                 </div>
                 <div className="pt-4">
                   <button onClick={saveStoreSettings} disabled={loading || !canEditTab('store')} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
