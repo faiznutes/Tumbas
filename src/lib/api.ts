@@ -322,6 +322,22 @@ export interface ShopHeroSettings {
   ctaText: string;
 }
 
+export interface DiscountCampaign {
+  id: string;
+  name: string;
+  type: 'PRODUCT' | 'BULK' | 'MIN_PURCHASE' | 'BUNDLE';
+  enabled: boolean;
+  startDate: string;
+  endDate: string;
+  productIds: string[];
+  bundleProductIds: string[];
+  minQuantity: number;
+  minPurchaseAmount: number;
+  discountType: 'percentage' | 'amount';
+  discountValue: number;
+  priority: number;
+}
+
 export const api = {
   products: {
     getAll: (params?: {
@@ -732,6 +748,7 @@ export const api = {
       selectedProductIds: string[];
       discountType: 'percentage' | 'amount';
       discountValue: number;
+      itemDiscounts: Record<string, { discountType: 'percentage' | 'amount'; discountValue: number }>;
     }>('/settings/weekly-deal'),
 
     getWeeklyDealPublic: () => fetchApi<{
@@ -743,6 +760,7 @@ export const api = {
       selectedProductIds: string[];
       discountType: 'percentage' | 'amount';
       discountValue: number;
+      itemDiscounts: Record<string, { discountType: 'percentage' | 'amount'; discountValue: number }>;
     }>('/settings/weekly-deal-public'),
 
     updateWeeklyDeal: (data: {
@@ -754,6 +772,7 @@ export const api = {
       selectedProductIds?: string[];
       discountType?: 'percentage' | 'amount';
       discountValue?: number;
+      itemDiscounts?: Record<string, { discountType?: 'percentage' | 'amount'; discountValue?: number }>;
     }) => fetchApi<{
       title: string;
       subtitle: string;
@@ -763,6 +782,7 @@ export const api = {
       selectedProductIds: string[];
       discountType: 'percentage' | 'amount';
       discountValue: number;
+      itemDiscounts: Record<string, { discountType: 'percentage' | 'amount'; discountValue: number }>;
     }>('/settings/weekly-deal', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -771,19 +791,23 @@ export const api = {
     getHomepageFeatured: () => fetchApi<{
       manualSlugs: string[];
       maxItems: number;
+      newArrivalsLimit: number;
     }>('/settings/homepage-featured'),
 
     getHomepageFeaturedPublic: () => fetchApi<{
       manualSlugs: string[];
       maxItems: number;
+      newArrivalsLimit: number;
     }>('/settings/homepage-featured-public'),
 
     updateHomepageFeatured: (data: {
       manualSlugs?: string[];
       maxItems?: number;
+      newArrivalsLimit?: number;
     }) => fetchApi<{
       manualSlugs: string[];
       maxItems: number;
+      newArrivalsLimit: number;
     }>('/settings/homepage-featured', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -860,6 +884,16 @@ export const api = {
 
     updateShopHero: (data: Partial<ShopHeroSettings>) =>
       fetchApi<ShopHeroSettings>('/settings/shop-hero', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    getDiscountCampaigns: () => fetchApi<{ campaigns: DiscountCampaign[] }>('/settings/discount-campaigns'),
+
+    getDiscountCampaignsPublic: () => fetchApi<{ campaigns: DiscountCampaign[] }>('/settings/discount-campaigns-public'),
+
+    updateDiscountCampaigns: (data: { campaigns?: DiscountCampaign[] }) =>
+      fetchApi<{ campaigns: DiscountCampaign[] }>('/settings/discount-campaigns', {
         method: 'POST',
         body: JSON.stringify(data),
       }),

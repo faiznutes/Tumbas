@@ -104,6 +104,7 @@ export class SettingsService {
       selectedProductIds: [] as string[],
       discountType: 'percentage' as 'percentage' | 'amount',
       discountValue: 0,
+      itemDiscounts: {} as Record<string, { discountType: 'percentage' | 'amount'; discountValue: number }>,
     };
 
     const weeklyDealKeys = [
@@ -115,6 +116,7 @@ export class SettingsService {
       'weekly_deal_selected_product_ids',
       'weekly_deal_discount_type',
       'weekly_deal_discount_value',
+      'weekly_deal_item_discounts',
     ];
     const weeklyDealSettings = await this.prisma.siteSettings.findMany({
       where: { key: { in: weeklyDealKeys } },
@@ -138,6 +140,23 @@ export class SettingsService {
           .slice(0, 100);
       } else if (s.key === 'weekly_deal_end_date') {
         result.endDate = s.value;
+      } else if (s.key === 'weekly_deal_item_discounts') {
+        try {
+          const parsed = JSON.parse(s.value);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            const sanitizedEntries = Object.entries(parsed as Record<string, any>)
+              .map(([productId, config]) => {
+                if (!productId || !config || typeof config !== 'object') return null;
+                const discountType = config.discountType === 'amount' ? 'amount' : 'percentage';
+                const discountValue = Math.max(0, Math.round(Number(config.discountValue) || 0));
+                return [productId, { discountType, discountValue }] as const;
+              })
+              .filter((entry): entry is readonly [string, { discountType: 'percentage' | 'amount'; discountValue: number }] => Boolean(entry));
+            result.itemDiscounts = Object.fromEntries(sanitizedEntries);
+          }
+        } catch {
+          result.itemDiscounts = {};
+        }
       } else {
         const key = s.key.replace('weekly_deal_', '');
         result[key] = s.value;
@@ -155,9 +174,10 @@ export class SettingsService {
     const defaults = {
       manualSlugs: [] as string[],
       maxItems: 12,
+      newArrivalsLimit: 4,
     };
 
-    const keys = ['homepage_featured_manual_slugs', 'homepage_featured_max_items'];
+    const keys = ['homepage_featured_manual_slugs', 'homepage_featured_max_items', 'homepage_new_arrivals_limit'];
     const settings = await this.prisma.siteSettings.findMany({
       where: { key: { in: keys } },
     });
@@ -174,6 +194,11 @@ export class SettingsService {
       if (setting.key === 'homepage_featured_max_items') {
         const parsed = parseInt(setting.value, 10);
         result.maxItems = Number.isFinite(parsed) ? Math.min(50, Math.max(1, parsed)) : defaults.maxItems;
+      }
+
+      if (setting.key === 'homepage_new_arrivals_limit') {
+        const parsed = parseInt(setting.value, 10);
+        result.newArrivalsLimit = Number.isFinite(parsed) ? Math.min(64, Math.max(1, parsed)) : defaults.newArrivalsLimit;
       }
     });
 
@@ -293,7 +318,7 @@ export class SettingsService {
     return this.getShippingSettings();
   }
 
-  async setHomepageFeaturedSettings(data: { manualSlugs?: string[]; maxItems?: number }) {
+  async setHomepageFeaturedSettings(data: { manualSlugs?: string[]; maxItems?: number; newArrivalsLimit?: number }) {
     const updates: Promise<any>[] = [];
 
     if (data.manualSlugs !== undefined) {
@@ -307,6 +332,11 @@ export class SettingsService {
     if (data.maxItems !== undefined) {
       const safeMaxItems = Math.min(50, Math.max(1, data.maxItems));
       updates.push(this.setSetting('homepage_featured_max_items', String(safeMaxItems)));
+    }
+
+    if (data.newArrivalsLimit !== undefined) {
+      const safeNewArrivalsLimit = Math.min(64, Math.max(1, data.newArrivalsLimit));
+      updates.push(this.setSetting('homepage_new_arrivals_limit', String(safeNewArrivalsLimit)));
     }
 
     if (updates.length > 0) {
@@ -325,6 +355,7 @@ export class SettingsService {
     selectedProductIds?: string[];
     discountType?: 'percentage' | 'amount';
     discountValue?: number;
+    itemDiscounts?: Record<string, { discountType?: 'percentage' | 'amount'; discountValue?: number }>;
   }) {
     const updates: Promise<any>[] = [];
 
@@ -359,6 +390,18 @@ export class SettingsService {
 
     if (data.discountValue !== undefined) {
       updates.push(this.setSetting('weekly_deal_discount_value', String(Math.max(0, Math.round(data.discountValue)))));
+    }
+
+    if (data.itemDiscounts !== undefined) {
+      const sanitizedEntries = Object.entries(data.itemDiscounts || {})
+        .map(([productId, config]) => {
+          if (!productId || !config || typeof config !== 'object') return null;
+          const discountType = config.discountType === 'amount' ? 'amount' : 'percentage';
+          const discountValue = Math.max(0, Math.round(Number(config.discountValue) || 0));
+          return [productId, { discountType, discountValue }] as const;
+        })
+        .filter((entry): entry is readonly [string, { discountType: 'percentage' | 'amount'; discountValue: number }] => Boolean(entry));
+      updates.push(this.setSetting('weekly_deal_item_discounts', JSON.stringify(Object.fromEntries(sanitizedEntries))));
     }
 
     await Promise.all(updates);
@@ -563,5 +606,63 @@ export class SettingsService {
     if (data.ctaText !== undefined) updates.push(this.setSetting('shop_hero_cta_text', data.ctaText));
     if (updates.length > 0) await Promise.all(updates);
     return this.getShopHeroSettings();
+  }
+
+  async getDiscountCampaignSettings() {
+    const raw = await this.getSetting('discount_campaigns');
+    if (!raw) return { campaigns: [] as Array<Record<string, any>> };
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return { campaigns: [] as Array<Record<string, any>> };
+      const campaigns = parsed
+        .filter((item) => item && typeof item === 'object')
+        .map((item: any) => ({
+          id: String(item.id || '').trim(),
+          name: String(item.name || '').trim(),
+          type: ['PRODUCT', 'BULK', 'MIN_PURCHASE', 'BUNDLE'].includes(String(item.type)) ? String(item.type) : 'PRODUCT',
+          enabled: item.enabled !== false,
+          startDate: String(item.startDate || ''),
+          endDate: String(item.endDate || ''),
+          productIds: Array.isArray(item.productIds) ? item.productIds.map((v: any) => String(v).trim()).filter(Boolean) : [],
+          bundleProductIds: Array.isArray(item.bundleProductIds) ? item.bundleProductIds.map((v: any) => String(v).trim()).filter(Boolean) : [],
+          minQuantity: Math.max(1, parseInt(String(item.minQuantity || 1), 10) || 1),
+          minPurchaseAmount: Math.max(0, parseInt(String(item.minPurchaseAmount || 0), 10) || 0),
+          discountType: String(item.discountType) === 'amount' ? 'amount' : 'percentage',
+          discountValue: Math.max(0, parseInt(String(item.discountValue || 0), 10) || 0),
+          priority: Math.max(0, parseInt(String(item.priority || 0), 10) || 0),
+        }))
+        .filter((item) => item.id && item.name);
+
+      return { campaigns };
+    } catch {
+      return { campaigns: [] as Array<Record<string, any>> };
+    }
+  }
+
+  async setDiscountCampaignSettings(data: { campaigns?: Array<Record<string, any>> }) {
+    const input = Array.isArray(data.campaigns) ? data.campaigns : [];
+    const campaigns = input
+      .filter((item) => item && typeof item === 'object')
+      .map((item: any) => ({
+        id: String(item.id || '').trim(),
+        name: String(item.name || '').trim(),
+        type: ['PRODUCT', 'BULK', 'MIN_PURCHASE', 'BUNDLE'].includes(String(item.type)) ? String(item.type) : 'PRODUCT',
+        enabled: item.enabled !== false,
+        startDate: String(item.startDate || ''),
+        endDate: String(item.endDate || ''),
+        productIds: Array.isArray(item.productIds) ? item.productIds.map((v: any) => String(v).trim()).filter(Boolean).slice(0, 200) : [],
+        bundleProductIds: Array.isArray(item.bundleProductIds) ? item.bundleProductIds.map((v: any) => String(v).trim()).filter(Boolean).slice(0, 50) : [],
+        minQuantity: Math.max(1, parseInt(String(item.minQuantity || 1), 10) || 1),
+        minPurchaseAmount: Math.max(0, parseInt(String(item.minPurchaseAmount || 0), 10) || 0),
+        discountType: String(item.discountType) === 'amount' ? 'amount' : 'percentage',
+        discountValue: Math.max(0, parseInt(String(item.discountValue || 0), 10) || 0),
+        priority: Math.max(0, parseInt(String(item.priority || 0), 10) || 0),
+      }))
+      .filter((item) => item.id && item.name)
+      .slice(0, 200);
+
+    await this.setSetting('discount_campaigns', JSON.stringify(campaigns));
+    return this.getDiscountCampaignSettings();
   }
 }

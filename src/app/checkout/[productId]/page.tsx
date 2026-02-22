@@ -8,6 +8,7 @@ import { api, Product, ShippingCity, ShippingRateService } from "@/lib/api";
 import { savePublicOrderRef } from "@/lib/order-tracking";
 import { useToast } from "@/components/ui/Toast";
 import { calculateCheckoutPricing, WeeklyDealPricing } from "@/lib/pricing";
+import type { DiscountCampaign } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -64,6 +65,7 @@ export default function CheckoutPage() {
   const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
   const [taxRate, setTaxRate] = useState(11);
   const [weeklyDeal, setWeeklyDeal] = useState<WeeklyDealPricing | null>(null);
+  const [discountCampaigns, setDiscountCampaigns] = useState<DiscountCampaign[]>([]);
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
@@ -168,12 +170,14 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function fetchPricingConfig() {
       try {
-        const [store, weekly] = await Promise.all([
+        const [store, weekly, campaignResponse] = await Promise.all([
           api.settings.getStorePublic(),
           api.settings.getWeeklyDealPublic(),
+          api.settings.getDiscountCampaignsPublic(),
         ]);
         setTaxRate(Number(store.taxRate || 0));
         setWeeklyDeal(weekly);
+        setDiscountCampaigns(campaignResponse.campaigns || []);
       } catch {
         // fallback defaults
       }
@@ -262,6 +266,7 @@ export default function CheckoutPage() {
     shipping,
     taxRate,
     weeklyDeal,
+    discountCampaigns,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -10,6 +10,7 @@ import { clearCart, getCartItems, CartItem } from "@/lib/cart";
 import { savePublicOrderRef } from "@/lib/order-tracking";
 import { useToast } from "@/components/ui/Toast";
 import { calculateCheckoutPricing, WeeklyDealPricing } from "@/lib/pricing";
+import type { DiscountCampaign } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -67,6 +68,7 @@ export default function CartCheckoutPage() {
   const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
   const [taxRate, setTaxRate] = useState(11);
   const [weeklyDeal, setWeeklyDeal] = useState<WeeklyDealPricing | null>(null);
+  const [discountCampaigns, setDiscountCampaigns] = useState<DiscountCampaign[]>([]);
 
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
   const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
@@ -129,7 +131,8 @@ export default function CartCheckoutPage() {
     shipping,
     taxRate,
     weeklyDeal,
-  }), [items, shipping, taxRate, weeklyDeal]);
+    discountCampaigns,
+  }), [items, shipping, taxRate, weeklyDeal, discountCampaigns]);
 
   useEffect(() => {
     setItems(getCartItems());
@@ -158,8 +161,10 @@ export default function CartCheckoutPage() {
           api.settings.getStorePublic(),
           api.settings.getWeeklyDealPublic(),
         ]);
+        const campaignResponse = await api.settings.getDiscountCampaignsPublic();
         setTaxRate(Number(store.taxRate || 0));
         setWeeklyDeal(weekly);
+        setDiscountCampaigns(campaignResponse.campaigns || []);
       } catch {
         // fallback defaults
       }

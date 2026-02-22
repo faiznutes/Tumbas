@@ -139,6 +139,7 @@ export class OrdersService {
       'weekly_deal_selected_product_ids',
       'weekly_deal_discount_type',
       'weekly_deal_discount_value',
+      'weekly_deal_item_discounts',
     ];
     const settings = await tx.siteSettings.findMany({ where: { key: { in: keys } } });
     const map = new Map(settings.map((setting) => [setting.key, setting.value]));
@@ -180,11 +181,74 @@ export class OrdersService {
       return null;
     }
 
+    const itemDiscountsRaw = map.get('weekly_deal_item_discounts') || '{}';
+    let itemDiscounts: Record<string, { discountType: 'percentage' | 'amount'; discountValue: number }> = {};
+    try {
+      const parsed = JSON.parse(itemDiscountsRaw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        itemDiscounts = Object.fromEntries(
+          Object.entries(parsed as Record<string, any>)
+            .map(([productId, config]) => {
+              if (!productId || !config || typeof config !== 'object') return null;
+              const discountTypeForProduct = config.discountType === 'amount' ? 'amount' : 'percentage';
+              const discountValueForProduct = Math.max(0, Math.round(Number(config.discountValue) || 0));
+              return [productId, { discountType: discountTypeForProduct, discountValue: discountValueForProduct }] as const;
+            })
+            .filter((entry): entry is readonly [string, { discountType: 'percentage' | 'amount'; discountValue: number }] => Boolean(entry)),
+        );
+      }
+    } catch {
+      itemDiscounts = {};
+    }
+
     return {
       selectedProductIds: new Set(selectedProductIds),
       discountType,
       discountValue,
+      itemDiscounts,
     };
+  }
+
+  private async getActiveDiscountCampaigns(tx: Prisma.TransactionClient) {
+    const setting = await tx.siteSettings.findUnique({ where: { key: 'discount_campaigns' } });
+    if (!setting?.value) return [] as Array<Record<string, any>>;
+
+    try {
+      const parsed = JSON.parse(setting.value);
+      if (!Array.isArray(parsed)) return [] as Array<Record<string, any>>;
+      const now = Date.now();
+      return parsed
+        .filter((item) => item && typeof item === 'object')
+        .map((item: any) => ({
+          type: ['PRODUCT', 'BULK', 'MIN_PURCHASE', 'BUNDLE'].includes(String(item.type)) ? String(item.type) : 'PRODUCT',
+          enabled: item.enabled !== false,
+          startDate: String(item.startDate || ''),
+          endDate: String(item.endDate || ''),
+          productIds: Array.isArray(item.productIds) ? item.productIds.map((v: any) => String(v).trim()).filter(Boolean) : [],
+          bundleProductIds: Array.isArray(item.bundleProductIds) ? item.bundleProductIds.map((v: any) => String(v).trim()).filter(Boolean) : [],
+          minQuantity: Math.max(1, parseInt(String(item.minQuantity || 1), 10) || 1),
+          minPurchaseAmount: Math.max(0, parseInt(String(item.minPurchaseAmount || 0), 10) || 0),
+          discountType: String(item.discountType) === 'amount' ? 'amount' : 'percentage',
+          discountValue: Math.max(0, parseInt(String(item.discountValue || 0), 10) || 0),
+        }))
+        .filter((campaign) => {
+          if (!campaign.enabled || campaign.discountValue <= 0) return false;
+          if (campaign.startDate) {
+            const startDate = new Date(campaign.startDate);
+            if (Number.isFinite(startDate.getTime()) && now < startDate.getTime()) return false;
+          }
+          if (campaign.endDate) {
+            const endDate = new Date(campaign.endDate);
+            if (Number.isFinite(endDate.getTime())) {
+              endDate.setHours(23, 59, 59, 999);
+              if (now > endDate.getTime()) return false;
+            }
+          }
+          return true;
+        });
+    } catch {
+      return [] as Array<Record<string, any>>;
+    }
   }
 
   async findAll(params: {
@@ -731,6 +795,8 @@ export class OrdersService {
       const subtotal = normalizedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       const totalWeightGram = normalizedItems.reduce((sum, item) => sum + item.itemWeightGram * item.quantity, 0);
       const weeklyDeal = await this.getActiveWeeklyDealConfig(tx);
+      const discountCampaigns = await this.getActiveDiscountCampaigns(tx);
+      const cartProductIds = new Set(normalizedItems.map((item) => item.productId));
 
       const discountedItems = normalizedItems.map((item) => {
         const eligibleForWeeklyDeal = Boolean(weeklyDeal?.selectedProductIds.has(item.productId));
@@ -742,10 +808,36 @@ export class OrdersService {
           };
         }
 
-        const rawDiscount = weeklyDeal.discountType === 'amount'
-          ? weeklyDeal.discountValue
-          : Math.round((item.unitPrice * weeklyDeal.discountValue) / 100);
-        const discountPerUnit = Math.min(item.unitPrice, Math.max(0, rawDiscount));
+        const productSpecificDiscount = weeklyDeal.itemDiscounts[item.productId];
+        const resolvedDiscountType = productSpecificDiscount?.discountType || weeklyDeal.discountType;
+        const resolvedDiscountValue = productSpecificDiscount?.discountValue || weeklyDeal.discountValue;
+
+        const rawDiscount = resolvedDiscountType === 'amount'
+          ? resolvedDiscountValue
+          : Math.round((item.unitPrice * resolvedDiscountValue) / 100);
+        let campaignRawDiscount = 0;
+        discountCampaigns.forEach((campaign) => {
+          const campaignProductIds = new Set((campaign.productIds || []).filter(Boolean));
+          const hasProductFilter = campaignProductIds.size > 0;
+          const appliesToItem = !hasProductFilter || campaignProductIds.has(item.productId);
+          if (!appliesToItem) return;
+
+          if (campaign.type === 'BULK' && item.quantity < campaign.minQuantity) return;
+          if (campaign.type === 'MIN_PURCHASE' && subtotal < campaign.minPurchaseAmount) return;
+          if (campaign.type === 'BUNDLE') {
+            const bundleIds = (campaign.bundleProductIds || []).filter(Boolean);
+            if (bundleIds.length === 0) return;
+            if (!bundleIds.every((id: string) => cartProductIds.has(id))) return;
+          }
+
+          const rawCampaignDiscount = campaign.discountType === 'amount'
+            ? campaign.discountValue
+            : Math.round((item.unitPrice * campaign.discountValue) / 100);
+
+          campaignRawDiscount = Math.max(campaignRawDiscount, rawCampaignDiscount);
+        });
+
+        const discountPerUnit = Math.min(item.unitPrice, Math.max(0, rawDiscount, campaignRawDiscount));
         return {
           ...item,
           discountedUnitPrice: Math.max(0, item.unitPrice - discountPerUnit),

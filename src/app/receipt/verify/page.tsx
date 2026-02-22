@@ -137,8 +137,8 @@ export default function VerifyReceiptPage() {
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h2 className="mb-2 text-xl font-black">Lacak Status Pesananmu</h2>
           <p className="mb-4 text-sm text-[#4c739a]">Masukkan resi Tumbas, order code, atau resi ekspedisi untuk melihat progres pesanan.</p>
-          <form onSubmit={handleVerify} className="flex items-end gap-3">
-            <div className="min-w-0 flex-1">
+          <form onSubmit={handleVerify} className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div className="min-w-0">
               <label className="mb-2 block text-sm font-medium">Nomor Resi / Order Code</label>
               <input
                 value={resi}
@@ -147,7 +147,7 @@ export default function VerifyReceiptPage() {
                 className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#137fec]"
                 required
               />
-              {normalizedPreview && <p className="mt-1 text-xs text-[#4c739a]">Input terformat: {normalizedPreview}</p>}
+              <p className="mt-1 min-h-[16px] text-xs text-[#4c739a]">{normalizedPreview ? `Input terformat: ${normalizedPreview}` : '\u00A0'}</p>
             </div>
             <button
               type="submit"

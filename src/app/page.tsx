@@ -17,8 +17,8 @@ function formatPrice(price: number) {
 
 export default function Beranda() {
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [latestProducts, setLatestProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(2);
   const [hours, setHours] = useState(14);
@@ -35,27 +35,27 @@ export default function Beranda() {
   const [weeklyDeal, setWeeklyDeal] = useState({
     title: '',
     subtitle: '',
-    enabled: true,
+    enabled: false,
     discount: 20,
     endDate: '',
   });
   const [weeklyDealReady, setWeeklyDealReady] = useState(false);
+  const [homepageFeaturedSettings, setHomepageFeaturedSettings] = useState({
+    maxItems: 12,
+    newArrivalsLimit: 4,
+  });
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [productsRes, promoRes, weeklyRes, featuredSettingsRes, popularRes, availableRes] = await Promise.allSettled([
-          api.products.getAll({ limit: 4, status: 'AVAILABLE' }),
+        const [promoRes, weeklyRes, featuredSettingsRes, popularRes, availableRes] = await Promise.allSettled([
           api.settings.getPromoPublic(),
           api.settings.getWeeklyDealPublic(),
           api.settings.getHomepageFeaturedPublic(),
           api.products.getAll({ limit: 12, status: 'AVAILABLE', sort: 'popular' }),
-          api.products.getAll({ limit: 100, status: 'AVAILABLE' }),
+          api.products.getAll({ limit: 200, status: 'AVAILABLE', sort: 'newest' }),
         ]);
-        
-        if (productsRes.status === 'fulfilled' && productsRes.value?.data) {
-          setProducts(productsRes.value.data);
-        }
+
         if (promoRes.status === 'fulfilled' && promoRes.value) {
           setPromo(promoRes.value);
         }
@@ -67,6 +67,11 @@ export default function Beranda() {
           featuredSettingsRes.status === 'fulfilled'
             ? Math.min(50, Math.max(1, featuredSettingsRes.value.maxItems || 12))
             : 12;
+        const newArrivalsLimit =
+          featuredSettingsRes.status === 'fulfilled'
+            ? Math.min(64, Math.max(1, featuredSettingsRes.value.newArrivalsLimit || 4))
+            : 4;
+        setHomepageFeaturedSettings({ maxItems, newArrivalsLimit });
         const manualSlugs =
           featuredSettingsRes.status === 'fulfilled'
             ? featuredSettingsRes.value.manualSlugs
@@ -97,6 +102,7 @@ export default function Beranda() {
         }
 
         setFeaturedProducts(featuredCandidate.slice(0, maxItems));
+        setLatestProducts(allAvailable);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -115,18 +121,36 @@ export default function Beranda() {
     return 'https://via.placeholder.com/400';
   };
 
+  const isWeeklyDealActive = (() => {
+    if (!weeklyDealReady) return false;
+    if (!weeklyDeal.enabled) return false;
+    if (!weeklyDeal.endDate) return true;
+    const endDate = new Date(weeklyDeal.endDate);
+    if (!Number.isFinite(endDate.getTime())) return true;
+    endDate.setHours(23, 59, 59, 999);
+    return Date.now() <= endDate.getTime();
+  })();
+
+  const displayedNewArrivalsCount = isWeeklyDealActive
+    ? homepageFeaturedSettings.newArrivalsLimit
+    : Math.max(16, homepageFeaturedSettings.newArrivalsLimit);
+
+  const displayedNewArrivals = latestProducts.slice(0, displayedNewArrivalsCount);
+
   return (
     <div className="min-h-screen bg-[#f6f7f8]">
       <Navbar />
       
       {/* Hero Banner */}
-      <section className="relative bg-slate-900 overflow-hidden">
+      <section className="relative min-h-[430px] bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-60">
-              <img 
-                alt="Banner Promo Tumbas" 
-                className="w-full h-full object-cover" 
-                src={promo.heroImage || "https://images.unsplash.com/photo-1563396983906-b3795482a59a?w=1200"}
-              />
+              {promoReady && promo.heroImage ? (
+                <img
+                  alt="Banner Promo Tumbas"
+                  className="w-full h-full object-cover"
+                  src={promo.heroImage}
+                />
+              ) : null}
             </div>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent"></div>
         <div className="relative max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8 lg:py-40 flex flex-col items-start justify-center">
@@ -145,7 +169,7 @@ export default function Beranda() {
           <p className="text-lg text-slate-300 mb-10 max-w-lg">
             {promoReady ? (promo.heroSubtitle || "Lihat produk terbaru dan penawaran terkurasi langsung dari pengaturan admin.") : "\u00A0"}
           </p>
-          <div className="flex flex-wrap gap-4">
+          <div className={`flex flex-wrap gap-4 transition-opacity ${promoReady ? 'opacity-100' : 'opacity-0'}`}>
             <Link href="/shop" className="px-8 py-4 bg-[#137fec] hover:bg-[#137fec]/90 text-white rounded-lg font-bold text-lg transition-all shadow-lg shadow-[#137fec]/20 flex items-center gap-2">
               Belanja Sekarang
               <span className="material-symbols-outlined">arrow_forward</span>
@@ -193,6 +217,7 @@ export default function Beranda() {
       </section>
 
       {/* Weekly Deals & Countdown */}
+      {isWeeklyDealActive && (
       <section className="bg-slate-50 py-20 border-y border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
@@ -220,6 +245,7 @@ export default function Beranda() {
           </div>
         </div>
       </section>
+      )}
 
       {/* New Arrivals Product Grid */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -233,14 +259,14 @@ export default function Beranda() {
           <div className="text-center py-8">
             <p className="text-[#4c739a]">Memuat produk...</p>
           </div>
-        ) : products.length === 0 ? (
+        ) : displayedNewArrivals.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-[#4c739a]">Belum ada produk</p>
             <Link href="/shop" className="text-[#137fec] hover:underline mt-2 inline-block">Lihat semua produk</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.map((product) => (
+            {displayedNewArrivals.map((product) => (
               <Link key={product.id} href={`/product/${product.slug}`} className="group block">
                 <div className="relative aspect-square rounded-xl bg-slate-100 overflow-hidden mb-4">
                   <span className="absolute top-3 left-3 z-10 bg-[#137fec] text-white text-[10px] font-black px-2 py-1 rounded uppercase">Baru</span>

@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/dashboard", label: "Dasbor", icon: "dashboard" },
   { href: "/admin/products", label: "Produk", icon: "inventory_2" },
   { href: "/admin/categories", label: "Kategori", icon: "category" },
+  { href: "/admin/discounts", label: "Diskon", icon: "local_offer" },
   { href: "/admin/orders", label: "Pesanan", icon: "shopping_cart" },
   { href: "/admin/orders/report", label: "Laporan Pesanan", icon: "assessment" },
   { href: "/admin/messages", label: "Pesan", icon: "mail" },
@@ -72,6 +73,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       if (item.href === "/admin/categories") {
         return hasAnyAdminPermission(["products.categories.view", "products.categories.edit", "products.edit"]);
       }
+      if (item.href === "/admin/discounts") return hasAdminPermission("products.edit");
       return true;
     });
   }, [role, sessionUser.permissions]);

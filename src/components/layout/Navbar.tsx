@@ -81,6 +81,12 @@ export default function Navbar() {
               </Link>
               <Link
                 className="hover:text-[#137fec] transition-colors"
+                href="/discounts"
+              >
+                Diskon
+              </Link>
+              <Link
+                className="hover:text-[#137fec] transition-colors"
                 href="/contact"
               >
                 Kontak
@@ -156,6 +162,12 @@ export default function Navbar() {
                 href="/receipt/verify"
               >
                 Cek Resi
+              </Link>
+              <Link
+                className="hover:text-[#137fec] transition-colors py-2"
+                href="/discounts"
+              >
+                Diskon
               </Link>
               <Link
                 className="hover:text-[#137fec] transition-colors py-2"

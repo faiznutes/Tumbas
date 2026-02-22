@@ -46,12 +46,14 @@ export default function AdminSettings() {
     selectedProductIds: [] as string[],
     discountType: 'percentage' as 'percentage' | 'amount',
     discountValue: 20,
+    itemDiscounts: {} as Record<string, { discountType: 'percentage' | 'amount'; discountValue: number }>,
   });
   const [weeklyProductSearch, setWeeklyProductSearch] = useState('');
 
   const [homepageFeaturedSettings, setHomepageFeaturedSettings] = useState({
     manualSlugs: [] as string[],
     maxItems: 12,
+    newArrivalsLimit: 4,
   });
   const [featuredSearch, setFeaturedSearch] = useState('');
   const [featuredProductsCatalog, setFeaturedProductsCatalog] = useState<Array<{ id: string; title: string; slug: string; category: string | null }>>([]);
@@ -117,6 +119,43 @@ export default function AdminSettings() {
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
     return fallback;
+  };
+
+  const processPromoImage = async (file: File) => {
+    const imageUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Gagal membaca file gambar'));
+      reader.readAsDataURL(file);
+    });
+
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Gagal memuat gambar'));
+      img.src = imageUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    const size = 1600;
+    canvas.width = size;
+    canvas.height = Math.round(size * 0.5);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas tidak tersedia');
+
+    const targetWidth = canvas.width;
+    const targetHeight = canvas.height;
+    const ratio = Math.max(targetWidth / image.width, targetHeight / image.height);
+    const drawWidth = image.width * ratio;
+    const drawHeight = image.height * ratio;
+    const offsetX = (targetWidth - drawWidth) / 2;
+    const offsetY = (targetHeight - drawHeight) / 2;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+    ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+    return canvas.toDataURL('image/jpeg', 0.86);
   };
 
   useEffect(() => {
@@ -206,6 +245,9 @@ export default function AdminSettings() {
         selectedProductIds: Array.isArray(data.selectedProductIds) ? data.selectedProductIds : [],
         discountType: data.discountType === 'amount' ? 'amount' : 'percentage',
         discountValue: Number(data.discountValue || data.discount || 0),
+        itemDiscounts: (data as any).itemDiscounts && typeof (data as any).itemDiscounts === 'object'
+          ? (data as any).itemDiscounts
+          : {},
       });
 
       if (featuredProductsCatalog.length === 0) {
@@ -233,6 +275,7 @@ export default function AdminSettings() {
       setHomepageFeaturedSettings({
         manualSlugs: data.manualSlugs,
         maxItems: Math.min(50, Math.max(1, data.maxItems || 12)),
+        newArrivalsLimit: Math.min(64, Math.max(1, data.newArrivalsLimit || 4)),
       });
       setFeaturedProductsCatalog(
         (products.data || []).map((item) => ({
@@ -372,6 +415,9 @@ export default function AdminSettings() {
         selectedProductIds: weeklyDealSettings.selectedProductIds,
         discountType: weeklyDealSettings.discountType,
         discountValue: weeklyDealSettings.discountValue,
+        itemDiscounts: Object.fromEntries(
+          Object.entries(weeklyDealSettings.itemDiscounts || {}).filter(([productId]) => weeklyDealSettings.selectedProductIds.includes(productId)),
+        ),
       });
       addToast('Pengaturan penawaran mingguan berhasil disimpan', 'success');
     } catch (error) {
@@ -393,6 +439,7 @@ export default function AdminSettings() {
       const response = await api.settings.updateHomepageFeatured({
         manualSlugs: homepageFeaturedSettings.manualSlugs,
         maxItems: homepageFeaturedSettings.maxItems,
+        newArrivalsLimit: homepageFeaturedSettings.newArrivalsLimit,
       });
 
       setHomepageFeaturedSettings(response);
@@ -620,7 +667,7 @@ export default function AdminSettings() {
               </button>)}
               {canViewTab("store") && (<button
                 onClick={() => setActiveTab("store")}
-                title="Toko"
+                title="Pajak"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
                   activeTab === "store" 
                     ? "bg-[#137fec]/10 text-[#137fec]" 
@@ -809,6 +856,27 @@ export default function AdminSettings() {
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                     placeholder="https://example.com/banner.jpg"
                   />
+                  <div className="mt-3">
+                    <label className="mb-2 block text-sm font-medium text-[#0d141b]">Upload Gambar Banner</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const imageBase64 = await processPromoImage(file);
+                          setPromoSettings((prev) => ({ ...prev, heroImage: imageBase64 }));
+                          addToast('Gambar banner berhasil diproses', 'success');
+                        } catch (error) {
+                          addToast(getErrorMessage(error, 'Gagal memproses gambar banner'), 'error');
+                        } finally {
+                          e.currentTarget.value = '';
+                        }
+                      }}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-[#0d141b]"
+                    />
+                  </div>
                   {promoSettings.heroImage && (
                     <div className="mt-3">
                       <img 
@@ -1049,7 +1117,7 @@ export default function AdminSettings() {
                       {canEditTab('weekly') && weeklyDealSettings.selectedProductIds.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setWeeklyDealSettings((prev) => ({ ...prev, selectedProductIds: [] }))}
+                          onClick={() => setWeeklyDealSettings((prev) => ({ ...prev, selectedProductIds: [], itemDiscounts: {} }))}
                           className="text-xs font-medium text-red-600 hover:text-red-700"
                         >
                           Hapus semua
@@ -1067,9 +1135,10 @@ export default function AdminSettings() {
                               {canEditTab('weekly') && (
                                 <button
                                   type="button"
-                                  onClick={() => setWeeklyDealSettings((prev) => ({
+                          onClick={() => setWeeklyDealSettings((prev) => ({
                                     ...prev,
                                     selectedProductIds: prev.selectedProductIds.filter((item) => item !== id),
+                                    itemDiscounts: Object.fromEntries(Object.entries(prev.itemDiscounts || {}).filter(([key]) => key !== id)),
                                   }))}
                                   className="text-red-600 hover:text-red-700"
                                 >
@@ -1084,6 +1153,69 @@ export default function AdminSettings() {
                       <p className="text-xs text-[#4c739a]">Belum ada produk dipilih.</p>
                     )}
                   </div>
+
+                  {weeklyDealSettings.selectedProductIds.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#4c739a]">Pengaturan diskon per item</p>
+                      <div className="space-y-2">
+                        {weeklyDealSettings.selectedProductIds.map((productId) => {
+                          const product = featuredProductsCatalog.find((item) => item.id === productId);
+                          const itemDiscount = weeklyDealSettings.itemDiscounts[productId] || {
+                            discountType: weeklyDealSettings.discountType,
+                            discountValue: weeklyDealSettings.discountValue,
+                          };
+
+                          return (
+                            <div key={`discount-${productId}`} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_160px_160px]">
+                              <p className="truncate text-sm font-medium text-[#0d141b]">{product?.title || productId}</p>
+                              <select
+                                value={itemDiscount.discountType}
+                                disabled={!canEditTab('weekly')}
+                                onChange={(e) => {
+                                  const discountType = e.target.value as 'percentage' | 'amount';
+                                  setWeeklyDealSettings((prev) => ({
+                                    ...prev,
+                                    itemDiscounts: {
+                                      ...prev.itemDiscounts,
+                                      [productId]: {
+                                        discountType,
+                                        discountValue: prev.itemDiscounts[productId]?.discountValue || prev.discountValue,
+                                      },
+                                    },
+                                  }));
+                                }}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-[#0d141b]"
+                              >
+                                <option value="percentage">Persen (%)</option>
+                                <option value="amount">Nominal (Rp)</option>
+                              </select>
+                              <input
+                                type="number"
+                                min={0}
+                                max={itemDiscount.discountType === 'percentage' ? 100 : undefined}
+                                disabled={!canEditTab('weekly')}
+                                value={itemDiscount.discountValue}
+                                onChange={(e) => {
+                                  const discountValue = Math.max(0, Number(e.target.value) || 0);
+                                  setWeeklyDealSettings((prev) => ({
+                                    ...prev,
+                                    itemDiscounts: {
+                                      ...prev.itemDiscounts,
+                                      [productId]: {
+                                        discountType: prev.itemDiscounts[productId]?.discountType || prev.discountType,
+                                        discountValue,
+                                      },
+                                    },
+                                  }));
+                                }}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-[#0d141b]"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-200">
                     {featuredProductsCatalog
@@ -1107,9 +1239,23 @@ export default function AdminSettings() {
                               onClick={() => {
                                 setWeeklyDealSettings((prev) => {
                                   if (prev.selectedProductIds.includes(item.id)) {
-                                    return { ...prev, selectedProductIds: prev.selectedProductIds.filter((id) => id !== item.id) };
+                                    return {
+                                      ...prev,
+                                      selectedProductIds: prev.selectedProductIds.filter((id) => id !== item.id),
+                                      itemDiscounts: Object.fromEntries(Object.entries(prev.itemDiscounts || {}).filter(([key]) => key !== item.id)),
+                                    };
                                   }
-                                  return { ...prev, selectedProductIds: [...prev.selectedProductIds, item.id] };
+                                  return {
+                                    ...prev,
+                                    selectedProductIds: [...prev.selectedProductIds, item.id],
+                                    itemDiscounts: {
+                                      ...prev.itemDiscounts,
+                                      [item.id]: prev.itemDiscounts[item.id] || {
+                                        discountType: prev.discountType,
+                                        discountValue: prev.discountValue,
+                                      },
+                                    },
+                                  };
                                 });
                               }}
                               className={`ml-3 rounded-md px-3 py-1 text-xs font-medium ${selected ? 'bg-red-50 text-red-700' : 'bg-[#137fec]/10 text-[#137fec]'} disabled:opacity-50`}
@@ -1171,6 +1317,27 @@ export default function AdminSettings() {
                     }
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="newArrivalsLimit" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Jumlah Produk Baru Default
+                  </label>
+                  <input
+                    id="newArrivalsLimit"
+                    type="number"
+                    min={1}
+                    max={64}
+                    value={homepageFeaturedSettings.newArrivalsLimit}
+                    onChange={(e) =>
+                      setHomepageFeaturedSettings((prev) => ({
+                        ...prev,
+                        newArrivalsLimit: Math.min(64, Math.max(1, Number(e.target.value) || 1)),
+                      }))
+                    }
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                  />
+                  <p className="mt-1 text-xs text-[#4c739a]">Saat Penawaran Mingguan nonaktif, beranda otomatis menampilkan minimal 16 produk terbaru.</p>
                 </div>
 
                 <div>

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
-import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, Max, Min } from 'class-validator';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Permissions } from '../auth/permissions.decorator';
@@ -69,6 +69,10 @@ class UpdateWeeklyDealSettingsDto {
   @IsInt()
   @Min(0)
   discountValue?: number;
+
+  @IsOptional()
+  @IsObject()
+  itemDiscounts?: Record<string, { discountType?: 'percentage' | 'amount'; discountValue?: number }>;
 }
 
 class UpdateHomepageFeaturedSettingsDto {
@@ -82,6 +86,18 @@ class UpdateHomepageFeaturedSettingsDto {
   @Min(1)
   @Max(50)
   maxItems?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(64)
+  newArrivalsLimit?: number;
+}
+
+class UpdateDiscountCampaignSettingsDto {
+  @IsOptional()
+  @IsArray()
+  campaigns?: Array<Record<string, any>>;
 }
 
 class UpdateShopHeroSettingsDto {
@@ -282,6 +298,25 @@ export class SettingsController {
   @Post('homepage-featured')
   async updateHomepageFeaturedSettings(@Body() data: UpdateHomepageFeaturedSettingsDto) {
     return this.settingsService.setHomepageFeaturedSettings(data);
+  }
+
+  @Get('discount-campaigns')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
+  async getDiscountCampaignSettings() {
+    return this.settingsService.getDiscountCampaignSettings();
+  }
+
+  @Get('discount-campaigns-public')
+  async getDiscountCampaignSettingsPublic() {
+    return this.settingsService.getDiscountCampaignSettings();
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
+  @Post('discount-campaigns')
+  async updateDiscountCampaignSettings(@Body() data: UpdateDiscountCampaignSettingsDto) {
+    return this.settingsService.setDiscountCampaignSettings(data);
   }
 
   @Get('shop-hero')
