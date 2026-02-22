@@ -123,9 +123,9 @@ export default function Beranda() {
       <section className="relative bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-60">
               <img 
-                alt="Summer Sale Banner" 
+                alt="Banner Promo Tumbas" 
                 className="w-full h-full object-cover" 
-                src={promo.heroImage || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200"}
+                src={promo.heroImage || "https://images.unsplash.com/photo-1563396983906-b3795482a59a?w=1200"}
               />
             </div>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent"></div>
@@ -137,13 +137,13 @@ export default function Beranda() {
             {!promoReady ? (
               <span>Memuat promo...</span>
             ) : (
-              (promo.heroTitle || "Sale Musim Panas: Hingga Diskon 50%").split(':').map((part, i) => (
+              (promo.heroTitle || "Promo Pilihan Minggu Ini").split(':').map((part, i) => (
                 <span key={i}>{i > 0 ? ':' : ''}<br/>{i === 1 && <span className="text-[#137fec]">{part}</span>}{i === 0 && part}</span>
               ))
             )}
           </h1>
           <p className="text-lg text-slate-300 mb-10 max-w-lg">
-            {promoReady ? (promo.heroSubtitle || "Tingkatkan gaya hidup Anda dengan koleksi eksklusif kami.") : "Mohon tunggu..."}
+            {promoReady ? (promo.heroSubtitle || "Lihat produk terbaru dan penawaran terkurasi langsung dari pengaturan admin.") : "Mohon tunggu..."}
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/shop" className="px-8 py-4 bg-[#137fec] hover:bg-[#137fec]/90 text-white rounded-lg font-bold text-lg transition-all shadow-lg shadow-[#137fec]/20 flex items-center gap-2">
