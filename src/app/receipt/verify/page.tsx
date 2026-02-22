@@ -56,7 +56,8 @@ export default function VerifyReceiptPage() {
   };
 
   const order = result?.order;
-  const isValidOrder = Boolean(result?.valid && order);
+  const isLegacyNotShippedCase = Boolean(result?.reason === "not_shipped_to_expedition" && order);
+  const isValidOrder = Boolean((result?.valid || isLegacyNotShippedCase) && order);
   const orderItems = order?.items && order.items.length > 0
     ? order.items
     : order
@@ -263,13 +264,22 @@ export default function VerifyReceiptPage() {
                       </div>
                     </div>
 
-                    {order.paymentStatus === "PENDING" && order.publicToken && (
-                      <Link
-                        href={`/payment/pending?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.publicToken)}`}
-                        className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0f65bd]"
-                      >
-                        Lanjutkan Pembayaran
-                      </Link>
+                    {order.paymentStatus === "PENDING" && (
+                      order.publicToken ? (
+                        <Link
+                          href={`/payment/pending?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.publicToken)}`}
+                          className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-[#137fec] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0f65bd]"
+                        >
+                          Lanjutkan Pembayaran
+                        </Link>
+                      ) : (
+                        <Link
+                          href="/orders"
+                          className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-[#137fec] bg-white px-4 py-3 text-sm font-semibold text-[#137fec] hover:bg-[#137fec]/5"
+                        >
+                          Buka Pesanan Saya untuk Bayar
+                        </Link>
+                      )
                     )}
                   </div>
                 </div>
