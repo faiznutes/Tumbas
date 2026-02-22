@@ -3,15 +3,16 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
-import { hasAdminPermission } from "@/lib/admin-permissions";
+import { ADMIN_SESSION_UPDATED_EVENT, getCurrentAdminUser, hasAdminPermission } from "@/lib/admin-permissions";
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const { addToast } = useToast();
-  const canEditSettings = hasAdminPermission('settings.edit');
   const [currentRole, setCurrentRole] = useState('');
   const [loading, setLoading] = useState(false);
   const canEditAdminNotice = currentRole === 'SUPER_ADMIN';
+  const hasGlobalSettingsView = hasAdminPermission('settings.view');
+  const hasGlobalSettingsEdit = hasAdminPermission('settings.edit');
   
   const [settings, setSettings] = useState({
     storeName: "Tumbas",
@@ -45,13 +46,11 @@ export default function AdminSettings() {
 
   const [homepageFeaturedSettings, setHomepageFeaturedSettings] = useState({
     manualSlugs: [] as string[],
-    maxItems: 3,
+    maxItems: 12,
   });
-  const [manualSlugsInput, setManualSlugsInput] = useState('');
-  const manualSlugList = manualSlugsInput
-    .split(/\r?\n|,/)
-    .map((slug) => slug.trim())
-    .filter(Boolean);
+  const [featuredSearch, setFeaturedSearch] = useState('');
+  const [featuredProductsCatalog, setFeaturedProductsCatalog] = useState<Array<{ id: string; title: string; slug: string; category: string | null }>>([]);
+  const manualSlugList = homepageFeaturedSettings.manualSlugs;
   const [paymentSettings, setPaymentSettings] = useState({
     midtransEnabled: true,
     midtransClientKey: '',
@@ -72,6 +71,43 @@ export default function AdminSettings() {
     title: 'Info Admin',
     message: '',
   });
+  const [shopHeroSettings, setShopHeroSettings] = useState({
+    badge: 'New Arrival',
+    title: 'Summer Collection Arrival',
+    subtitle: 'Discover the latest trends in accessories and get 20% off for a limited time.',
+    image: '',
+    ctaText: 'Shop Now',
+  });
+
+  const canViewTab = (tab: string) => {
+    if (currentRole === 'SUPER_ADMIN') return true;
+    if (tab === 'general') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.general.view') || hasAdminPermission('settings.general.edit');
+    if (tab === 'promo') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.promo.view') || hasAdminPermission('settings.promo.edit');
+    if (tab === 'weekly') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.weekly.view') || hasAdminPermission('settings.weekly.edit');
+    if (tab === 'homepage-featured') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.featured.view') || hasAdminPermission('settings.featured.edit');
+    if (tab === 'store') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.store.view') || hasAdminPermission('settings.store.edit');
+    if (tab === 'notifications') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.notifications.view') || hasAdminPermission('settings.notifications.edit');
+    if (tab === 'payment') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.payment.view') || hasAdminPermission('settings.payment.edit');
+    if (tab === 'shipping') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.shipping.view') || hasAdminPermission('settings.shipping.edit');
+    if (tab === 'admin-notice') return hasAdminPermission('settings.notice.view') || canEditAdminNotice;
+    return false;
+  };
+
+  const canEditTab = (tab: string) => {
+    if (currentRole === 'SUPER_ADMIN') return true;
+    if (tab === 'general') return hasGlobalSettingsEdit || hasAdminPermission('settings.general.edit');
+    if (tab === 'promo') return hasGlobalSettingsEdit || hasAdminPermission('settings.promo.edit');
+    if (tab === 'weekly') return hasGlobalSettingsEdit || hasAdminPermission('settings.weekly.edit');
+    if (tab === 'homepage-featured') return hasGlobalSettingsEdit || hasAdminPermission('settings.featured.edit');
+    if (tab === 'store') return hasGlobalSettingsEdit || hasAdminPermission('settings.store.edit');
+    if (tab === 'notifications') return hasGlobalSettingsEdit || hasAdminPermission('settings.notifications.edit');
+    if (tab === 'payment') return hasGlobalSettingsEdit || hasAdminPermission('settings.payment.edit');
+    if (tab === 'shipping') return hasGlobalSettingsEdit || hasAdminPermission('settings.shipping.edit');
+    if (tab === 'admin-notice') return canEditAdminNotice;
+    return false;
+  };
+  const canEditAnySettings = ['general', 'promo', 'weekly', 'homepage-featured', 'store', 'notifications', 'payment', 'shipping', 'admin-notice']
+    .some((tab) => canEditTab(tab));
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
@@ -79,17 +115,17 @@ export default function AdminSettings() {
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const rawUser = localStorage.getItem('user');
-      if (!rawUser) return;
-      const parsed = JSON.parse(rawUser) as { role?: unknown };
-      if (typeof parsed.role === 'string') {
-        setCurrentRole(parsed.role);
-      }
-    } catch {
-      setCurrentRole('');
-    }
+    const syncRole = () => {
+      const user = getCurrentAdminUser();
+      setCurrentRole(user.role || '');
+    };
+    syncRole();
+    window.addEventListener(ADMIN_SESSION_UPDATED_EVENT, syncRole);
+    window.addEventListener('storage', syncRole);
+    return () => {
+      window.removeEventListener(ADMIN_SESSION_UPDATED_EVENT, syncRole);
+      window.removeEventListener('storage', syncRole);
+    };
   }, []);
 
   useEffect(() => {
@@ -114,6 +150,16 @@ export default function AdminSettings() {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (!canViewTab(activeTab)) {
+      const firstAllowed = ['general', 'promo', 'weekly', 'homepage-featured', 'store', 'notifications', 'payment', 'shipping', 'admin-notice']
+        .find((tab) => canViewTab(tab));
+      if (firstAllowed) {
+        setActiveTab(firstAllowed);
+      }
+    }
+  }, [activeTab, currentRole]);
+
   async function fetchGeneralSettings() {
     try {
       const data = await api.settings.getGeneral();
@@ -131,8 +177,12 @@ export default function AdminSettings() {
 
   async function fetchPromoSettings() {
     try {
-      const data = await api.settings.getPromo();
+      const [data, shopHero] = await Promise.all([
+        api.settings.getPromo(),
+        api.settings.getShopHero(),
+      ]);
       setPromoSettings(data);
+      setShopHeroSettings(shopHero);
     } catch (error) {
       console.error('Failed to fetch promo settings:', error);
     }
@@ -149,9 +199,22 @@ export default function AdminSettings() {
 
   async function fetchHomepageFeaturedSettings() {
     try {
-      const data = await api.settings.getHomepageFeatured();
-      setHomepageFeaturedSettings(data);
-      setManualSlugsInput(data.manualSlugs.join('\n'));
+      const [data, products] = await Promise.all([
+        api.settings.getHomepageFeatured(),
+        api.products.getAll({ limit: 200, status: 'AVAILABLE', sort: 'newest' }),
+      ]);
+      setHomepageFeaturedSettings({
+        manualSlugs: data.manualSlugs,
+        maxItems: Math.min(50, Math.max(1, data.maxItems || 12)),
+      });
+      setFeaturedProductsCatalog(
+        (products.data || []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          slug: item.slug,
+          category: item.category,
+        })),
+      );
     } catch (error) {
       console.error('Failed to fetch homepage featured settings:', error);
     }
@@ -218,7 +281,7 @@ export default function AdminSettings() {
   }
 
   async function saveGeneralSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('general')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -248,7 +311,7 @@ export default function AdminSettings() {
   }
 
   async function savePromoSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('promo')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -266,7 +329,7 @@ export default function AdminSettings() {
   }
 
   async function saveWeeklyDealSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('weekly')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -284,26 +347,19 @@ export default function AdminSettings() {
   }
 
   async function saveHomepageFeaturedSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('homepage-featured')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
 
     setLoading(true);
     try {
-      const manualSlugs = manualSlugsInput
-        .split(/[,\n]/)
-        .map((slug) => slug.trim())
-        .filter(Boolean)
-        .slice(0, 8);
-
       const response = await api.settings.updateHomepageFeatured({
-        manualSlugs,
+        manualSlugs: homepageFeaturedSettings.manualSlugs,
         maxItems: homepageFeaturedSettings.maxItems,
       });
 
       setHomepageFeaturedSettings(response);
-      setManualSlugsInput(response.manualSlugs.join('\n'));
       addToast('Pengaturan Kategori Pilihan berhasil disimpan', 'success');
     } catch (error) {
       console.error('Failed to save homepage featured settings:', error);
@@ -314,7 +370,7 @@ export default function AdminSettings() {
   }
 
   async function savePaymentSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('payment')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -332,7 +388,7 @@ export default function AdminSettings() {
   }
 
   async function saveStoreSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('store')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -360,7 +416,7 @@ export default function AdminSettings() {
   }
 
   async function saveNotificationSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('notifications')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -388,7 +444,7 @@ export default function AdminSettings() {
   }
 
   async function saveShippingSettings() {
-    if (!canEditSettings) {
+    if (!canEditTab('shipping')) {
       addToast('Anda tidak memiliki izin untuk mengubah pengaturan', 'warning');
       return;
     }
@@ -410,6 +466,25 @@ export default function AdminSettings() {
     } catch (error) {
       console.error('Failed to save shipping settings:', error);
       addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan pengiriman'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveShopHeroSettings() {
+    if (!canEditTab('promo')) {
+      addToast('Anda tidak memiliki izin untuk mengubah Summer Collection', 'warning');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.settings.updateShopHero(shopHeroSettings);
+      setShopHeroSettings(response);
+      addToast('Pengaturan Summer Collection berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save shop hero settings:', error);
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan Summer Collection'), 'error');
     } finally {
       setLoading(false);
     }
@@ -452,7 +527,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {!canEditSettings && (
+      {!canEditAnySettings && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Mode hanya lihat: akun ini tidak memiliki izin untuk mengubah pengaturan.
         </div>
@@ -463,7 +538,7 @@ export default function AdminSettings() {
         <div className="w-full shrink-0 lg:w-64">
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <nav className="grid grid-cols-4 gap-2 lg:block lg:space-y-1">
-              <button
+              {canViewTab("general") && (<button
                 onClick={() => setActiveTab("general")}
                 title="Umum"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -474,8 +549,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">store</span>
                 <span className="hidden text-sm font-medium lg:inline">Umum</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("promo") && (<button
                 onClick={() => setActiveTab("promo")}
                 title="Promo"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -486,8 +561,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">campaign</span>
                 <span className="hidden text-sm font-medium lg:inline">Promo</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("weekly") && (<button
                 onClick={() => setActiveTab("weekly")}
                 title="Penawaran Mingguan"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -498,8 +573,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">local_offer</span>
                 <span className="hidden text-sm font-medium lg:inline">Penawaran Mingguan</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("homepage-featured") && (<button
                 onClick={() => setActiveTab("homepage-featured")}
                 title="Kategori Pilihan"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -510,8 +585,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">star</span>
                 <span className="hidden text-sm font-medium lg:inline">Kategori Pilihan</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("store") && (<button
                 onClick={() => setActiveTab("store")}
                 title="Toko"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -522,8 +597,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">inventory_2</span>
                 <span className="hidden text-sm font-medium lg:inline">Toko</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("notifications") && (<button
                 onClick={() => setActiveTab("notifications")}
                 title="Notifikasi"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -534,8 +609,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">notifications</span>
                 <span className="hidden text-sm font-medium lg:inline">Notifikasi</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("admin-notice") && (<button
                 onClick={() => setActiveTab("admin-notice")}
                 title="Admin Notice"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -546,8 +621,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">campaign</span>
                 <span className="hidden text-sm font-medium lg:inline">Admin Notice</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("payment") && (<button
                 onClick={() => setActiveTab("payment")}
                 title="Pembayaran"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -558,8 +633,8 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">payments</span>
                 <span className="hidden text-sm font-medium lg:inline">Pembayaran</span>
-              </button>
-              <button
+              </button>)}
+              {canViewTab("shipping") && (<button
                 onClick={() => setActiveTab("shipping")}
                 title="Pengiriman"
                 className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
@@ -570,7 +645,7 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">local_shipping</span>
                 <span className="hidden text-sm font-medium lg:inline">Pengiriman</span>
-              </button>
+              </button>)}
             </nav>
           </div>
         </div>
@@ -634,7 +709,7 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveGeneralSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveGeneralSettings} disabled={loading || !canEditTab('general')} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -733,7 +808,7 @@ export default function AdminSettings() {
                 <div className="pt-4">
                   <button 
                     onClick={savePromoSettings}
-                    disabled={loading || !canEditSettings}
+                    disabled={loading || !canEditTab('promo')}
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -748,6 +823,68 @@ export default function AdminSettings() {
                       </>
                     )}
                   </button>
+                </div>
+
+                <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-base font-bold text-[#0d141b] mb-4">Summer Collection (Halaman Shop)</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Badge</label>
+                      <input
+                        type="text"
+                        value={shopHeroSettings.badge}
+                        onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, badge: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                        placeholder="Contoh: New Arrival"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Judul</label>
+                      <input
+                        type="text"
+                        value={shopHeroSettings.title}
+                        onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, title: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                        placeholder="Contoh: Summer Collection Arrival"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Subtitle</label>
+                      <textarea
+                        rows={3}
+                        value={shopHeroSettings.subtitle}
+                        onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, subtitle: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">URL Gambar</label>
+                      <input
+                        type="url"
+                        value={shopHeroSettings.image}
+                        onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, image: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0d141b] mb-2">Teks Tombol</label>
+                      <input
+                        type="text"
+                        value={shopHeroSettings.ctaText}
+                        onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, ctaText: e.target.value }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
+                        placeholder="Contoh: Shop Now"
+                      />
+                    </div>
+
+                    <button
+                      onClick={saveShopHeroSettings}
+                      disabled={loading || !canEditTab('promo')}
+                      className="bg-[#0d141b] hover:bg-[#1f2a37] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Menyimpan...' : 'Simpan Summer Collection'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -833,7 +970,7 @@ export default function AdminSettings() {
                 <div className="pt-4">
                   <button 
                     onClick={saveWeeklyDealSettings}
-                    disabled={loading || !canEditSettings}
+                    disabled={loading || !canEditTab('weekly')}
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -869,12 +1006,12 @@ export default function AdminSettings() {
                     id="featuredMaxItems"
                     type="number"
                     min={1}
-                    max={8}
+                    max={50}
                     value={homepageFeaturedSettings.maxItems}
                     onChange={(e) =>
                       setHomepageFeaturedSettings((prev) => ({
                         ...prev,
-                        maxItems: Math.min(8, Math.max(1, Number(e.target.value) || 1)),
+                        maxItems: Math.min(50, Math.max(1, Number(e.target.value) || 1)),
                       }))
                     }
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
@@ -882,29 +1019,26 @@ export default function AdminSettings() {
                 </div>
 
                 <div>
-                  <label htmlFor="manualSlugs" className="block text-sm font-medium text-[#0d141b] mb-2">
-                    Slug produk manual (pisahkan per baris atau koma)
+                  <label htmlFor="featuredSearch" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Pilih Produk (dengan pencarian)
                   </label>
-                  <textarea
-                    id="manualSlugs"
-                    rows={8}
-                    value={manualSlugsInput}
-                    onChange={(e) => setManualSlugsInput(e.target.value)}
+                  <input
+                    id="featuredSearch"
+                    type="text"
+                    value={featuredSearch}
+                    onChange={(e) => setFeaturedSearch(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                    placeholder={"sepatu-running-pria\njam-tangan-sport"}
+                    placeholder="Cari nama produk atau slug"
                   />
-                  <p className="mt-2 text-xs text-[#4c739a]">
-                    Contoh: isi 1 slug manual, maka slot sisanya otomatis dari produk populer. Isi 2 slug manual juga bisa.
-                  </p>
 
                   {manualSlugList.length > 0 && (
                     <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                       <div className="mb-2 flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#4c739a]">Slug aktif</p>
-                        {canEditSettings && (
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#4c739a]">Produk terpilih ({manualSlugList.length})</p>
+                        {canEditTab('homepage-featured') && (
                           <button
                             type="button"
-                            onClick={() => setManualSlugsInput('')}
+                            onClick={() => setHomepageFeaturedSettings((prev) => ({ ...prev, manualSlugs: [] }))}
                             className="text-xs font-medium text-red-600 hover:text-red-700"
                           >
                             Hapus semua
@@ -915,20 +1049,15 @@ export default function AdminSettings() {
                         {manualSlugList.map((slug) => (
                           <span key={slug} className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs text-[#0d141b] border border-slate-200">
                             {slug}
-                            {canEditSettings && (
+                            {canEditTab('homepage-featured') && (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setManualSlugsInput((prev) =>
-                                    prev
-                                      .split(/\r?\n|,/)
-                                      .map((item) => item.trim())
-                                      .filter((item) => item && item !== slug)
-                                      .join("\n"),
-                                  );
-                                }}
+                                onClick={() => setHomepageFeaturedSettings((prev) => ({
+                                  ...prev,
+                                  manualSlugs: prev.manualSlugs.filter((item) => item !== slug),
+                                }))}
                                 className="text-red-600 hover:text-red-700"
-                                title="Hapus slug"
+                                title="Hapus produk"
                               >
                                 <span className="material-symbols-outlined text-sm">close</span>
                               </button>
@@ -938,12 +1067,48 @@ export default function AdminSettings() {
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-200">
+                    {featuredProductsCatalog
+                      .filter((item) => {
+                        const keyword = featuredSearch.trim().toLowerCase();
+                        if (!keyword) return true;
+                        return item.title.toLowerCase().includes(keyword) || item.slug.toLowerCase().includes(keyword);
+                      })
+                      .slice(0, 80)
+                      .map((item) => {
+                        const selected = homepageFeaturedSettings.manualSlugs.includes(item.slug);
+                        return (
+                          <div key={item.id} className="flex items-center justify-between border-b border-slate-100 px-3 py-2 last:border-b-0">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-[#0d141b]">{item.title}</p>
+                              <p className="truncate text-xs text-[#4c739a]">{item.slug}{item.category ? ` - ${item.category}` : ''}</p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={!canEditTab('homepage-featured')}
+                              onClick={() => {
+                                setHomepageFeaturedSettings((prev) => {
+                                  if (prev.manualSlugs.includes(item.slug)) {
+                                    return { ...prev, manualSlugs: prev.manualSlugs.filter((slug) => slug !== item.slug) };
+                                  }
+                                  return { ...prev, manualSlugs: [...prev.manualSlugs, item.slug] };
+                                });
+                              }}
+                              className={`ml-3 rounded-md px-3 py-1 text-xs font-medium ${selected ? 'bg-red-50 text-red-700' : 'bg-[#137fec]/10 text-[#137fec]'} disabled:opacity-50`}
+                            >
+                              {selected ? 'Hapus' : 'Pilih'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
 
                 <div className="pt-4">
                   <button
                     onClick={saveHomepageFeaturedSettings}
-                    disabled={loading || !canEditSettings}
+                    disabled={loading || !canEditTab('homepage-featured')}
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -994,7 +1159,7 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveStoreSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveStoreSettings} disabled={loading || !canEditTab('store')} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -1055,7 +1220,7 @@ export default function AdminSettings() {
                   </label>
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveNotificationSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveNotificationSettings} disabled={loading || !canEditTab('notifications')} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -1118,7 +1283,7 @@ export default function AdminSettings() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <button onClick={savePaymentSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={savePaymentSettings} disabled={loading || !canEditTab('payment')} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>
@@ -1276,7 +1441,7 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button onClick={saveShippingSettings} disabled={loading || !canEditSettings} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={saveShippingSettings} disabled={loading || !canEditTab('shipping')} className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                 </div>

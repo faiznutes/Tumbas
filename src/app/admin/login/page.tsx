@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, setAuthToken } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { setCurrentAdminUser } from "@/lib/admin-permissions";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -48,7 +49,7 @@ export default function AdminLogin() {
     try {
       const response = await api.auth.login(email, password);
       setAuthToken(response.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      setCurrentAdminUser(response.user);
       const nextPath =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("next") || "/admin/dashboard"

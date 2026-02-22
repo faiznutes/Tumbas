@@ -16,9 +16,36 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'messages.edit',
     'settings.view',
     'settings.edit',
+    'settings.general.view',
+    'settings.general.edit',
+    'settings.store.view',
+    'settings.store.edit',
+    'settings.notifications.view',
+    'settings.notifications.edit',
+    'settings.promo.view',
+    'settings.promo.edit',
+    'settings.weekly.view',
+    'settings.weekly.edit',
+    'settings.featured.view',
+    'settings.featured.edit',
+    'settings.payment.view',
+    'settings.payment.edit',
+    'settings.shipping.view',
+    'settings.shipping.edit',
+    'settings.notice.view',
+    'settings.notice.edit',
   ],
   MANAGER: [],
 };
+
+function hasPermission(userPermissions: string[], requiredPermission: string): boolean {
+  if (userPermissions.includes(requiredPermission)) return true;
+  if (requiredPermission.startsWith('settings.')) {
+    if (requiredPermission.endsWith('.view') && userPermissions.includes('settings.view')) return true;
+    if (requiredPermission.endsWith('.edit') && userPermissions.includes('settings.edit')) return true;
+  }
+  return false;
+}
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -47,6 +74,6 @@ export class PermissionsGuard implements CanActivate {
       userPermissionsRaw.length > 0
         ? userPermissionsRaw
         : ROLE_DEFAULT_PERMISSIONS[user.role || ''] || [];
-    return requiredPermissions.every((permission) => userPermissions.includes(permission));
+    return requiredPermissions.every((permission) => hasPermission(userPermissions, permission));
   }
 }

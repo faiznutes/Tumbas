@@ -42,7 +42,19 @@ export default function AdminDashboard() {
   const { addToast } = useToast();
   const canViewOrders = hasAdminPermission("orders.view");
   const canEditProducts = hasAdminPermission("products.edit");
-  const canViewSettings = hasAdminPermission("settings.view") || hasAdminPermission("settings.edit");
+  const canViewSettings = [
+    "settings.view",
+    "settings.edit",
+    "settings.general.view",
+    "settings.store.view",
+    "settings.notifications.view",
+    "settings.promo.view",
+    "settings.weekly.view",
+    "settings.featured.view",
+    "settings.payment.view",
+    "settings.shipping.view",
+    "settings.notice.view",
+  ].some((permission) => hasAdminPermission(permission));
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

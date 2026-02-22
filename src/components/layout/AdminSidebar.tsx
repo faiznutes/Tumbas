@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { setAuthToken } from "@/lib/api";
-import { hasAdminPermission } from "@/lib/admin-permissions";
+import { ADMIN_SESSION_UPDATED_EVENT, getCurrentAdminUser, hasAdminPermission, hasAnyAdminPermission, setCurrentAdminUser } from "@/lib/admin-permissions";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dasbor", icon: "dashboard" },
@@ -22,22 +22,48 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [role] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      const raw = localStorage.getItem("user");
-      if (!raw) return "";
-      const parsed = JSON.parse(raw) as { role?: string };
-      return parsed.role || "";
-    } catch {
-      return "";
-    }
-  });
+  const [sessionUser, setSessionUser] = useState(() => getCurrentAdminUser());
+  const role = sessionUser.role || "";
+
+  useEffect(() => {
+    const syncSession = () => setSessionUser(getCurrentAdminUser());
+    syncSession();
+    window.addEventListener(ADMIN_SESSION_UPDATED_EVENT, syncSession);
+    window.addEventListener("storage", syncSession);
+    return () => {
+      window.removeEventListener(ADMIN_SESSION_UPDATED_EVENT, syncSession);
+      window.removeEventListener("storage", syncSession);
+    };
+  }, []);
+
   const visibleNavItems = useMemo(() => {
     return navItems.filter((item) => {
       if (item.href === "/admin/users") return role === "SUPER_ADMIN";
       if (item.href === "/admin/webhooks") return role === "SUPER_ADMIN";
-      if (item.href === "/admin/settings") return hasAdminPermission("settings.view") || hasAdminPermission("settings.edit");
+      if (item.href === "/admin/settings") {
+        return hasAnyAdminPermission([
+          "settings.view",
+          "settings.edit",
+          "settings.general.view",
+          "settings.general.edit",
+          "settings.store.view",
+          "settings.store.edit",
+          "settings.notifications.view",
+          "settings.notifications.edit",
+          "settings.promo.view",
+          "settings.promo.edit",
+          "settings.weekly.view",
+          "settings.weekly.edit",
+          "settings.featured.view",
+          "settings.featured.edit",
+          "settings.payment.view",
+          "settings.payment.edit",
+          "settings.shipping.view",
+          "settings.shipping.edit",
+          "settings.notice.view",
+          "settings.notice.edit",
+        ]);
+      }
       if (item.href === "/admin/messages") return hasAdminPermission("messages.view");
       if (item.href === "/admin/orders") return hasAdminPermission("orders.view");
       if (item.href === "/admin/orders/report") return hasAdminPermission("orders.view");
@@ -45,7 +71,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       if (item.href === "/admin/products") return hasAdminPermission("products.edit");
       return true;
     });
-  }, [role]);
+  }, [role, sessionUser.permissions]);
 
   const currentTitle = useMemo(() => {
     const exact = navItems.find((item) => pathname === item.href);
@@ -60,6 +86,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
 
   const handleLogout = () => {
     setAuthToken(null);
+    setCurrentAdminUser(null);
     router.push('/admin/login');
   };
 
