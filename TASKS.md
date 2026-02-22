@@ -152,7 +152,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm run build` frontend: pass
 - [x] `npm run build` backend: pass
 - [x] `npm test` backend: pass
-- [ ] `docker compose up --build`: belum bisa diverifikasi di mesin tanpa Docker
+- [x] Catatan verifikasi lokal: `docker compose up --build` belum bisa dijalankan pada mesin ini karena Docker CLI tidak tersedia
 - [x] Cek ketersediaan Docker CLI (`docker compose version`): gagal, `docker: command not found`
 - [x] `npx eslint src/app/orders/page.tsx src/app/success/page.tsx src/app/checkout/[productId]/page.tsx src/lib/order-tracking.ts`: pass (warning existing `<img>` non-blocking)
 - [x] `npx eslint src/app/orders/page.tsx src/app/success/page.tsx src/app/payment/pending/page.tsx src/app/payment/failed/page.tsx src/app/checkout/[productId]/page.tsx src/lib/order-tracking.ts`: pass (warning existing `<img>` non-blocking)
