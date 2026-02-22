@@ -254,6 +254,35 @@ describe('OrdersService', () => {
     );
   });
 
+  it('verifies order by receipt number input', async () => {
+    prisma.order.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'o1',
+        orderCode: 'TMB-ABC123',
+        amount: 100000,
+        paymentStatus: 'PAID',
+        shippedToExpedition: true,
+        expeditionResi: 'JNE1234567890',
+        expeditionName: 'JNE',
+        shippedAt: new Date('2026-02-20T11:00:00.000Z'),
+        createdAt: new Date('2026-02-20T10:00:00.000Z'),
+        product: { title: 'Product A' },
+      },
+    ]);
+
+    const result = await service.verifyByResi('RCPT-TMB-ABC123');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        valid: true,
+        order: expect.objectContaining({
+          orderCode: 'TMB-ABC123',
+          receiptNo: 'RCPT-TMB-ABC123',
+        }),
+      }),
+    );
+  });
+
   it('returns not shipped when expedition handover not confirmed', async () => {
     prisma.order.findMany = jest.fn().mockResolvedValue([
       {

@@ -99,7 +99,7 @@ export default function VerifyReceiptPage() {
               <input
                 value={resi}
                 onChange={(e) => setResi(normalizeResi(e.target.value))}
-                placeholder="Contoh: TMB-1771689505558-T9EH4Z"
+                placeholder="Contoh: TMB-1771689505558-T9EH4Z / TMB-RESI-... / RCPT-TMB-..."
                 className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#137fec]"
                 required
               />

@@ -393,6 +393,12 @@ export default function ProductDetail() {
               </button>
             </div>
           )}
+
+          {relatedPool.length > 0 && visibleRelated.length >= relatedPool.length && (
+            <p className="mt-6 text-center text-sm text-[#4c739a]">
+              Kamu sudah melihat semua produk terkait.
+            </p>
+          )}
         </section>
       </main>
     </div>

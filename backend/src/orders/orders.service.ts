@@ -453,10 +453,16 @@ export class OrdersService {
     const matched = orders.find(
       (order) => {
         const orderCodeCompare = this.normalizeResiForCompare(order.orderCode);
+        const receiptNoCompare = this.normalizeResiForCompare(`RCPT-${order.orderCode}`);
         const tumbasResi = this.createShippingResi(order.orderCode);
         const tumbasCompare = this.normalizeResiForCompare(tumbasResi);
         const expeditionCompare = this.normalizeResiForCompare(order.expeditionResi || '');
-        return compareInput === orderCodeCompare || compareInput === tumbasCompare || compareInput === expeditionCompare;
+        return (
+          compareInput === orderCodeCompare ||
+          compareInput === receiptNoCompare ||
+          compareInput === tumbasCompare ||
+          compareInput === expeditionCompare
+        );
       },
     );
 
