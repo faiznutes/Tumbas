@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api, Product } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
 import { addToCart } from "@/lib/cart";
+import { resolveProductDiscount } from "@/lib/discount-display";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -44,16 +45,18 @@ export default function Beranda() {
     maxItems: 12,
     newArrivalsLimit: 4,
   });
+  const [discountCampaigns, setDiscountCampaigns] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [promoRes, weeklyRes, featuredSettingsRes, popularRes, availableRes] = await Promise.allSettled([
+        const [promoRes, weeklyRes, featuredSettingsRes, popularRes, availableRes, campaignsRes] = await Promise.allSettled([
           api.settings.getPromoPublic(),
           api.settings.getWeeklyDealPublic(),
           api.settings.getHomepageFeaturedPublic(),
           api.products.getAll({ limit: 12, status: 'AVAILABLE', sort: 'popular' }),
           api.products.getAll({ limit: 200, status: 'AVAILABLE', sort: 'newest' }),
+          api.settings.getDiscountCampaignsPublic(),
         ]);
 
         if (promoRes.status === 'fulfilled' && promoRes.value) {
@@ -61,6 +64,9 @@ export default function Beranda() {
         }
         if (weeklyRes.status === 'fulfilled' && weeklyRes.value) {
           setWeeklyDeal(weeklyRes.value);
+        }
+        if (campaignsRes.status === 'fulfilled' && campaignsRes.value) {
+          setDiscountCampaigns(campaignsRes.value.campaigns || []);
         }
 
         const maxItems =
@@ -321,7 +327,23 @@ export default function Beranda() {
                 <div className="space-y-1">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-tighter">{product.category || 'Produk'}</p>
                   <h3 className="font-bold text-slate-900 group-hover:text-[#137fec] transition-colors">{product.title}</h3>
-                  <p className="text-[#137fec] font-bold">{formatPrice(product.price)}</p>
+                  {(() => {
+                    const discount = resolveProductDiscount({
+                      productId: product.id,
+                      unitPrice: product.price,
+                      weeklyDeal,
+                      campaigns: discountCampaigns,
+                    });
+                    if (!discount.hasDiscount) {
+                      return <p className="text-[#137fec] font-bold">{formatPrice(product.price)}</p>;
+                    }
+                    return (
+                      <div>
+                        <p className="text-xs text-slate-400 line-through">{formatPrice(product.price)}</p>
+                        <p className="text-[#137fec] font-bold">{formatPrice(discount.finalPrice)}</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </Link>
             ))}

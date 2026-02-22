@@ -6,6 +6,7 @@ import { api, Product } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
 import { addToCart } from "@/lib/cart";
 import { getProductRatingSummary } from "@/lib/product-reviews";
+import { resolveProductDiscount } from "@/lib/discount-display";
 
 const sortOptions = [
   { value: "newest", label: "Terbaru" },
@@ -37,6 +38,8 @@ export default function ShopPage() {
     image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4",
     ctaText: "Belanja Sekarang",
   });
+  const [weeklyDeal, setWeeklyDeal] = useState<any>(null);
+  const [discountCampaigns, setDiscountCampaigns] = useState<any[]>([]);
 
   const categories = useMemo(() => {
     const counts = allProducts.reduce((acc: Record<string, number>, product) => {
@@ -103,12 +106,16 @@ export default function ShopPage() {
       try {
         setLoading(true);
         setFetchError("");
-        const [response, heroSettings] = await Promise.all([
+        const [response, heroSettings, weekly, campaignsRes] = await Promise.all([
           api.products.getAll({ limit: 100, status: 'AVAILABLE', sort: 'popular' }),
           api.settings.getShopHeroPublic(),
+          api.settings.getWeeklyDealPublic(),
+          api.settings.getDiscountCampaignsPublic(),
         ]);
         setAllProducts(response.data);
         setShopHero(heroSettings);
+        setWeeklyDeal(weekly);
+        setDiscountCampaigns(campaignsRes.campaigns || []);
 
         const highestPrice = response.data.reduce((max, product) => Math.max(max, product.price), 0);
         const nextMaxPrice = Math.max(1000000, Math.ceil(highestPrice / 50000) * 50000);
@@ -148,6 +155,8 @@ export default function ShopPage() {
 
   const getBadge = (product: Product) => {
     if (product.status === 'SOLD') return { text: 'Terjual', class: 'bg-gray-500' };
+    const discount = resolveProductDiscount({ productId: product.id, unitPrice: product.price, weeklyDeal, campaigns: discountCampaigns });
+    if (discount.hasDiscount) return { text: 'Diskon', class: 'bg-red-500' };
     return null;
   };
 
@@ -415,7 +424,18 @@ export default function ShopPage() {
                         <h3 className="font-bold text-[#0d141b] text-lg mb-1 truncate">{product.title}</h3>
                         <p className="text-sm text-[#4c739a] mb-3 truncate">{product.description || ''}</p>
                         <div className="flex items-baseline gap-2">
-                          <span className="text-xl font-bold text-[#137fec]">{formatPrice(product.price)}</span>
+                          {(() => {
+                            const discount = resolveProductDiscount({ productId: product.id, unitPrice: product.price, weeklyDeal, campaigns: discountCampaigns });
+                            if (!discount.hasDiscount) {
+                              return <span className="text-xl font-bold text-[#137fec]">{formatPrice(product.price)}</span>;
+                            }
+                            return (
+                              <>
+                                <span className="text-xs text-slate-400 line-through">{formatPrice(product.price)}</span>
+                                <span className="text-xl font-bold text-[#137fec]">{formatPrice(discount.finalPrice)}</span>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </Link>

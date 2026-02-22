@@ -153,19 +153,26 @@ export default function AdminDiscountsPage() {
             </div>
 
             <div className="mb-3 grid gap-3 md:grid-cols-4">
-              <input type="date" value={campaign.startDate || ""} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, startDate: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2" />
-              <input type="date" value={campaign.endDate || ""} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, endDate: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2" />
+              <input type="date" title="Tanggal mulai campaign" value={campaign.startDate || ""} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, startDate: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2" />
+              <input type="date" title="Tanggal akhir campaign" value={campaign.endDate || ""} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, endDate: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2" />
               <select value={campaign.discountType} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, discountType: e.target.value as 'percentage' | 'amount' }))} className="rounded-lg border border-slate-200 px-3 py-2">
                 <option value="percentage">Persen</option>
                 <option value="amount">Nominal</option>
               </select>
-              <input type="number" min={0} value={campaign.discountValue} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, discountValue: Number(e.target.value) || 0 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Nilai diskon" />
+              <input type="number" min={0} value={campaign.discountValue} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, discountValue: Number(e.target.value) || 0 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder={campaign.discountType === 'percentage' ? 'Contoh: 15 (15%)' : 'Contoh: 20000 (Rp20.000)'} />
             </div>
 
+            <p className="mb-3 text-xs text-[#4c739a]">
+              {campaign.type === 'BULK' && 'Diskon berlaku jika jumlah item produk mencapai minimal kuantitas.'}
+              {campaign.type === 'BUNDLE' && 'Diskon berlaku saat semua produk bundle terpilih ada di keranjang.'}
+              {campaign.type === 'MIN_PURCHASE' && 'Diskon berlaku saat total belanja mencapai minimal pembelian.'}
+              {campaign.type === 'PRODUCT' && 'Diskon langsung berlaku ke produk terpilih pada periode aktif.'}
+            </p>
+
             <div className="grid gap-3 md:grid-cols-3">
-              <input type="number" min={1} value={campaign.minQuantity} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, minQuantity: Number(e.target.value) || 1 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Min qty (bulk)" />
-              <input type="number" min={0} value={campaign.minPurchaseAmount} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, minPurchaseAmount: Number(e.target.value) || 0 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Min belanja (Rp)" />
-              <input type="number" min={0} value={campaign.priority} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, priority: Number(e.target.value) || 0 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Prioritas" />
+              <input type="number" min={1} value={campaign.minQuantity} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, minQuantity: Number(e.target.value) || 1 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Min qty (contoh: 3)" />
+              <input type="number" min={0} value={campaign.minPurchaseAmount} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, minPurchaseAmount: Number(e.target.value) || 0 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Min belanja (contoh: 500000)" />
+              <input type="number" min={0} value={campaign.priority} disabled={!canEdit} onChange={(e) => updateCampaign(campaign.id, (prev) => ({ ...prev, priority: Number(e.target.value) || 0 }))} className="rounded-lg border border-slate-200 px-3 py-2" placeholder="Prioritas (angka besar lebih diprioritaskan)" />
             </div>
 
             <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-slate-200">

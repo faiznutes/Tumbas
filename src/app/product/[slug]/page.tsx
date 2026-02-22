@@ -8,6 +8,7 @@ import { addToCart } from "@/lib/cart";
 import { useToast } from "@/components/ui/Toast";
 import Navbar from "@/components/layout/Navbar";
 import { getHardcodedReviews, getProductRatingSummary } from "@/lib/product-reviews";
+import { resolveProductDiscount } from "@/lib/discount-display";
 
 type ProductTab = "description" | "specs" | "reviews" | "faq";
 
@@ -36,6 +37,8 @@ export default function ProductDetail() {
   const [selectedAttr2, setSelectedAttr2] = useState("");
   const [activeTab, setActiveTab] = useState<ProductTab>("description");
   const [reviewPage, setReviewPage] = useState(1);
+  const [weeklyDeal, setWeeklyDeal] = useState<any>(null);
+  const [discountCampaigns, setDiscountCampaigns] = useState<any[]>([]);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -45,8 +48,14 @@ export default function ProductDetail() {
         setLoading(true);
         setError("");
 
-        const data = await api.products.getBySlug(slug);
+        const [data, weeklyRes, campaignsRes] = await Promise.all([
+          api.products.getBySlug(slug),
+          api.settings.getWeeklyDealPublic(),
+          api.settings.getDiscountCampaignsPublic(),
+        ]);
         setProduct(data);
+        setWeeklyDeal(weeklyRes);
+        setDiscountCampaigns(campaignsRes.campaigns || []);
         setSelectedImage(0);
         setReviewPage(1);
 
@@ -105,6 +114,12 @@ export default function ProductDetail() {
   const attr2Options = Array.from(new Set(variants.map((variant) => variant.attribute2Value)));
   const selectedVariant = variants.find((variant) => variant.attribute1Value === selectedAttr1 && variant.attribute2Value === selectedAttr2);
   const activePrice = selectedVariant && selectedVariant.price > 0 ? selectedVariant.price : product?.price || 0;
+  const activeDiscount = resolveProductDiscount({
+    productId: product?.id || "",
+    unitPrice: activePrice,
+    weeklyDeal,
+    campaigns: discountCampaigns,
+  });
   const activeStock = selectedVariant ? selectedVariant.stock : product?.stock || 0;
   const visibleRelated = relatedPool.slice(0, relatedVisibleCount);
   const ratingSummary = useMemo(() => (product ? getProductRatingSummary(product.slug) : { average: 0, total: 0 }), [product]);
@@ -212,7 +227,8 @@ export default function ProductDetail() {
               <p className="mb-3 text-sm font-medium text-[#4c739a]">{ratingSummary.average.toFixed(1)} / 5.0 dari {ratingSummary.total} ulasan</p>
               <p className="mb-6 text-sm leading-relaxed text-[#4c739a]">{product.description || "Produk premium dengan kualitas terbaik dan jaminan resmi."}</p>
               <div className="flex items-baseline gap-3">
-                <span className="text-4xl font-bold text-[#137fec]">{formatPrice(activePrice)}</span>
+                {activeDiscount.hasDiscount && <span className="text-sm text-slate-400 line-through">{formatPrice(activePrice)}</span>}
+                <span className="text-4xl font-bold text-[#137fec]">{formatPrice(activeDiscount.hasDiscount ? activeDiscount.finalPrice : activePrice)}</span>
               </div>
             </div>
 
