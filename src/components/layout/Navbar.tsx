@@ -88,11 +88,6 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="p-2 text-[#4c739a] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-full transition-colors relative">
-                <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              </button>
-
               <Link
                 href="/cart"
                 className="p-2 text-[#4c739a] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-full transition-colors relative"
