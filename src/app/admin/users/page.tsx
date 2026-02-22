@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Popup from "@/components/ui/Popup";
 import { api } from "@/lib/api";
+import { getCurrentAdminUser } from "@/lib/admin-permissions";
 
 interface User {
   id: string;
@@ -116,6 +118,7 @@ const roleColors: Record<string, string> = {
 };
 
 export default function AdminUsers() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,6 +134,14 @@ export default function AdminUsers() {
     permissions: [] as string[],
   });
   const { addToast } = useToast();
+
+  useEffect(() => {
+    const user = getCurrentAdminUser();
+    if (user.role !== "SUPER_ADMIN") {
+      addToast("Anda tidak memiliki akses ke halaman pengguna", "warning");
+      router.replace("/admin/dashboard");
+    }
+  }, [addToast, router]);
 
   const fetchUsers = useCallback(async () => {
     try {

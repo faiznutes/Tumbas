@@ -114,10 +114,16 @@ export default function AdminProducts() {
             <p className="text-[#4c739a]">Kelola semua produk di toko Anda</p>
           </div>
           {canEditProducts && (
-          <Link href="/admin/products/create" className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-4 py-2 rounded-lg flex items-center gap-2">
-            <span className="material-symbols-outlined">add</span>
-            Tambah Produk
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/categories" className="border border-slate-200 bg-white text-[#0d141b] px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-50">
+              <span className="material-symbols-outlined">category</span>
+              Kelola Kategori
+            </Link>
+            <Link href="/admin/products/create" className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-4 py-2 rounded-lg flex items-center gap-2">
+              <span className="material-symbols-outlined">add</span>
+              Tambah Produk
+            </Link>
+          </div>
           )}
         </div>
 

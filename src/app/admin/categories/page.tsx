@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 export default function AdminCategoriesPage() {
+  const router = useRouter();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -12,6 +15,12 @@ export default function AdminCategoriesPage() {
   const [newCategory, setNewCategory] = useState("");
 
   useEffect(() => {
+    if (!hasAdminPermission("products.edit")) {
+      addToast("Anda tidak memiliki akses untuk kelola kategori", "warning");
+      router.replace("/admin/dashboard");
+      return;
+    }
+
     async function fetchCategories() {
       try {
         setLoading(true);
@@ -24,7 +33,7 @@ export default function AdminCategoriesPage() {
       }
     }
     fetchCategories();
-  }, [addToast]);
+  }, [addToast, router]);
 
   const normalizeCategory = (value: string) => value.replace(/\s+/g, " ").trim();
 
