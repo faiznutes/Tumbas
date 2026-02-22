@@ -149,7 +149,11 @@ export default function VerifyReceiptPage() {
 
             {!order.shippedToExpedition && (
               <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                Data order ditemukan. Saat ini pesanan belum diserahkan ke ekspedisi.
+                {order.paymentStatus === "PENDING"
+                  ? "Data order ditemukan, tapi saat ini pesanan belum dibayar. Mohon bayar terlebih dahulu."
+                  : order.paymentStatus === "PAID"
+                    ? "Pesanan Anda sedang diproses. Mohon tunggu hingga diserahkan ke ekspedisi."
+                    : "Data order ditemukan. Saat ini pesanan belum diserahkan ke ekspedisi."}
               </div>
             )}
 

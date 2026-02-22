@@ -648,6 +648,16 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+    getProductCategories: () => fetchApi<{ categories: string[] }>('/settings/product-categories'),
+
+    getProductCategoriesPublic: () => fetchApi<{ categories: string[] }>('/settings/product-categories-public'),
+
+    updateProductCategories: (data: { categories?: string[] }) =>
+      fetchApi<{ categories: string[] }>('/settings/product-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
     getNotifications: () => fetchApi<{
       emailNotifications: boolean;
       orderNotifications: boolean;

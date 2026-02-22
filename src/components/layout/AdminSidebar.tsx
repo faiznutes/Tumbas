@@ -9,6 +9,7 @@ import { ADMIN_SESSION_UPDATED_EVENT, getCurrentAdminUser, hasAdminPermission, h
 const navItems = [
   { href: "/admin/dashboard", label: "Dasbor", icon: "dashboard" },
   { href: "/admin/products", label: "Produk", icon: "inventory_2" },
+  { href: "/admin/categories", label: "Kategori", icon: "category" },
   { href: "/admin/orders", label: "Pesanan", icon: "shopping_cart" },
   { href: "/admin/orders/report", label: "Laporan Pesanan", icon: "assessment" },
   { href: "/admin/messages", label: "Pesan", icon: "mail" },
@@ -68,6 +69,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       if (item.href === "/admin/orders/report") return hasAdminPermission("orders.view");
       if (item.href === "/admin/customers") return hasAdminPermission("orders.view");
       if (item.href === "/admin/products") return hasAdminPermission("products.edit");
+      if (item.href === "/admin/categories") return hasAdminPermission("products.edit");
       return true;
     });
   }, [role, sessionUser.permissions]);

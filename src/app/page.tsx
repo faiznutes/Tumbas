@@ -131,11 +131,11 @@ export default function Beranda() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent"></div>
         <div className="relative max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8 lg:py-40 flex flex-col items-start justify-center">
           <span className="inline-block px-3 py-1 bg-[#137fec]/20 text-[#137fec] border border-[#137fec]/30 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
-            {promoReady ? (promo.heroBadge || "Penawaran Terbatas") : "Memuat promo"}
+            {promoReady ? (promo.heroBadge || "Penawaran Terbatas") : "\u00A0"}
           </span>
           <h1 className="text-4xl md:text-6xl font-black text-white leading-tight mb-6 max-w-2xl">
             {!promoReady ? (
-              <span>Memuat promo...</span>
+              <span className="invisible">Promo Pilihan Minggu Ini</span>
             ) : (
               (promo.heroTitle || "Promo Pilihan Minggu Ini").split(':').map((part, i) => (
                 <span key={i}>{i > 0 ? ':' : ''}<br/>{i === 1 && <span className="text-[#137fec]">{part}</span>}{i === 0 && part}</span>
@@ -143,7 +143,7 @@ export default function Beranda() {
             )}
           </h1>
           <p className="text-lg text-slate-300 mb-10 max-w-lg">
-            {promoReady ? (promo.heroSubtitle || "Lihat produk terbaru dan penawaran terkurasi langsung dari pengaturan admin.") : "Mohon tunggu..."}
+            {promoReady ? (promo.heroSubtitle || "Lihat produk terbaru dan penawaran terkurasi langsung dari pengaturan admin.") : "\u00A0"}
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/shop" className="px-8 py-4 bg-[#137fec] hover:bg-[#137fec]/90 text-white rounded-lg font-bold text-lg transition-all shadow-lg shadow-[#137fec]/20 flex items-center gap-2">

@@ -112,8 +112,19 @@ export default function CreateProduct() {
     { id: crypto.randomUUID(), name: "Ukuran", optionsText: "64GB, 128GB" },
   ]);
   const [variantRows, setVariantRows] = useState<VariantDraft[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const categories = ["Smartphone", "Laptop", "Tablet", "Headphones", "Smartwatch", "Camera", "Accessories", "Other"];
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const data = await api.settings.getProductCategories();
+        setCategories(Array.isArray(data.categories) ? data.categories : []);
+      } catch {
+        setCategories(["Smartphone", "Laptop", "Tablet", "Headphones", "Smartwatch", "Camera", "Accessories", "Other"]);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   const generatedCombinations = useMemo(() => {
     if (!variantEnabled) return [];

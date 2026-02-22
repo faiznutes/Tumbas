@@ -126,6 +126,7 @@ export default function EditProduct() {
     { id: crypto.randomUUID(), name: "Warna", optionsText: "" },
     { id: crypto.randomUUID(), name: "Ukuran", optionsText: "" },
   ]);
+  const [categories, setCategories] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -138,7 +139,17 @@ export default function EditProduct() {
     status: "AVAILABLE",
   });
 
-  const categories = ["Smartphone", "Laptop", "Tablet", "Headphones", "Smartwatch", "Camera", "Accessories", "Other"];
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const data = await api.settings.getProductCategories();
+        setCategories(Array.isArray(data.categories) ? data.categories : []);
+      } catch {
+        setCategories(["Smartphone", "Laptop", "Tablet", "Headphones", "Smartwatch", "Camera", "Accessories", "Other"]);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   const generatedCombinations = useMemo(() => {
     if (!variantEnabled) return [];

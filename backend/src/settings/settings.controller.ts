@@ -185,6 +185,13 @@ class UpdateStoreSettingsDto {
   taxRate?: number;
 }
 
+class UpdateProductCategoriesDto {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  categories?: string[];
+}
+
 class UpdateNotificationSettingsDto {
   @IsOptional()
   @IsBoolean()
@@ -370,6 +377,25 @@ export class SettingsController {
   @Post('store')
   async updateStoreSettings(@Body() data: UpdateStoreSettingsDto) {
     return this.settingsService.setStoreSettings(data);
+  }
+
+  @Get('product-categories')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
+  async getProductCategories() {
+    return this.settingsService.getProductCategories();
+  }
+
+  @Get('product-categories-public')
+  async getProductCategoriesPublic() {
+    return this.settingsService.getProductCategories();
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('products.edit')
+  @Post('product-categories')
+  async updateProductCategories(@Body() data: UpdateProductCategoriesDto) {
+    return this.settingsService.setProductCategories(data);
   }
 
   @Get('notifications')

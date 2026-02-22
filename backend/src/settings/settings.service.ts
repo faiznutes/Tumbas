@@ -428,6 +428,46 @@ export class SettingsService {
     return this.getStoreSettings();
   }
 
+  async getProductCategories() {
+    const defaults = [
+      'Smartphone',
+      'Laptop',
+      'Tablet',
+      'Headphones',
+      'Smartwatch',
+      'Camera',
+      'Accessories',
+      'Other',
+    ];
+
+    const raw = await this.getSetting('product_categories');
+    if (!raw) return { categories: defaults };
+
+    const categories = raw
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index)
+      .slice(0, 100);
+
+    return { categories: categories.length > 0 ? categories : defaults };
+  }
+
+  async setProductCategories(data: { categories?: string[] }) {
+    if (!Array.isArray(data.categories)) {
+      return this.getProductCategories();
+    }
+
+    const cleaned = data.categories
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index)
+      .slice(0, 100);
+
+    await this.setSetting('product_categories', cleaned.join(','));
+    return this.getProductCategories();
+  }
+
   async getNotificationSettings() {
     const defaults = {
       emailNotifications: true,
