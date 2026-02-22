@@ -47,77 +47,203 @@ export default function VerifyReceiptPage() {
     }
   };
 
+  const order = result?.order;
+  const isValidOrder = Boolean(result?.valid && order);
+
+  const steps = (() => {
+    if (!order) return [] as Array<{ label: string; detail: string }>;
+
+    const shippedLabel = order.shippedAt
+      ? `Dikirim ${formatDateTimeId(order.shippedAt)}`
+      : "Menunggu konfirmasi ekspedisi";
+
+    return [
+      { label: "Order Dibuat", detail: formatDateTimeId(order.createdAt) },
+      { label: "Pembayaran", detail: order.paymentStatus === "PAID" ? "Pembayaran diterima" : `Status: ${order.paymentStatus}` },
+      { label: "Diproses Gudang", detail: order.paymentStatus === "PAID" ? "Pesanan sedang diproses" : "Menunggu pembayaran" },
+      { label: "Dikirim ke Ekspedisi", detail: shippedLabel },
+      { label: "Selesai", detail: "Menunggu konfirmasi diterima" },
+    ];
+  })();
+
+  const activeStepIndex = (() => {
+    if (!order) return -1;
+    if (["FAILED", "EXPIRED", "CANCELLED"].includes(order.paymentStatus)) return 1;
+    if (order.paymentStatus !== "PAID") return 0;
+    if (!order.shippedToExpedition || !order.expeditionResi) return 2;
+    return 3;
+  })();
+
   return (
-    <div className="min-h-screen bg-[#f6f7f8] px-4 py-10">
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0d141b]">Verifikasi Resi</h1>
-          <Link href="/" className="text-sm text-[#137fec] hover:underline">
+    <div className="min-h-screen bg-[#f6f7f8] text-[#0d141b]">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-[#137fec]">verified_user</span>
+            <h1 className="text-lg font-bold">Verifikasi Resi</h1>
+          </div>
+          <Link href="/" className="inline-flex items-center gap-1 rounded-lg bg-[#137fec] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f65bd]">
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Kembali ke Beranda
           </Link>
         </div>
+      </header>
 
-        <form onSubmit={handleVerify} className="rounded-xl border border-slate-200 bg-white p-6">
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-[#0d141b]">Resi Pengiriman</label>
-            <input
-              value={resi}
-              onChange={(e) => setResi(normalizeResi(e.target.value))}
-              placeholder="contoh: TMB-RESI-TMBABC123"
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 text-[#0d141b] focus:outline-none focus:ring-2 focus:ring-[#137fec]"
-              required
-            />
-            <p className="mt-2 text-xs text-[#4c739a]">Bisa input resi Tumbas atau resi ekspedisi. Sistem otomatis uppercase dan hapus spasi.</p>
-            {normalizedPreview && (
-              <p className="mt-1 text-xs text-[#0d141b]">
-                Preview verifikasi: <span className="font-semibold">{normalizedPreview}</span>
-              </p>
-            )}
-          </div>
+      <main className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+          <h2 className="mb-2 text-xl font-black">Lacak Status Pesananmu</h2>
+          <p className="mb-4 text-sm text-[#4c739a]">Masukkan resi Tumbas, order code, atau resi ekspedisi untuk melihat progres pesanan.</p>
+          <form onSubmit={handleVerify} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-2 block text-sm font-medium">Nomor Resi / Order Code</label>
+              <input
+                value={resi}
+                onChange={(e) => setResi(normalizeResi(e.target.value))}
+                placeholder="Contoh: TMB-1771689505558-T9EH4Z"
+                className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+                required
+              />
+              {normalizedPreview && <p className="mt-1 text-xs text-[#4c739a]">Input terformat: {normalizedPreview}</p>}
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex h-12 items-center justify-center rounded-lg bg-[#137fec] px-6 font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
+            >
+              {loading ? "Memverifikasi..." : "Verifikasi Sekarang"}
+            </button>
+          </form>
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-[#137fec] px-5 py-3 text-white font-semibold hover:bg-[#0f65bd] disabled:opacity-50"
-          >
-            {loading ? "Memverifikasi..." : "Verifikasi"}
-          </button>
-        </form>
+        {error && <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-        {error && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-
-        {result && (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-            {result.valid && result.order ? (
-              <>
-                <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                  Resi valid dan terverifikasi.
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Order ID</span><span className="font-medium text-[#0d141b]">{result.order.id}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Receipt No</span><span className="font-medium text-[#0d141b]">{result.order.receiptNo}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Resi Pengiriman</span><span className="font-medium text-[#0d141b]">{result.order.shippingResi || '-'}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Kode Verifikasi</span><span className="font-medium text-[#0d141b]">{result.order.verificationCode}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Produk</span><span className="font-medium text-[#0d141b]">{result.order.productTitle}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Total</span><span className="font-medium text-[#0d141b]">{formatPriceIdr(result.order.amount)}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Status</span><span className="font-medium text-[#0d141b]">{getOrderProgressLabel(result.order)}</span></div>
-                  <div className="flex justify-between"><span className="text-[#4c739a]">Tanggal</span><span className="font-medium text-[#0d141b]">{formatDateTimeId(result.order.createdAt)}</span></div>
-                </div>
-              </>
-            ) : (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                Resi tidak valid: {reasonLabel[result.reason || ""] || "Data tidak cocok"}
-              </div>
-            )}
-
-            {!result.valid && result.order && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Resi Tumbas ditemukan, tetapi admin belum konfirmasi serah ke ekspedisi atau resi ekspedisi belum diinput.
+        {result && !isValidOrder && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+            Resi tidak valid: {reasonLabel[result.reason || ""] || "Data tidak cocok"}
+            {result.order && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                Data order ditemukan, namun belum ada serah terima ekspedisi atau resi ekspedisi belum diinput.
               </div>
             )}
           </div>
         )}
-      </div>
+
+        {isValidOrder && order && (
+          <>
+            <div className="mb-6">
+              <h2 className="text-2xl font-black">Ringkasan Verifikasi Pesanan</h2>
+              <p className="mt-1 text-sm text-[#4c739a]">
+                {order.orderCode} • Dibuat {formatDateTimeId(order.createdAt)}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-1">
+                <div className="rounded-xl border border-slate-200 bg-white p-6">
+                  <h3 className="mb-6 flex items-center gap-2 text-lg font-bold">
+                    <span className="material-symbols-outlined text-[#137fec]">analytics</span>
+                    Status Pesanan
+                  </h3>
+                  <div className="space-y-0">
+                    {steps.map((step, index) => {
+                      const completed = index < activeStepIndex;
+                      const active = index === activeStepIndex;
+                      const pending = index > activeStepIndex;
+                      return (
+                        <div key={step.label} className="relative flex gap-4 pb-7 last:pb-0">
+                          {index < steps.length - 1 && (
+                            <div className={`absolute left-[11px] top-6 h-full w-0.5 ${completed || active ? "bg-[#137fec]/30" : "bg-slate-200"}`} />
+                          )}
+                          <div
+                            className={`z-10 flex h-6 w-6 items-center justify-center rounded-full ${
+                              completed
+                                ? "bg-[#137fec] text-white"
+                                : active
+                                  ? "border-2 border-[#137fec] bg-white text-[#137fec]"
+                                  : "bg-slate-100 text-slate-400"
+                            }`}
+                          >
+                            {completed ? <span className="material-symbols-outlined text-[14px]">check</span> : <div className="h-2 w-2 rounded-full bg-current" />}
+                          </div>
+                          <div>
+                            <p className={`text-sm font-bold ${active ? "text-[#137fec]" : pending ? "text-slate-400" : "text-[#0d141b]"}`}>{step.label}</p>
+                            <p className={`text-xs ${pending ? "text-slate-400" : "text-[#4c739a]"}`}>{step.detail}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-6">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-bold">
+                    <span className="material-symbols-outlined text-[#137fec]">inventory_2</span>
+                    Informasi Pengiriman
+                  </h3>
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Resi Terkonfirmasi</p>
+                      <p className="font-semibold">{order.shippingResi || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Ekspedisi</p>
+                      <p className="font-semibold">{order.expeditionName || "Belum ditentukan"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Status Progress</p>
+                      <p className="font-semibold">{getOrderProgressLabel(order)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white">
+                  <div className="flex items-center justify-between border-b border-slate-200 p-6">
+                    <h3 className="flex items-center gap-2 text-lg font-bold">
+                      <span className="material-symbols-outlined text-[#137fec]">shopping_bag</span>
+                      Detail Pembelian
+                    </h3>
+                    <span className="rounded-full bg-[#137fec]/10 px-3 py-1 text-xs font-bold text-[#137fec]">1 Item</span>
+                  </div>
+
+                  <div className="flex-1 p-6">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <p className="font-bold">{order.productTitle}</p>
+                      <p className="mt-1 text-sm text-[#4c739a]">Receipt: {order.receiptNo}</p>
+                      <p className="text-sm text-[#4c739a]">Kode Verifikasi: {order.verificationCode}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-b-xl border-t border-slate-200 bg-slate-50 p-6">
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[#4c739a]">Status Pembayaran</span>
+                        <span className="font-semibold">{order.paymentStatus}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[#4c739a]">Dibuat</span>
+                        <span className="font-semibold">{formatDateTimeId(order.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-end justify-between border-t border-slate-200 pt-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Order Code</p>
+                        <p className="text-sm font-semibold">{order.orderCode}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Total</p>
+                        <p className="text-2xl font-black text-[#137fec]">{formatPriceIdr(order.amount)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 }
