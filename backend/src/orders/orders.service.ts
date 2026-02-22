@@ -452,10 +452,11 @@ export class OrdersService {
 
     const matched = orders.find(
       (order) => {
+        const orderCodeCompare = this.normalizeResiForCompare(order.orderCode);
         const tumbasResi = this.createShippingResi(order.orderCode);
         const tumbasCompare = this.normalizeResiForCompare(tumbasResi);
         const expeditionCompare = this.normalizeResiForCompare(order.expeditionResi || '');
-        return compareInput === tumbasCompare || compareInput === expeditionCompare;
+        return compareInput === orderCodeCompare || compareInput === tumbasCompare || compareInput === expeditionCompare;
       },
     );
 

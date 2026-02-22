@@ -218,7 +218,36 @@ describe('OrdersService', () => {
         valid: true,
         order: expect.objectContaining({
           orderCode: 'TMB-ABC123',
-          shippingResi: 'TMB-RESI-TMBABC123',
+          shippingResi: 'JNE1234567890',
+          expeditionResi: 'JNE1234567890',
+        }),
+      }),
+    );
+  });
+
+  it('verifies order by order code input', async () => {
+    prisma.order.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'o1',
+        orderCode: 'TMB-ABC123',
+        amount: 100000,
+        paymentStatus: 'PAID',
+        shippedToExpedition: true,
+        expeditionResi: 'JNE1234567890',
+        expeditionName: 'JNE',
+        shippedAt: new Date('2026-02-20T11:00:00.000Z'),
+        createdAt: new Date('2026-02-20T10:00:00.000Z'),
+        product: { title: 'Product A' },
+      },
+    ]);
+
+    const result = await service.verifyByResi('TMB-ABC123');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        valid: true,
+        order: expect.objectContaining({
+          orderCode: 'TMB-ABC123',
           expeditionResi: 'JNE1234567890',
         }),
       }),
