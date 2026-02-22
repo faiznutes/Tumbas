@@ -43,7 +43,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 ### 5) Deploy Readiness
 - [x] Refactor backend Dockerfile ke multi-stage build
 - [x] Jalankan `prisma migrate deploy` saat container startup
-- [ ] Validasi docker compose end-to-end di environment dengan Docker (blocked: Docker CLI belum terpasang)
+- [x] Validasi docker compose end-to-end di environment dengan Docker: pass (dijalankan di server remote dengan port override `13000/13001/15432`, service frontend/backend/db `up` dan healthcheck HTTP `200`)
 
 ## Next Tasks
 - [x] Integrasi RajaOngkir Starter (`jne`, `jnt`, `sicepat`) untuk kalkulasi ongkir realtime di checkout
