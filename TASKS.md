@@ -231,6 +231,13 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm run build` backend (post permission alignment + webhook super-admin restriction): pass
 - [x] Push `main` commit `8608a44` (permission alignment batch) ke GitHub: pass
 - [x] `npm run build` backend (post remove webhook permission dependency): pass
+- [x] `npm run build` frontend (post live admin permission sync focus+visibility+interval): pass
+- [x] `npm run build` frontend (post admin layout/settings/dashboard session revision sync): pass
+- [x] `npm run build` backend (post granular settings permission + admin-notice super-admin only): pass
+- [x] UAT API role matrix (akun uji `superadmin@tumbas.id` & `jamal@tumbas.id`):
+  - phase deny (`orders.view`): `GET /api/contact-messages` -> `403`, `GET /api/settings/general` -> `403`, `GET /api/settings/promo` -> `403`
+  - phase allow (`orders.view,messages.view,settings.general.view,settings.promo.view`): `GET /api/contact-messages` -> `200`, `GET /api/settings/general` -> `200`, `GET /api/settings/promo` -> `200`, `GET /api/settings/payment` -> `403`
+  - admin notice update restriction: `POST /api/settings/admin-notice` staff -> `403`, super admin -> `201`
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` only)
