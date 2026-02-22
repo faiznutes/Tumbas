@@ -93,8 +93,8 @@ export default function VerifyReceiptPage() {
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h2 className="mb-2 text-xl font-black">Lacak Status Pesananmu</h2>
           <p className="mb-4 text-sm text-[#4c739a]">Masukkan resi Tumbas, order code, atau resi ekspedisi untuk melihat progres pesanan.</p>
-          <form onSubmit={handleVerify} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
+          <form onSubmit={handleVerify} className="flex items-end gap-3">
+            <div className="min-w-0 flex-1">
               <label className="mb-2 block text-sm font-medium">Nomor Resi / Order Code</label>
               <input
                 value={resi}
@@ -108,7 +108,7 @@ export default function VerifyReceiptPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex h-12 items-center justify-center rounded-lg bg-[#137fec] px-6 font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
+              className="inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-[#137fec] px-6 font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
             >
               {loading ? "Memverifikasi..." : "Verifikasi Sekarang"}
             </button>
