@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
-import { hasAdminPermission } from "@/lib/admin-permissions";
+import { hasAnyAdminPermission } from "@/lib/admin-permissions";
 
 export default function AdminCategoriesPage() {
   const router = useRouter();
@@ -13,9 +13,10 @@ export default function AdminCategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
+  const canEditCategories = hasAnyAdminPermission(["products.categories.edit", "products.edit"]);
 
   useEffect(() => {
-    if (!hasAdminPermission("products.edit")) {
+    if (!hasAnyAdminPermission(["products.categories.view", "products.categories.edit", "products.edit"])) {
       addToast("Anda tidak memiliki akses untuk kelola kategori", "warning");
       router.replace("/admin/dashboard");
       return;
@@ -96,6 +97,7 @@ export default function AdminCategoriesPage() {
           <button
             type="button"
             onClick={addCategory}
+            disabled={!canEditCategories}
             className="rounded-lg bg-[#137fec] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f65bd]"
           >
             Tambah
@@ -107,11 +109,13 @@ export default function AdminCategoriesPage() {
             <div key={`${category}-${index}`} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2">
               <input
                 value={category}
+                disabled={!canEditCategories}
                 onChange={(e) => updateCategory(index, e.target.value)}
                 className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm"
               />
               <button
                 type="button"
+                disabled={!canEditCategories}
                 onClick={() => removeCategory(category)}
                 className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
               >
@@ -126,7 +130,7 @@ export default function AdminCategoriesPage() {
           <button
             type="button"
             onClick={saveCategories}
-            disabled={saving}
+            disabled={saving || !canEditCategories}
             className="rounded-lg bg-[#137fec] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-60"
           >
             {saving ? "Menyimpan..." : "Simpan Kategori"}

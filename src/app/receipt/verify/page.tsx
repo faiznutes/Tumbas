@@ -64,6 +64,35 @@ export default function VerifyReceiptPage() {
       ? [{ id: `${order.id}-fallback`, title: order.productTitle, quantity: 1 }]
       : [];
   const totalItems = order?.totalItems || orderItems.reduce((sum, item) => sum + Math.max(1, Number(item.quantity || 1)), 0);
+  const statusMessage = (() => {
+    if (!order) return "";
+
+    if (order.paymentStatus === "PENDING") {
+      return "Data order ditemukan, tapi pesanan belum dibayar. Silakan selesaikan pembayaran terlebih dahulu.";
+    }
+    if (order.paymentStatus === "PAID" && !order.shippedToExpedition) {
+      return "Pembayaran sudah diterima. Pesanan Anda sedang diproses di gudang dan akan segera diserahkan ke ekspedisi.";
+    }
+    if (order.paymentStatus === "PAID" && order.shippedToExpedition) {
+      return "Pesanan sudah diserahkan ke ekspedisi. Silakan pantau pengiriman menggunakan resi ekspedisi.";
+    }
+    if (order.paymentStatus === "FAILED") {
+      return "Pembayaran gagal. Silakan lakukan pembayaran ulang untuk melanjutkan pesanan.";
+    }
+    if (order.paymentStatus === "EXPIRED") {
+      return "Waktu pembayaran pesanan ini sudah habis. Silakan checkout kembali jika ingin melanjutkan pembelian.";
+    }
+    if (order.paymentStatus === "CANCELLED") {
+      return "Pesanan ini sudah dibatalkan. Jika ini tidak sesuai, silakan hubungi admin.";
+    }
+
+    return "Status pesanan sedang diperbarui.";
+  })();
+  const statusMessageTone = ["FAILED", "EXPIRED", "CANCELLED"].includes(order?.paymentStatus || "")
+    ? "border-red-200 bg-red-50 text-red-700"
+    : order?.paymentStatus === "PAID" && order.shippedToExpedition
+      ? "border-green-200 bg-green-50 text-green-700"
+      : "border-amber-200 bg-amber-50 text-amber-800";
 
   const steps = (() => {
     if (!order) return [] as Array<{ label: string; detail: string }>;
@@ -147,15 +176,9 @@ export default function VerifyReceiptPage() {
               </p>
             </div>
 
-            {!order.shippedToExpedition && (
-              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                {order.paymentStatus === "PENDING"
-                  ? "Data order ditemukan, tapi saat ini pesanan belum dibayar. Mohon bayar terlebih dahulu."
-                  : order.paymentStatus === "PAID"
-                    ? "Pesanan Anda sedang diproses. Mohon tunggu hingga diserahkan ke ekspedisi."
-                    : "Data order ditemukan. Saat ini pesanan belum diserahkan ke ekspedisi."}
-              </div>
-            )}
+            <div className={`mb-6 rounded-lg border p-3 text-sm ${statusMessageTone}`}>
+              {statusMessage}
+            </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-1">

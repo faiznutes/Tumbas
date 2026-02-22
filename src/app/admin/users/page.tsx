@@ -33,7 +33,11 @@ const permissionGroups = [
   {
     key: "products",
     label: "Produk",
-    permissions: [{ key: "products.edit", label: "Kelola produk" }],
+    permissions: [
+      { key: "products.edit", label: "Kelola produk" },
+      { key: "products.categories.view", label: "Lihat halaman kategori" },
+      { key: "products.categories.edit", label: "Kelola kategori" },
+    ],
   },
   {
     key: "messages",
@@ -74,6 +78,8 @@ const defaultEditorPermissions = [
   "orders.view",
   "orders.edit",
   "products.edit",
+  "products.categories.view",
+  "products.categories.edit",
   "messages.view",
   "messages.edit",
   "settings.view",

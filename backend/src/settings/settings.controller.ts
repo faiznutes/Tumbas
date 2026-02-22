@@ -381,7 +381,7 @@ export class SettingsController {
 
   @Get('product-categories')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('products.edit')
+  @Permissions('products.categories.view')
   async getProductCategories() {
     return this.settingsService.getProductCategories();
   }
@@ -392,7 +392,7 @@ export class SettingsController {
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('products.edit')
+  @Permissions('products.categories.edit')
   @Post('product-categories')
   async updateProductCategories(@Body() data: UpdateProductCategoriesDto) {
     return this.settingsService.setProductCategories(data);

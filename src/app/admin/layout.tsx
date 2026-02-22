@@ -27,7 +27,7 @@ function canAccessAdminPath(pathname: string) {
     return hasAdminPermission("products.edit");
   }
   if (pathname.startsWith("/admin/categories")) {
-    return hasAdminPermission("products.edit");
+    return hasAnyAdminPermission(["products.categories.view", "products.categories.edit", "products.edit"]);
   }
   if (pathname.startsWith("/admin/messages")) {
     return hasAdminPermission("messages.view");

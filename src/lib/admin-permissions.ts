@@ -13,6 +13,8 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     "orders.view",
     "orders.edit",
     "products.edit",
+    "products.categories.view",
+    "products.categories.edit",
     "messages.view",
     "messages.edit",
     "settings.view",
@@ -47,6 +49,11 @@ function hasSettingsFallbackPermission(userPermissions: string[], requiredPermis
   if (requiredPermission.endsWith(".view") && userPermissions.includes("settings.view")) return true;
   if (requiredPermission.endsWith(".edit") && userPermissions.includes("settings.edit")) return true;
   return false;
+}
+
+function hasProductCategoriesFallbackPermission(userPermissions: string[], requiredPermission: string) {
+  if (!requiredPermission.startsWith("products.categories.")) return false;
+  return userPermissions.includes("products.edit");
 }
 
 function getResolvedPermissions(user: AdminSessionUser): string[] {
@@ -88,7 +95,11 @@ export function hasAdminPermission(permission: string) {
   const user = getCurrentAdminUser();
   if (user.role === "SUPER_ADMIN") return true;
   const userPermissions = getResolvedPermissions(user);
-  return userPermissions.includes(permission) || hasSettingsFallbackPermission(userPermissions, permission);
+  return (
+    userPermissions.includes(permission) ||
+    hasSettingsFallbackPermission(userPermissions, permission) ||
+    hasProductCategoriesFallbackPermission(userPermissions, permission)
+  );
 }
 
 export function hasAnyAdminPermission(permissions: string[]) {

@@ -69,7 +69,9 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       if (item.href === "/admin/orders/report") return hasAdminPermission("orders.view");
       if (item.href === "/admin/customers") return hasAdminPermission("orders.view");
       if (item.href === "/admin/products") return hasAdminPermission("products.edit");
-      if (item.href === "/admin/categories") return hasAdminPermission("products.edit");
+      if (item.href === "/admin/categories") {
+        return hasAnyAdminPermission(["products.categories.view", "products.categories.edit", "products.edit"]);
+      }
       return true;
     });
   }, [role, sessionUser.permissions]);

@@ -12,6 +12,8 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'orders.view',
     'orders.edit',
     'products.edit',
+    'products.categories.view',
+    'products.categories.edit',
     'messages.view',
     'messages.edit',
     'settings.view',
@@ -39,6 +41,9 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
 function hasPermission(userPermissions: string[], requiredPermission: string): boolean {
   if (userPermissions.includes(requiredPermission)) return true;
+  if (requiredPermission.startsWith('products.categories.') && userPermissions.includes('products.edit')) {
+    return true;
+  }
   if (requiredPermission.startsWith('settings.')) {
     if (requiredPermission.endsWith('.view') && userPermissions.includes('settings.view')) return true;
     if (requiredPermission.endsWith('.edit') && userPermissions.includes('settings.edit')) return true;
