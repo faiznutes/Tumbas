@@ -9,6 +9,7 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const { addToast } = useToast();
   const [currentRole, setCurrentRole] = useState('');
+  const [sessionRevision, setSessionRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const canEditAdminNotice = currentRole === 'SUPER_ADMIN';
   const hasGlobalSettingsView = hasAdminPermission('settings.view');
@@ -118,6 +119,7 @@ export default function AdminSettings() {
     const syncRole = () => {
       const user = getCurrentAdminUser();
       setCurrentRole(user.role || '');
+      setSessionRevision((prev) => prev + 1);
     };
     syncRole();
     window.addEventListener(ADMIN_SESSION_UPDATED_EVENT, syncRole);
@@ -158,7 +160,7 @@ export default function AdminSettings() {
         setActiveTab(firstAllowed);
       }
     }
-  }, [activeTab, currentRole]);
+  }, [activeTab, currentRole, sessionRevision]);
 
   async function fetchGeneralSettings() {
     try {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
-import { hasAdminPermission } from "@/lib/admin-permissions";
+import { ADMIN_SESSION_UPDATED_EVENT, hasAdminPermission } from "@/lib/admin-permissions";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-700",
@@ -39,6 +39,7 @@ export default function AdminDashboard() {
     paymentStatus: string;
   }>>([]);
   const [loading, setLoading] = useState(true);
+  const [sessionRevision, setSessionRevision] = useState(0);
   const { addToast } = useToast();
   const canViewOrders = hasAdminPermission("orders.view");
   const canEditProducts = hasAdminPermission("products.edit");
@@ -66,6 +67,16 @@ export default function AdminDashboard() {
       window.history.replaceState({}, '', url.pathname + url.search);
     }
   }, [addToast]);
+
+  useEffect(() => {
+    const syncSession = () => setSessionRevision((prev) => prev + 1);
+    window.addEventListener(ADMIN_SESSION_UPDATED_EVENT, syncSession);
+    window.addEventListener('storage', syncSession);
+    return () => {
+      window.removeEventListener(ADMIN_SESSION_UPDATED_EVENT, syncSession);
+      window.removeEventListener('storage', syncSession);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -97,7 +108,7 @@ export default function AdminDashboard() {
       }
     }
     fetchData();
-  }, [canEditProducts, canViewOrders]);
+  }, [canEditProducts, canViewOrders, sessionRevision]);
 
   const chartData = [45, 65, 50, 75, 60, 85, 70];
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

@@ -4,7 +4,7 @@ import AdminSidebar from "@/components/layout/AdminSidebar";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, getAuthToken } from "@/lib/api";
-import { getCurrentAdminUser, hasAdminPermission, hasAnyAdminPermission, setCurrentAdminUser } from "@/lib/admin-permissions";
+import { ADMIN_SESSION_UPDATED_EVENT, getCurrentAdminUser, hasAdminPermission, hasAnyAdminPermission, setCurrentAdminUser } from "@/lib/admin-permissions";
 
 function canAccessAdminPath(pathname: string) {
   const user = getCurrentAdminUser();
@@ -69,6 +69,7 @@ export default function AdminLayout({
   const router = useRouter();
   const isLoginPage = pathname === "/admin/login";
   const [sessionChecked, setSessionChecked] = useState(isLoginPage);
+  const [sessionRevision, setSessionRevision] = useState(0);
 
   useEffect(() => {
     if (isLoginPage) return;
@@ -84,6 +85,7 @@ export default function AdminLayout({
       try {
         const latestUser = await api.auth.me();
         setCurrentAdminUser(latestUser);
+        if (isMounted) setSessionRevision((prev) => prev + 1);
       } catch {
         // handled by api layer redirect logic for 401
       } finally {
@@ -91,15 +93,23 @@ export default function AdminLayout({
       }
     };
 
+    const syncFromEvent = () => {
+      setSessionRevision((prev) => prev + 1);
+    };
+
     syncSession();
     window.addEventListener("focus", syncSession);
     window.addEventListener("visibilitychange", syncSession);
+    window.addEventListener(ADMIN_SESSION_UPDATED_EVENT, syncFromEvent);
+    window.addEventListener("storage", syncFromEvent);
     const interval = window.setInterval(syncSession, 20000);
 
     return () => {
       isMounted = false;
       window.removeEventListener("focus", syncSession);
       window.removeEventListener("visibilitychange", syncSession);
+      window.removeEventListener(ADMIN_SESSION_UPDATED_EVENT, syncFromEvent);
+      window.removeEventListener("storage", syncFromEvent);
       window.clearInterval(interval);
     };
   }, [isLoginPage]);
@@ -117,7 +127,7 @@ export default function AdminLayout({
         router.push("/admin/dashboard?forbidden=1");
       }
     }
-  }, [pathname, isLoginPage, router, sessionChecked]);
+  }, [pathname, isLoginPage, router, sessionChecked, sessionRevision]);
 
   if (isLoginPage) {
     return <>{children}</>;
