@@ -238,6 +238,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
   - phase deny (`orders.view`): `GET /api/contact-messages` -> `403`, `GET /api/settings/general` -> `403`, `GET /api/settings/promo` -> `403`
   - phase allow (`orders.view,messages.view,settings.general.view,settings.promo.view`): `GET /api/contact-messages` -> `200`, `GET /api/settings/general` -> `200`, `GET /api/settings/promo` -> `200`, `GET /api/settings/payment` -> `403`
   - admin notice update restriction: `POST /api/settings/admin-notice` staff -> `403`, super admin -> `201`
+- [x] UAT API role matrix (akun uji sementara ADMIN): `GET /api/settings/admin-notice` -> `200`, `POST /api/settings/admin-notice` -> `403`, `GET /api/settings/promo` -> `200` (akun uji dihapus setelah verifikasi)
 
 ## Webhook Observability Notes
 - Endpoint monitor internal: `GET /api/webhook/midtrans/monitor?minutes=60` (role `SUPER_ADMIN` only)
