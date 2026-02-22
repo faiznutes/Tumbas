@@ -306,6 +306,14 @@ export interface AdminNoticeSettings {
   message: string;
 }
 
+export interface ShopHeroSettings {
+  badge: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  ctaText: string;
+}
+
 export const api = {
   products: {
     getAll: (params?: {
@@ -657,6 +665,14 @@ export const api = {
       discountText: string;
     }>('/settings/promo'),
 
+    getPromoPublic: () => fetchApi<{
+      heroImage: string;
+      heroTitle: string;
+      heroSubtitle: string;
+      heroBadge: string;
+      discountText: string;
+    }>('/settings/promo-public'),
+
     updatePromo: (data: {
       heroImage?: string;
       heroTitle?: string;
@@ -682,6 +698,14 @@ export const api = {
       endDate: string;
     }>('/settings/weekly-deal'),
 
+    getWeeklyDealPublic: () => fetchApi<{
+      title: string;
+      subtitle: string;
+      enabled: boolean;
+      discount: number;
+      endDate: string;
+    }>('/settings/weekly-deal-public'),
+
     updateWeeklyDeal: (data: {
       title?: string;
       subtitle?: string;
@@ -703,6 +727,11 @@ export const api = {
       manualSlugs: string[];
       maxItems: number;
     }>('/settings/homepage-featured'),
+
+    getHomepageFeaturedPublic: () => fetchApi<{
+      manualSlugs: string[];
+      maxItems: number;
+    }>('/settings/homepage-featured-public'),
 
     updateHomepageFeatured: (data: {
       manualSlugs?: string[];
@@ -752,6 +781,15 @@ export const api = {
       defaultWeightGram: number;
     }>('/settings/shipping'),
 
+    getShippingPublic: () => fetchApi<{
+      minFreeShipping: number;
+      estimateJawa: number;
+      estimateLuarJawa: number;
+      providers: string[];
+      originCityId: number;
+      defaultWeightGram: number;
+    }>('/settings/shipping-public'),
+
     updateShipping: (data: {
       minFreeShipping?: number;
       estimateJawa?: number;
@@ -770,6 +808,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+    getShopHero: () => fetchApi<ShopHeroSettings>('/settings/shop-hero'),
+
+    getShopHeroPublic: () => fetchApi<ShopHeroSettings>('/settings/shop-hero-public'),
+
+    updateShopHero: (data: Partial<ShopHeroSettings>) =>
+      fetchApi<ShopHeroSettings>('/settings/shop-hero', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   shipping: {

@@ -126,7 +126,7 @@ export class SettingsService {
   async getHomepageFeaturedSettings() {
     const defaults = {
       manualSlugs: [] as string[],
-      maxItems: 3,
+      maxItems: 12,
     };
 
     const keys = ['homepage_featured_manual_slugs', 'homepage_featured_max_items'];
@@ -145,7 +145,7 @@ export class SettingsService {
 
       if (setting.key === 'homepage_featured_max_items') {
         const parsed = parseInt(setting.value, 10);
-        result.maxItems = Number.isFinite(parsed) ? Math.min(8, Math.max(1, parsed)) : defaults.maxItems;
+        result.maxItems = Number.isFinite(parsed) ? Math.min(50, Math.max(1, parsed)) : defaults.maxItems;
       }
     });
 
@@ -272,12 +272,12 @@ export class SettingsService {
       const clean = data.manualSlugs
         .map((slug) => slug.trim())
         .filter(Boolean)
-        .slice(0, 8);
+        .slice(0, 100);
       updates.push(this.setSetting('homepage_featured_manual_slugs', clean.join(',')));
     }
 
     if (data.maxItems !== undefined) {
-      const safeMaxItems = Math.min(8, Math.max(1, data.maxItems));
+      const safeMaxItems = Math.min(50, Math.max(1, data.maxItems));
       updates.push(this.setSetting('homepage_featured_max_items', String(safeMaxItems)));
     }
 
@@ -440,5 +440,40 @@ export class SettingsService {
     if (data.message !== undefined) updates.push(this.setSetting('admin_notice_message', data.message));
     if (updates.length > 0) await Promise.all(updates);
     return this.getAdminNoticeSettings();
+  }
+
+  async getShopHeroSettings() {
+    const defaults = {
+      badge: 'New Arrival',
+      title: 'Summer Collection Arrival',
+      subtitle: 'Discover the latest trends in accessories and get 20% off for a limited time.',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4',
+      ctaText: 'Shop Now',
+    };
+
+    const keys = ['shop_hero_badge', 'shop_hero_title', 'shop_hero_subtitle', 'shop_hero_image', 'shop_hero_cta_text'];
+    const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
+    const result = { ...defaults };
+
+    settings.forEach((setting) => {
+      if (setting.key === 'shop_hero_badge') result.badge = setting.value;
+      if (setting.key === 'shop_hero_title') result.title = setting.value;
+      if (setting.key === 'shop_hero_subtitle') result.subtitle = setting.value;
+      if (setting.key === 'shop_hero_image') result.image = setting.value;
+      if (setting.key === 'shop_hero_cta_text') result.ctaText = setting.value;
+    });
+
+    return result;
+  }
+
+  async setShopHeroSettings(data: { badge?: string; title?: string; subtitle?: string; image?: string; ctaText?: string }) {
+    const updates: Promise<any>[] = [];
+    if (data.badge !== undefined) updates.push(this.setSetting('shop_hero_badge', data.badge));
+    if (data.title !== undefined) updates.push(this.setSetting('shop_hero_title', data.title));
+    if (data.subtitle !== undefined) updates.push(this.setSetting('shop_hero_subtitle', data.subtitle));
+    if (data.image !== undefined) updates.push(this.setSetting('shop_hero_image', data.image));
+    if (data.ctaText !== undefined) updates.push(this.setSetting('shop_hero_cta_text', data.ctaText));
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getShopHeroSettings();
   }
 }

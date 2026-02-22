@@ -44,9 +44,9 @@ export default function Beranda() {
       try {
         const [productsRes, promoRes, weeklyRes, featuredSettingsRes, popularRes, availableRes] = await Promise.allSettled([
           api.products.getAll({ limit: 4, status: 'AVAILABLE' }),
-          api.settings.getPromo(),
-          api.settings.getWeeklyDeal(),
-          api.settings.getHomepageFeatured(),
+          api.settings.getPromoPublic(),
+          api.settings.getWeeklyDealPublic(),
+          api.settings.getHomepageFeaturedPublic(),
           api.products.getAll({ limit: 12, status: 'AVAILABLE', sort: 'popular' }),
           api.products.getAll({ limit: 100, status: 'AVAILABLE' }),
         ]);
@@ -63,8 +63,8 @@ export default function Beranda() {
 
         const maxItems =
           featuredSettingsRes.status === 'fulfilled'
-            ? Math.min(8, Math.max(1, featuredSettingsRes.value.maxItems || 3))
-            : 3;
+            ? Math.min(50, Math.max(1, featuredSettingsRes.value.maxItems || 12))
+            : 12;
         const manualSlugs =
           featuredSettingsRes.status === 'fulfilled'
             ? featuredSettingsRes.value.manualSlugs
@@ -160,9 +160,9 @@ export default function Beranda() {
             Lihat Semua Kategori <span className="material-symbols-outlined text-sm">open_in_new</span>
           </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex gap-6 overflow-x-auto pb-2">
           {featuredProducts.map((product) => (
-            <Link key={product.id} href={`/product/${product.slug}`} className="group relative rounded-xl overflow-hidden aspect-[4/5] bg-slate-100 cursor-pointer">
+            <Link key={product.id} href={`/product/${product.slug}`} className="group relative aspect-[4/5] w-[260px] flex-none cursor-pointer overflow-hidden rounded-xl bg-slate-100 sm:w-[280px]">
               <img 
                 alt={product.title} 
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 

@@ -136,7 +136,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function fetchShipping() {
       try {
-        const data = await api.settings.getShipping();
+        const data = await api.settings.getShippingPublic();
         setShippingConfig(data);
         if (data.providers.length > 0) {
           setShippingProvider(data.providers[0]);

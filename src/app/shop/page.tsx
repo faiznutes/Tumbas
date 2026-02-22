@@ -28,6 +28,13 @@ export default function ShopPage() {
   const [fetchError, setFetchError] = useState("");
   const [gridView, setGridView] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [shopHero, setShopHero] = useState({
+    badge: "New Arrival",
+    title: "Summer Collection Arrival",
+    subtitle: "Discover the latest trends in accessories and get 20% off for a limited time.",
+    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4",
+    ctaText: "Shop Now",
+  });
 
   const categories = useMemo(() => {
     const counts = allProducts.reduce((acc: Record<string, number>, product) => {
@@ -90,8 +97,12 @@ export default function ShopPage() {
       try {
         setLoading(true);
         setFetchError("");
-        const response = await api.products.getAll({ limit: 100, status: 'AVAILABLE', sort: 'popular' });
+        const [response, heroSettings] = await Promise.all([
+          api.products.getAll({ limit: 100, status: 'AVAILABLE', sort: 'popular' }),
+          api.settings.getShopHeroPublic(),
+        ]);
         setAllProducts(response.data);
+        setShopHero(heroSettings);
 
         const highestPrice = response.data.reduce((max, product) => Math.max(max, product.price), 0);
         const nextMaxPrice = Math.max(1000000, Math.ceil(highestPrice / 50000) * 50000);
@@ -145,18 +156,18 @@ export default function ShopPage() {
           <img 
             alt="Summer Collection Banner" 
             className="w-full h-[400px] object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4"
+            src={shopHero.image}
           />
           <div className="absolute inset-0 z-20 flex flex-col justify-center items-start p-8 md:p-16">
-            <span className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-white uppercase bg-[#137fec] rounded-full">New Arrival</span>
+            <span className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-white uppercase bg-[#137fec] rounded-full">{shopHero.badge}</span>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 max-w-xl">
-              Summer Collection <br/> Arrival
+              {shopHero.title}
             </h2>
             <p className="text-gray-200 text-lg md:text-xl mb-8 max-w-lg font-light">
-              Discover the latest trends in accessories and get 20% off for a limited time.
+              {shopHero.subtitle}
             </p>
             <Link href="/shop" className="bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold py-3 px-8 rounded-lg transition-all transform hover:-translate-y-0.5 shadow-lg shadow-[#137fec]/30 flex items-center gap-2">
-              Shop Now
+              {shopHero.ctaText}
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
           </div>
@@ -225,12 +236,12 @@ export default function ShopPage() {
                   value={priceRange}
                   onChange={(e) => setPriceRange(Number(e.target.value))}
                 />
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <div className="min-w-[92px] rounded border border-[#e7edf3] bg-white px-2 py-1.5 text-center text-xs font-medium text-[#0d141b] sm:text-sm">
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="flex min-w-0 flex-1 items-center justify-center rounded border border-[#e7edf3] bg-white px-2 py-1.5 text-center text-xs font-medium text-[#0d141b] sm:text-sm">
                     {formatPrice(0)}
                   </div>
                   <span className="text-[#4c739a]">-</span>
-                  <div className="min-w-[126px] max-w-[170px] whitespace-nowrap rounded border border-[#e7edf3] bg-white px-2 py-1.5 text-right text-xs font-medium tabular-nums text-[#0d141b] sm:text-sm">
+                  <div className="flex min-w-0 flex-[1.35] items-center justify-end overflow-hidden rounded border border-[#e7edf3] bg-white px-2 py-1.5 text-right text-xs font-medium tabular-nums text-[#0d141b] sm:text-sm">
                     {formatPrice(priceRange)}
                   </div>
                 </div>

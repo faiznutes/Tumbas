@@ -62,8 +62,30 @@ class UpdateHomepageFeaturedSettingsDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(8)
+  @Max(50)
   maxItems?: number;
+}
+
+class UpdateShopHeroSettingsDto {
+  @IsOptional()
+  @IsString()
+  badge?: string;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  subtitle?: string;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+
+  @IsOptional()
+  @IsString()
+  ctaText?: string;
 }
 
 class UpdatePaymentSettingsDto {
@@ -178,44 +200,84 @@ export class SettingsController {
   constructor(private settingsService: SettingsService) {}
 
   @Get('promo')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.promo.view')
   async getPromoSettings() {
     return this.settingsService.getPromoSettings();
   }
 
+  @Get('promo-public')
+  async getPromoSettingsPublic() {
+    return this.settingsService.getPromoSettings();
+  }
+
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.promo.edit')
   @Post('promo')
   async updatePromoSettings(@Body() data: UpdatePromoSettingsDto) {
     return this.settingsService.setPromoSettings(data);
   }
 
   @Get('weekly-deal')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.weekly.view')
   async getWeeklyDealSettings() {
     return this.settingsService.getWeeklyDealSettings();
   }
 
+  @Get('weekly-deal-public')
+  async getWeeklyDealSettingsPublic() {
+    return this.settingsService.getWeeklyDealSettings();
+  }
+
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.weekly.edit')
   @Post('weekly-deal')
   async updateWeeklyDealSettings(@Body() data: UpdateWeeklyDealSettingsDto) {
     return this.settingsService.setWeeklyDealSettings(data);
   }
 
   @Get('homepage-featured')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.featured.view')
   async getHomepageFeaturedSettings() {
     return this.settingsService.getHomepageFeaturedSettings();
   }
 
+  @Get('homepage-featured-public')
+  async getHomepageFeaturedSettingsPublic() {
+    return this.settingsService.getHomepageFeaturedSettings();
+  }
+
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.featured.edit')
   @Post('homepage-featured')
   async updateHomepageFeaturedSettings(@Body() data: UpdateHomepageFeaturedSettingsDto) {
     return this.settingsService.setHomepageFeaturedSettings(data);
   }
 
+  @Get('shop-hero')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.promo.view')
+  async getShopHeroSettings() {
+    return this.settingsService.getShopHeroSettings();
+  }
+
+  @Get('shop-hero-public')
+  async getShopHeroSettingsPublic() {
+    return this.settingsService.getShopHeroSettings();
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.promo.edit')
+  @Post('shop-hero')
+  async updateShopHeroSettings(@Body() data: UpdateShopHeroSettingsDto) {
+    return this.settingsService.setShopHeroSettings(data);
+  }
+
   @Get('payment')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.view')
+  @Permissions('settings.payment.view')
   async getPaymentSettings() {
     return this.settingsService.getPaymentSettings();
   }
@@ -231,55 +293,68 @@ export class SettingsController {
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.payment.edit')
   @Post('payment')
   async updatePaymentSettings(@Body() data: UpdatePaymentSettingsDto) {
     return this.settingsService.setPaymentSettings(data);
   }
 
   @Get('shipping')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.shipping.view')
   async getShippingSettings() {
     return this.settingsService.getShippingSettings();
   }
 
+  @Get('shipping-public')
+  async getShippingSettingsPublic() {
+    return this.settingsService.getShippingSettings();
+  }
+
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.shipping.edit')
   @Post('shipping')
   async updateShippingSettings(@Body() data: UpdateShippingSettingsDto) {
     return this.settingsService.setShippingSettings(data);
   }
 
   @Get('general')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.general.view')
   async getGeneralSettings() {
     return this.settingsService.getGeneralSettings();
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.general.edit')
   @Post('general')
   async updateGeneralSettings(@Body() data: UpdateGeneralSettingsDto) {
     return this.settingsService.setGeneralSettings(data);
   }
 
   @Get('store')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.store.view')
   async getStoreSettings() {
     return this.settingsService.getStoreSettings();
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.store.edit')
   @Post('store')
   async updateStoreSettings(@Body() data: UpdateStoreSettingsDto) {
     return this.settingsService.setStoreSettings(data);
   }
 
   @Get('notifications')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('settings.notifications.view')
   async getNotificationSettings() {
     return this.settingsService.getNotificationSettings();
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.edit')
+  @Permissions('settings.notifications.edit')
   @Post('notifications')
   async updateNotificationSettings(@Body() data: UpdateNotificationSettingsDto) {
     return this.settingsService.setNotificationSettings(data);
@@ -287,7 +362,7 @@ export class SettingsController {
 
   @Get('admin-notice')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('settings.view')
+  @Permissions('settings.notice.view')
   async getAdminNoticeSettings() {
     return this.settingsService.getAdminNoticeSettings();
   }
