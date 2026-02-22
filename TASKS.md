@@ -115,7 +115,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] UI admin produk/pesanan/pesan/pengaturan menghormati mode read-only (aksi edit/hapus/konfirmasi disembunyikan atau dinonaktifkan)
 - [x] Tambah helper frontend `admin-permissions` untuk konsistensi cek hak akses lintas halaman admin
 - [x] Perbaiki UX responsive `/admin/settings` (tab/icon mobile agar navigasi tab tetap terlihat di layar kecil)
-- [~] Audit full i18n: konsisten Bahasa Indonesia (contoh `Settings` -> `Pengaturan`)
+- [x] Audit full i18n: konsisten Bahasa Indonesia (contoh `Settings` -> `Pengaturan`)
 - [x] Rapikan copy campuran non-Indonesia di template publik (homepage/footer/legal/settings placeholder) ke Indonesia-first
 - [x] Konsistensi label utama admin/public diperbarui (Dasbor/Monitor Webhook/Terjual/Staf/Cek Resi/Cari)
 - [x] Audit popup/notifikasi: hapus penggunaan popup system browser (`alert/confirm/prompt`) dan ganti ke komponen website (`Popup` + `Toast`)
@@ -131,7 +131,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npm run build` frontend (post variant matrix + variant checkout param): pass
 - [x] `npm run build` backend (post variant stock + order variant fields): pass
 - [x] `npm run test` backend (post variant/stock update): pass
-- [ ] `npx prisma migrate dev --name add_product_variants_and_order_variant_fields`: gagal (`P1001 localhost:5432` DB lokal belum aktif)
+- [x] Catatan historis: `npx prisma migrate dev --name add_product_variants_and_order_variant_fields` pernah gagal (`P1001 localhost:5432` DB lokal belum aktif), kini sudah terselesaikan via DB lokal aktif + deploy migration
 - [x] Remote `prisma migrate deploy` saat Coolify deploy commit `e4354b4`: pass (migration `20260221123000_add_product_variants_and_order_variant_fields` applied)
 - [x] Remote deploy commit `e0bb691`: pass; smoke test `/`, `/api`, `/api/shipping/cities`, `/api/shipping/rates`
 - [x] `npm run build` frontend (post `/checkout/cart` multi-item): pass
@@ -183,7 +183,7 @@ Dokumen ini dipakai untuk tracking progres implementasi.
 - [x] `npx eslint src/app/contact/page.tsx src/app/shop/page.tsx src/app/admin/messages/page.tsx src/components/layout/AdminSidebar.tsx src/lib/api.ts proxy.ts`: pass (warning existing `<img>` non-blocking di `/shop`)
 - [x] `npm run build` frontend (post-contact-messages + admin-messages): pass
 - [x] `npm run build` backend (post-contact-messages module): pass
-- [ ] `npx prisma migrate dev --name add_contact_messages`: gagal karena DB lokal belum aktif (`P1001 localhost:5432`)
+- [x] Catatan historis: `npx prisma migrate dev --name add_contact_messages` pernah gagal saat DB lokal belum aktif (`P1001`), kini sudah sukses setelah DB aktif
 - [x] PostgreSQL lokal aktif di `localhost:5432` (verified `TcpTestSucceeded=True`)
 - [x] `npx prisma migrate dev --name add_contact_messages`: pass (migration applied)
 - [x] `POST /api/contact-messages` test: pass (201 created)
