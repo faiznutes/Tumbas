@@ -33,7 +33,6 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'settings.shipping.view',
     'settings.shipping.edit',
     'settings.notice.view',
-    'settings.notice.edit',
   ],
   MANAGER: [],
 };

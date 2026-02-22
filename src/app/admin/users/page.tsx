@@ -64,7 +64,6 @@ const permissionGroups = [
       { key: "settings.shipping.view", label: "Lihat pengaturan pengiriman" },
       { key: "settings.shipping.edit", label: "Ubah pengaturan pengiriman" },
       { key: "settings.notice.view", label: "Lihat admin notice" },
-      { key: "settings.notice.edit", label: "Ubah admin notice" },
     ],
   },
 ] as const;
@@ -94,7 +93,6 @@ const defaultEditorPermissions = [
   "settings.shipping.view",
   "settings.shipping.edit",
   "settings.notice.view",
-  "settings.notice.edit",
 ];
 
 const defaultViewerPermissions = [

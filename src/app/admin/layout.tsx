@@ -50,7 +50,6 @@ function canAccessAdminPath(pathname: string) {
       "settings.shipping.view",
       "settings.shipping.edit",
       "settings.notice.view",
-      "settings.notice.edit",
     ]);
   }
   if (pathname.startsWith("/admin/webhooks")) {

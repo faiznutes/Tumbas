@@ -61,7 +61,6 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
           "settings.shipping.view",
           "settings.shipping.edit",
           "settings.notice.view",
-          "settings.notice.edit",
         ]);
       }
       if (item.href === "/admin/messages") return hasAdminPermission("messages.view");
