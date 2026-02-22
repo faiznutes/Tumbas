@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, Product } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
 import { addToCart } from "@/lib/cart";
+import { getProductRatingSummary } from "@/lib/product-reviews";
 
 const sortOptions = [
   { value: "newest", label: "Terbaru" },
@@ -28,6 +29,7 @@ export default function ShopPage() {
   const [fetchError, setFetchError] = useState("");
   const [gridView, setGridView] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [minRating, setMinRating] = useState(0);
   const [shopHero, setShopHero] = useState({
     badge: "Koleksi Baru",
     title: "Koleksi Musim Panas Telah Tiba",
@@ -65,6 +67,10 @@ export default function ShopPage() {
       filtered = filtered.filter((product) => product.price <= priceRange);
     }
 
+    if (minRating > 0) {
+      filtered = filtered.filter((product) => getProductRatingSummary(product.slug).average >= minRating);
+    }
+
     if (sortBy === "price-low") {
       filtered.sort((a, b) => a.price - b.price);
     } else if (sortBy === "price-high") {
@@ -74,7 +80,7 @@ export default function ShopPage() {
     }
 
     return filtered;
-  }, [allProducts, maxPrice, priceRange, selectedCategory, sortBy]);
+  }, [allProducts, maxPrice, priceRange, selectedCategory, sortBy, minRating]);
 
   const itemsPerPage = gridView ? 12 : 10;
   const totalPages = Math.max(1, Math.ceil(products.length / itemsPerPage));
@@ -125,7 +131,7 @@ export default function ShopPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, sortBy, priceRange, gridView]);
+  }, [selectedCategory, sortBy, priceRange, gridView, minRating]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -252,18 +258,20 @@ export default function ShopPage() {
 
             {/* Rating */}
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
-              <h3 className="font-bold text-lg text-[#0d141b] flex items-center justify-between">
-                Penilaian
-                <span className="material-symbols-outlined text-[#4c739a] cursor-pointer">expand_less</span>
-              </h3>
-              <ul className="space-y-2 text-sm text-[#4c739a]">
-                {[5, 4, 3].map((rating) => (
-                  <li key={rating} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1">
-                    <input 
-                      className="rounded border-gray-300 text-[#137fec] focus:ring-[#137fec] bg-white"
-                      id={`rate-${rating}`}
-                      type="checkbox"
-                    />
+                <h3 className="font-bold text-lg text-[#0d141b] flex items-center justify-between">
+                  Penilaian
+                  <span className="material-symbols-outlined text-[#4c739a] cursor-pointer">expand_less</span>
+                </h3>
+                <ul className="space-y-2 text-sm text-[#4c739a]">
+                  {[5, 4, 3].map((rating) => (
+                    <li key={rating} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1">
+                      <input 
+                        className="rounded border-gray-300 text-[#137fec] focus:ring-[#137fec] bg-white"
+                        id={`rate-${rating}`}
+                        type="checkbox"
+                        checked={minRating === rating}
+                        onChange={() => setMinRating((prev) => (prev === rating ? 0 : rating))}
+                      />
                     <label className="flex items-center gap-1 cursor-pointer" htmlFor={`rate-${rating}`}>
                       <div className="flex text-yellow-400">
                         {[...Array(5)].map((_, i) => (
@@ -279,10 +287,19 @@ export default function ShopPage() {
                       <span className="text-xs text-[#4c739a] ml-1">ke atas</span>
                     </label>
                   </li>
-                ))}
-              </ul>
-            </div>
-          </aside>
+                  ))}
+                </ul>
+                {minRating > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMinRating(0)}
+                    className="text-xs font-medium text-[#137fec] hover:underline"
+                  >
+                    Reset filter bintang
+                  </button>
+                )}
+              </div>
+            </aside>
 
           {/* Main Product Grid Area */}
           <div className="flex-1">
@@ -342,6 +359,7 @@ export default function ShopPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {paginatedProducts.map((product) => {
                   const badge = getBadge(product);
+                  const rating = getProductRatingSummary(product.slug);
                   return (
                     <Link
                       key={product.id}
@@ -392,7 +410,7 @@ export default function ShopPage() {
                       <div className="p-4">
                         <div className="flex items-center gap-1 mb-1">
                           <span className="material-symbols-outlined text-[16px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                          <span className="text-xs text-[#4c739a] font-medium">4.8 (120)</span>
+                          <span className="text-xs text-[#4c739a] font-medium">{rating.average.toFixed(1)} ({rating.total})</span>
                         </div>
                         <h3 className="font-bold text-[#0d141b] text-lg mb-1 truncate">{product.title}</h3>
                         <p className="text-sm text-[#4c739a] mb-3 truncate">{product.description || ''}</p>

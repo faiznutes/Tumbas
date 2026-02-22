@@ -7,6 +7,7 @@ import { api, Product } from "@/lib/api";
 import { addToCart } from "@/lib/cart";
 import { useToast } from "@/components/ui/Toast";
 import Navbar from "@/components/layout/Navbar";
+import { getHardcodedReviews, getProductRatingSummary } from "@/lib/product-reviews";
 
 type ProductTab = "description" | "specs" | "reviews" | "faq";
 
@@ -34,6 +35,7 @@ export default function ProductDetail() {
   const [selectedAttr1, setSelectedAttr1] = useState("");
   const [selectedAttr2, setSelectedAttr2] = useState("");
   const [activeTab, setActiveTab] = useState<ProductTab>("description");
+  const [reviewPage, setReviewPage] = useState(1);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,6 +48,7 @@ export default function ProductDetail() {
         const data = await api.products.getBySlug(slug);
         setProduct(data);
         setSelectedImage(0);
+        setReviewPage(1);
 
         const relatedResponse = await api.products.getAll({
           limit: 200,
@@ -104,6 +107,12 @@ export default function ProductDetail() {
   const activePrice = selectedVariant && selectedVariant.price > 0 ? selectedVariant.price : product?.price || 0;
   const activeStock = selectedVariant ? selectedVariant.stock : product?.stock || 0;
   const visibleRelated = relatedPool.slice(0, relatedVisibleCount);
+  const ratingSummary = useMemo(() => (product ? getProductRatingSummary(product.slug) : { average: 0, total: 0 }), [product]);
+  const reviews = useMemo(() => (product ? getHardcodedReviews(product.slug, product.title) : []), [product]);
+  const reviewPerPage = 6;
+  const reviewTotalPages = Math.max(1, Math.ceil(reviews.length / reviewPerPage));
+  const safeReviewPage = Math.min(reviewPage, reviewTotalPages);
+  const visibleReviews = reviews.slice((safeReviewPage - 1) * reviewPerPage, safeReviewPage * reviewPerPage);
 
   const handleBuyNow = () => {
     if (!product) return;
@@ -200,6 +209,7 @@ export default function ProductDetail() {
                 <span className="text-xs font-medium text-[#4c739a]">Official Store</span>
               </div>
               <h1 className="mb-4 text-3xl font-bold text-[#0d141b] sm:text-4xl">{product.title}</h1>
+              <p className="mb-3 text-sm font-medium text-[#4c739a]">{ratingSummary.average.toFixed(1)} / 5.0 dari {ratingSummary.total} ulasan</p>
               <p className="mb-6 text-sm leading-relaxed text-[#4c739a]">{product.description || "Produk premium dengan kualitas terbaik dan jaminan resmi."}</p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-bold text-[#137fec]">{formatPrice(activePrice)}</span>
@@ -307,13 +317,43 @@ export default function ProductDetail() {
             {activeTab === "reviews" && (
               <div className="space-y-3">
                 <h3 className="text-xl font-bold text-[#0d141b]">Review Pelanggan</h3>
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="font-semibold text-[#0d141b]">Andi • 5/5</p>
-                  <p>Produk sesuai deskripsi, pengiriman cepat, dan kualitas sangat memuaskan.</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="font-semibold text-[#0d141b]">Nadia • 4/5</p>
-                  <p>Packaging rapi, barang original. Akan beli lagi untuk varian lain.</p>
+                {visibleReviews.map((review) => (
+                  <div key={review.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="mb-1 flex items-center justify-between">
+                      <p className="font-semibold text-[#0d141b]">{review.author}</p>
+                      <div className="flex items-center gap-0.5 text-yellow-500">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span key={star} className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: star <= review.rating ? "'FILL' 1" : "'FILL' 0" }}>
+                            star
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="mb-1 text-xs text-[#4c739a]">{new Date(review.date).toLocaleDateString("id-ID")}</p>
+                    <p>{review.comment}</p>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between pt-2">
+                  <p className="text-xs text-[#4c739a]">Halaman {safeReviewPage} dari {reviewTotalPages}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReviewPage((prev) => Math.max(1, prev - 1))}
+                      disabled={safeReviewPage === 1}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-[#0d141b] disabled:opacity-50"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1))}
+                      disabled={safeReviewPage >= reviewTotalPages}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-[#0d141b] disabled:opacity-50"
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
