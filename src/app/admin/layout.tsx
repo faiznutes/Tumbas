@@ -93,10 +93,14 @@ export default function AdminLayout({
 
     syncSession();
     window.addEventListener("focus", syncSession);
+    window.addEventListener("visibilitychange", syncSession);
+    const interval = window.setInterval(syncSession, 20000);
 
     return () => {
       isMounted = false;
       window.removeEventListener("focus", syncSession);
+      window.removeEventListener("visibilitychange", syncSession);
+      window.clearInterval(interval);
     };
   }, [isLoginPage]);
 
