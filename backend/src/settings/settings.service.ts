@@ -444,11 +444,11 @@ export class SettingsService {
 
   async getShopHeroSettings() {
     const defaults = {
-      badge: 'New Arrival',
-      title: 'Summer Collection Arrival',
-      subtitle: 'Discover the latest trends in accessories and get 20% off for a limited time.',
+      badge: 'Koleksi Baru',
+      title: 'Koleksi Musim Panas Telah Tiba',
+      subtitle: 'Temukan tren aksesori terbaru dan nikmati diskon 20% untuk waktu terbatas.',
       image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4',
-      ctaText: 'Shop Now',
+      ctaText: 'Belanja Sekarang',
     };
 
     const keys = ['shop_hero_badge', 'shop_hero_title', 'shop_hero_subtitle', 'shop_hero_image', 'shop_hero_cta_text'];

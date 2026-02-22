@@ -29,11 +29,11 @@ export default function ShopPage() {
   const [gridView, setGridView] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [shopHero, setShopHero] = useState({
-    badge: "New Arrival",
-    title: "Summer Collection Arrival",
-    subtitle: "Discover the latest trends in accessories and get 20% off for a limited time.",
+    badge: "Koleksi Baru",
+    title: "Koleksi Musim Panas Telah Tiba",
+    subtitle: "Temukan tren aksesori terbaru dan nikmati diskon 20% untuk waktu terbatas.",
     image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4",
-    ctaText: "Shop Now",
+    ctaText: "Belanja Sekarang",
   });
 
   const categories = useMemo(() => {
@@ -141,7 +141,7 @@ export default function ShopPage() {
   };
 
   const getBadge = (product: Product) => {
-    if (product.status === 'SOLD') return { text: 'Sold', class: 'bg-gray-500' };
+    if (product.status === 'SOLD') return { text: 'Terjual', class: 'bg-gray-500' };
     return null;
   };
 
@@ -179,20 +179,20 @@ export default function ShopPage() {
           <aside className="w-full lg:w-64 flex-shrink-0 space-y-8">
             {/* Mobile Filter Toggle */}
             <div className="lg:hidden flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-[#0d141b]">Filters</h3>
+              <h3 className="font-bold text-lg text-[#0d141b]">Filter</h3>
               <button 
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 text-[#137fec] font-medium"
               >
                 <span className="material-symbols-outlined">filter_list</span>
-                Show Filters
+                Tampilkan Filter
               </button>
             </div>
 
             {/* Categories */}
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
               <h3 className="font-bold text-lg text-[#0d141b] flex items-center justify-between">
-                Categories
+                Kategori
                 <span className="material-symbols-outlined text-[#4c739a] cursor-pointer">expand_less</span>
               </h3>
               <ul className="space-y-2 text-sm text-[#4c739a]">
@@ -224,7 +224,7 @@ export default function ShopPage() {
             {/* Price Range */}
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
               <h3 className="font-bold text-lg text-[#0d141b] flex items-center justify-between">
-                Price Range
+                Rentang Harga
                 <span className="material-symbols-outlined text-[#4c739a] cursor-pointer">expand_less</span>
               </h3>
               <div className="px-2">
@@ -253,7 +253,7 @@ export default function ShopPage() {
             {/* Rating */}
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
               <h3 className="font-bold text-lg text-[#0d141b] flex items-center justify-between">
-                Rating
+                Penilaian
                 <span className="material-symbols-outlined text-[#4c739a] cursor-pointer">expand_less</span>
               </h3>
               <ul className="space-y-2 text-sm text-[#4c739a]">
@@ -276,7 +276,7 @@ export default function ShopPage() {
                           </span>
                         ))}
                       </div>
-                      <span className="text-xs text-[#4c739a] ml-1">& up</span>
+                      <span className="text-xs text-[#4c739a] ml-1">ke atas</span>
                     </label>
                   </li>
                 ))}
@@ -289,10 +289,10 @@ export default function ShopPage() {
             {/* Controls Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-lg shadow-sm border border-[#e7edf3]">
               <p className="text-sm text-[#4c739a] font-medium">
-                Showing <span className="text-[#0d141b] font-bold">{resultStart}-{resultEnd}</span> of <span className="text-[#0d141b] font-bold">{products.length}</span> results
+                Menampilkan <span className="text-[#0d141b] font-bold">{resultStart}-{resultEnd}</span> dari <span className="text-[#0d141b] font-bold">{products.length}</span> hasil
               </p>
               <div className="flex items-center gap-3 self-end sm:self-auto">
-                <label className="text-sm font-medium text-[#4c739a]" htmlFor="sort">Sort by:</label>
+                <label className="text-sm font-medium text-[#4c739a]" htmlFor="sort">Urutkan:</label>
                 <div className="relative">
                   <select 
                     className="appearance-none bg-[#f6f7f8] border border-[#e7edf3] text-[#0d141b] text-sm rounded-lg focus:ring-[#137fec] focus:border-[#137fec] block w-40 p-2.5 pr-8 cursor-pointer"
@@ -385,7 +385,7 @@ export default function ShopPage() {
                             }}
                           >
                             <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
-                            Add to Cart
+                            Tambah ke Keranjang
                           </button>
                         </div>
                       </div>

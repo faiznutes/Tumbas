@@ -73,11 +73,11 @@ export default function AdminSettings() {
     message: '',
   });
   const [shopHeroSettings, setShopHeroSettings] = useState({
-    badge: 'New Arrival',
-    title: 'Summer Collection Arrival',
-    subtitle: 'Discover the latest trends in accessories and get 20% off for a limited time.',
+    badge: 'Koleksi Baru',
+    title: 'Koleksi Musim Panas Telah Tiba',
+    subtitle: 'Temukan tren aksesori terbaru dan nikmati diskon 20% untuk waktu terbatas.',
     image: '',
-    ctaText: 'Shop Now',
+    ctaText: 'Belanja Sekarang',
   });
 
   const canViewTab = (tab: string) => {
@@ -837,7 +837,7 @@ export default function AdminSettings() {
                         value={shopHeroSettings.badge}
                         onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, badge: e.target.value }))}
                         className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                        placeholder="Contoh: New Arrival"
+                        placeholder="Contoh: Koleksi Baru"
                       />
                     </div>
                     <div>
@@ -847,7 +847,7 @@ export default function AdminSettings() {
                         value={shopHeroSettings.title}
                         onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, title: e.target.value }))}
                         className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                        placeholder="Contoh: Summer Collection Arrival"
+                        placeholder="Contoh: Koleksi Musim Panas Telah Tiba"
                       />
                     </div>
                     <div>
@@ -875,7 +875,7 @@ export default function AdminSettings() {
                         value={shopHeroSettings.ctaText}
                         onChange={(e) => setShopHeroSettings((prev) => ({ ...prev, ctaText: e.target.value }))}
                         className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b]"
-                        placeholder="Contoh: Shop Now"
+                        placeholder="Contoh: Belanja Sekarang"
                       />
                     </div>
 
