@@ -20,13 +20,13 @@ jobs:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
           if [ -z "$COOLIFY_WEBHOOK" ]; then
-            echo "COOLIFY_WEBHOOK secret is missing"
-            exit 1
+            echo "COOLIFY_WEBHOOK secret is missing. Skipping deploy trigger."
+            exit 0
           fi
 
           if [ -z "$COOLIFY_TOKEN" ]; then
-            echo "COOLIFY_TOKEN secret is missing"
-            exit 1
+            echo "COOLIFY_TOKEN secret is missing. Skipping deploy trigger."
+            exit 0
           fi
 
           echo "Triggering Coolify deploy webhook..."
