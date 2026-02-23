@@ -442,6 +442,7 @@ export class OrdersService {
         id: true,
         orderCode: true,
         amount: true,
+        snapToken: true,
         paymentStatus: true,
         shippedToExpedition: true,
         expeditionResi: true,

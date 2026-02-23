@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, PublicOrder } from "@/lib/api";
 import { formatPriceIdr } from "@/lib/order-presenter";
+import Script from "next/script";
+import Navbar from "@/components/layout/Navbar";
 
 function getOrderLoadFailureReason(err: unknown) {
   const raw = err instanceof Error ? err.message : "";
@@ -24,6 +26,11 @@ function PaymentPendingContent() {
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState(300);
+  const [snapReady, setSnapReady] = useState(false);
+  const [openingPayment, setOpeningPayment] = useState(false);
+
+  const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
+  const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
 
   useEffect(() => {
     async function fetchOrder() {
@@ -86,6 +93,39 @@ function PaymentPendingContent() {
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
 
+  const openSnapPayment = async () => {
+    if (!order?.snapToken) {
+      return;
+    }
+
+    try {
+      setOpeningPayment(true);
+
+      const waitUntilReady = async () => {
+        if (window.snap) return true;
+        for (let i = 0; i < 12; i += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          if (window.snap) return true;
+        }
+        return false;
+      };
+
+      const ready = snapReady || (await waitUntilReady());
+      if (!ready || !window.snap || !midtransClientKey) {
+        return;
+      }
+
+      window.snap.pay(order.snapToken, {
+        onSuccess: () => window.location.reload(),
+        onPending: () => window.location.reload(),
+        onError: () => router.push(`/payment/failed?orderId=${order.id}`),
+        onClose: () => undefined,
+      });
+    } finally {
+      setOpeningPayment(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f6f7f8] flex items-center justify-center">
@@ -96,29 +136,14 @@ function PaymentPendingContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f6f7f8]">
-      <nav className="sticky top-0 z-50 w-full border-b border-[#e7edf3] bg-white flex-shrink-0">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="text-[#137fec]"><span className="material-symbols-outlined text-3xl">shopping_bag</span></div>
-                <h1 className="text-xl font-bold tracking-tight text-[#0d141b] hidden sm:block">Tumbas</h1>
-              </Link>
-            </div>
-            <div className="hidden lg:flex items-center gap-8 flex-1 justify-center">
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/">Beranda</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/shop">Belanja</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/about">Tentang</Link>
-              <Link className="text-sm font-medium text-[#4c739a] hover:text-[#137fec]" href="/contact">Kontak</Link>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/cart" className="p-2 text-[#4c739a] hover:text-[#137fec] hover:bg-[#137fec]/10 rounded-full relative">
-                <span className="material-symbols-outlined">shopping_cart</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
+
+      <Script
+        src={snapUrl}
+        data-client-key={midtransClientKey || ""}
+        strategy="afterInteractive"
+        onLoad={() => setSnapReady(Boolean(window.snap))}
+      />
 
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="max-md:w-full text-center">
@@ -172,6 +197,14 @@ function PaymentPendingContent() {
           </div>
 
           <div className="space-y-3">
+            <button
+              onClick={openSnapPayment}
+              disabled={!order?.snapToken || !midtransClientKey || openingPayment}
+              className="inline-flex items-center justify-center w-full px-6 py-3 bg-[#16a34a] hover:bg-[#15803d] text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined mr-2">payments</span>
+              {openingPayment ? "Membuka Midtrans..." : "Lanjutkan Pembayaran"}
+            </button>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center justify-center w-full px-6 py-3 bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold rounded-lg transition-colors"

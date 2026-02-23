@@ -166,6 +166,7 @@ export interface PublicOrder {
   id: string;
   orderCode: string;
   amount: number;
+  snapToken?: string | null;
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED';
   shippedToExpedition?: boolean;
   expeditionResi?: string | null;
