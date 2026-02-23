@@ -152,7 +152,7 @@ export default function VerifyReceiptPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-[#137fec] px-6 font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
+              className="inline-flex h-12 min-w-[176px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-[#137fec] px-6 font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
             >
               {loading ? "Memverifikasi..." : "Verifikasi Sekarang"}
             </button>

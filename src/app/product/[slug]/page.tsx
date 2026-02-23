@@ -269,11 +269,11 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 onClick={handleBuyNow}
                 disabled={product.status !== "AVAILABLE" || addingToCart || (variants.length > 0 && !selectedVariant) || activeStock <= 0}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-[#137fec] font-semibold text-white hover:bg-[#0f65bd] disabled:opacity-50"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#137fec] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#0f65bd] disabled:opacity-50 sm:h-14 sm:text-base"
               >
                 <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
                 Beli Sekarang
@@ -281,7 +281,7 @@ export default function ProductDetail() {
               <button
                 onClick={handleAddToCart}
                 disabled={product.status !== "AVAILABLE" || addingToCart || (variants.length > 0 && !selectedVariant) || activeStock <= 0}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white font-semibold text-[#0d141b] hover:border-[#137fec] hover:text-[#137fec] disabled:opacity-50"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-[#0d141b] shadow-sm hover:border-[#137fec] hover:text-[#137fec] disabled:opacity-50 sm:h-14 sm:text-base"
               >
                 <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
                 Tambah ke Keranjang

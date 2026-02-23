@@ -28,9 +28,23 @@ function PaymentPendingContent() {
   const [countdown, setCountdown] = useState(300);
   const [snapReady, setSnapReady] = useState(false);
   const [openingPayment, setOpeningPayment] = useState(false);
+  const [runtimePaymentClientKey, setRuntimePaymentClientKey] = useState("");
 
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
+  const effectiveClientKey = midtransClientKey || runtimePaymentClientKey;
   const snapUrl = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || "https://app.sandbox.midtrans.com/snap/snap.js";
+
+  useEffect(() => {
+    async function fetchPaymentPublic() {
+      try {
+        const settings = await api.settings.getPaymentPublic();
+        setRuntimePaymentClientKey(settings.midtransClientKey || "");
+      } catch {
+        // ignore fallback
+      }
+    }
+    fetchPaymentPublic();
+  }, []);
 
   useEffect(() => {
     async function fetchOrder() {
@@ -111,7 +125,7 @@ function PaymentPendingContent() {
       };
 
       const ready = snapReady || (await waitUntilReady());
-      if (!ready || !window.snap || !midtransClientKey) {
+      if (!ready || !window.snap || !effectiveClientKey) {
         return;
       }
 
@@ -140,7 +154,7 @@ function PaymentPendingContent() {
 
       <Script
         src={snapUrl}
-        data-client-key={midtransClientKey || ""}
+        data-client-key={effectiveClientKey || ""}
         strategy="afterInteractive"
         onLoad={() => setSnapReady(Boolean(window.snap))}
       />
@@ -199,12 +213,15 @@ function PaymentPendingContent() {
           <div className="space-y-3">
             <button
               onClick={openSnapPayment}
-              disabled={!order?.snapToken || !midtransClientKey || openingPayment}
+              disabled={!order?.snapToken || !effectiveClientKey || openingPayment}
               className="inline-flex items-center justify-center w-full px-6 py-3 bg-[#16a34a] hover:bg-[#15803d] text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
               <span className="material-symbols-outlined mr-2">payments</span>
               {openingPayment ? "Membuka Midtrans..." : "Lanjutkan Pembayaran"}
             </button>
+            {!effectiveClientKey && (
+              <p className="text-xs text-amber-700 text-left">Client Key Midtrans belum tersedia. Hubungi admin untuk konfigurasi pembayaran.</p>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center justify-center w-full px-6 py-3 bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold rounded-lg transition-colors"
