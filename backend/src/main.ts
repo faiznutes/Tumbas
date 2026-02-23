@@ -37,6 +37,26 @@ async function bootstrap() {
       warnings.push('DATABASE_URL appears to use placeholder credentials.');
     }
 
+    try {
+      const expectedDbName = (process.env.EXPECTED_DB_NAME || 'tumbas_market').trim();
+      const parsed = new URL(databaseUrl);
+      const actualDbName = parsed.pathname.replace(/^\//, '').split('?')[0];
+      if (!actualDbName) {
+        warnings.push('DATABASE_URL database name is empty.');
+      } else if (expectedDbName && actualDbName !== expectedDbName) {
+        throw new Error(
+          `DATABASE_URL points to "${actualDbName}" but expected "${expectedDbName}". ` +
+          'Set DATABASE_URL / EXPECTED_DB_NAME correctly before starting production app.',
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('DATABASE_URL points to')) {
+        logger.error(`[SECURITY_CONFIG] ${error.message}`);
+        process.exit(1);
+      }
+      warnings.push('DATABASE_URL format cannot be parsed with URL parser.');
+    }
+
     if (!midtransServerKey) {
       warnings.push('MIDTRANS_SERVER_KEY is missing.');
     }
