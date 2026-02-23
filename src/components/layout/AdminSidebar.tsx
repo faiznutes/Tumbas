@@ -98,7 +98,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f6f7f8]">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200 bg-white overflow-y-auto transition-transform md:static md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200 bg-white overflow-y-auto transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center gap-3 p-6">
           <Link href="/admin/dashboard" className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#137fec] text-white">
@@ -148,13 +148,13 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       </aside>
 
       {sidebarOpen && (
-        <button className="fixed inset-0 z-20 bg-black/30 md:hidden" onClick={() => setSidebarOpen(false)} aria-label="Tutup menu" />
+        <button className="fixed inset-0 z-20 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Tutup menu" />
       )}
 
       {/* Main Content */}
       <main className="flex flex-1 flex-col overflow-y-auto bg-[#f6f7f8]">
         {/* Top Header */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 sm:px-6 lg:px-8 backdrop-blur">
           <div className="flex items-center gap-4">
             <button className="rounded-lg p-2 text-[#4c739a] hover:bg-slate-100 hover:text-[#137fec]" onClick={() => setSidebarOpen((prev) => !prev)} aria-label="Toggle menu">
               <span className="material-symbols-outlined">menu</span>

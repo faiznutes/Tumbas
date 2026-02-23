@@ -21,9 +21,7 @@ export default function Beranda() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [latestProducts, setLatestProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(2);
-  const [hours, setHours] = useState(14);
-  const [minutes, setMinutes] = useState(52);
+  const [nowTick, setNowTick] = useState(Date.now());
   const [promo, setPromo] = useState({
     heroImage: '',
     heroTitle: '',
@@ -43,7 +41,7 @@ export default function Beranda() {
   const [weeklyDealReady, setWeeklyDealReady] = useState(false);
   const [homepageFeaturedSettings, setHomepageFeaturedSettings] = useState({
     maxItems: 12,
-    newArrivalsLimit: 4,
+    newArrivalsLimit: 12,
   });
   const [discountCampaigns, setDiscountCampaigns] = useState<any[]>([]);
 
@@ -75,8 +73,8 @@ export default function Beranda() {
             : 12;
         const newArrivalsLimit =
           featuredSettingsRes.status === 'fulfilled'
-            ? Math.min(64, Math.max(1, featuredSettingsRes.value.newArrivalsLimit || 4))
-            : 4;
+            ? Math.min(64, Math.max(1, featuredSettingsRes.value.newArrivalsLimit || 12))
+            : 12;
         setHomepageFeaturedSettings({ maxItems, newArrivalsLimit });
         const manualSlugs =
           featuredSettingsRes.status === 'fulfilled'
@@ -120,6 +118,11 @@ export default function Beranda() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const getProductImage = (product: Product) => {
     if (product.images && product.images.length > 0) {
       return product.images[0].url;
@@ -137,9 +140,22 @@ export default function Beranda() {
     return Date.now() <= endDate.getTime();
   })();
 
+  const countdown = (() => {
+    if (!isWeeklyDealActive || !weeklyDeal.endDate) return null;
+    const endDate = new Date(weeklyDeal.endDate);
+    if (!Number.isFinite(endDate.getTime())) return null;
+    endDate.setHours(23, 59, 59, 999);
+    const diffMs = Math.max(0, endDate.getTime() - nowTick);
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return { days, hours, minutes };
+  })();
+
   const displayedNewArrivalsCount = isWeeklyDealActive
     ? homepageFeaturedSettings.newArrivalsLimit
-    : Math.max(16, homepageFeaturedSettings.newArrivalsLimit);
+    : Math.max(12, homepageFeaturedSettings.newArrivalsLimit);
 
   const displayedNewArrivals = latestProducts.slice(0, displayedNewArrivalsCount);
 
@@ -230,24 +246,34 @@ export default function Beranda() {
             <div>
               <h2 className="text-3xl font-extrabold text-slate-900">{weeklyDealReady ? (weeklyDeal.title || "Penawaran Mingguan") : "Memuat..."}</h2>
               <p className="text-slate-500 mt-2">{weeklyDealReady ? (weeklyDeal.subtitle || "Promo spesial terbatas waktu") : "Memuat penawaran mingguan..."}</p>
+              <Link href="/discounts" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#137fec] hover:underline">
+                Lihat semua produk promo
+                <span className="material-symbols-outlined text-sm">open_in_new</span>
+              </Link>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Berakhir Dalam:</span>
-              <div className="flex gap-2">
-                <div className="flex flex-col items-center justify-center w-14 h-14 bg-white border border-slate-200 rounded-lg shadow-sm">
-                  <span className="text-xl font-bold text-[#137fec]">{String(days).padStart(2, '0')}</span>
-                  <span className="text-[10px] text-slate-400 uppercase">Hari</span>
-                </div>
-                <div className="flex flex-col items-center justify-center w-14 h-14 bg-white border border-slate-200 rounded-lg shadow-sm">
-                  <span className="text-xl font-bold text-[#137fec]">{String(hours).padStart(2, '0')}</span>
-                  <span className="text-[10px] text-slate-400 uppercase">Jam</span>
-                </div>
-                <div className="flex flex-col items-center justify-center w-14 h-14 bg-white border border-slate-200 rounded-lg shadow-sm">
-                  <span className="text-xl font-bold text-[#137fec]">{String(minutes).padStart(2, '0')}</span>
-                  <span className="text-[10px] text-slate-400 uppercase">Menit</span>
+            {countdown ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Berakhir Dalam:</span>
+                <div className="flex gap-2">
+                  <div className="flex flex-col items-center justify-center w-14 h-14 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <span className="text-xl font-bold text-[#137fec]">{String(countdown.days).padStart(2, '0')}</span>
+                    <span className="text-[10px] text-slate-400 uppercase">Hari</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center w-14 h-14 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <span className="text-xl font-bold text-[#137fec]">{String(countdown.hours).padStart(2, '0')}</span>
+                    <span className="text-[10px] text-slate-400 uppercase">Jam</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center w-14 h-14 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <span className="text-xl font-bold text-[#137fec]">{String(countdown.minutes).padStart(2, '0')}</span>
+                    <span className="text-[10px] text-slate-400 uppercase">Menit</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-[#4c739a]">
+                Promo sedang aktif tanpa batas waktu khusus.
+              </div>
+            )}
           </div>
         </div>
       </section>

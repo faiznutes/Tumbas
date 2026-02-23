@@ -140,6 +140,11 @@ export default function ProductDetail() {
     router.push(`/checkout/${product.slug}${suffix}`);
   };
 
+  const goToReviewPage = (nextPage: number) => {
+    setReviewPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleAddToCart = () => {
     if (!product || product.status !== "AVAILABLE") return;
     if (variants.length > 0 && !selectedVariant) {
@@ -355,7 +360,7 @@ export default function ProductDetail() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setReviewPage((prev) => Math.max(1, prev - 1))}
+                      onClick={() => goToReviewPage(Math.max(1, safeReviewPage - 1))}
                       disabled={safeReviewPage === 1}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-[#0d141b] disabled:opacity-50"
                     >
@@ -363,7 +368,7 @@ export default function ProductDetail() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1))}
+                      onClick={() => goToReviewPage(Math.min(reviewTotalPages, safeReviewPage + 1))}
                       disabled={safeReviewPage >= reviewTotalPages}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-[#0d141b] disabled:opacity-50"
                     >

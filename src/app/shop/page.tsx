@@ -31,13 +31,14 @@ export default function ShopPage() {
   const [gridView, setGridView] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [minRating, setMinRating] = useState(0);
-  const [shopHero, setShopHero] = useState({
-    badge: "Koleksi Baru",
-    title: "Koleksi Musim Panas Telah Tiba",
-    subtitle: "Temukan tren aksesori terbaru dan nikmati diskon 20% untuk waktu terbatas.",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBeedSfej9dHlWKKsEZrhnlgVKTEkuxcUJvEzvKBxFq0eerDfw-ZXQB--pIyO00S4U6EsuEStAMeBYMujBGYj5a8NUIBX8F-xqLlP_t3ysmOc2fNeVmNWAF9M4HnK03c8vrHpEOhGq6msw8XUNw3adG5-hLCWYHKP3S73bgLRh7UrWbw-c2zYMc6cYtYpUtwPLpjwMCCx2wME-RA0k33V5x1yunQWF0EHev5_L1B8VU-ZxlAv8LTF_cGOp2XObWtgk9J900RRsTef4",
-    ctaText: "Belanja Sekarang",
+  const [promo, setPromo] = useState({
+    heroImage: "",
+    heroTitle: "",
+    heroSubtitle: "",
+    heroBadge: "",
+    discountText: "",
   });
+  const [promoReady, setPromoReady] = useState(false);
   const [weeklyDeal, setWeeklyDeal] = useState<any>(null);
   const [discountCampaigns, setDiscountCampaigns] = useState<any[]>([]);
 
@@ -106,14 +107,14 @@ export default function ShopPage() {
       try {
         setLoading(true);
         setFetchError("");
-        const [response, heroSettings, weekly, campaignsRes] = await Promise.all([
+        const [response, promoSettings, weekly, campaignsRes] = await Promise.all([
           api.products.getAll({ limit: 100, status: 'AVAILABLE', sort: 'popular' }),
-          api.settings.getShopHeroPublic(),
+          api.settings.getPromoPublic(),
           api.settings.getWeeklyDealPublic(),
           api.settings.getDiscountCampaignsPublic(),
         ]);
         setAllProducts(response.data);
-        setShopHero(heroSettings);
+        setPromo(promoSettings);
         setWeeklyDeal(weekly);
         setDiscountCampaigns(campaignsRes.campaigns || []);
 
@@ -130,6 +131,7 @@ export default function ShopPage() {
           setFetchError("Produk belum bisa dimuat saat ini. Periksa koneksi lalu coba lagi.");
         }
       } finally {
+        setPromoReady(true);
         setLoading(false);
       }
     }
@@ -160,6 +162,11 @@ export default function ShopPage() {
     return null;
   };
 
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="min-h-screen bg-[#f6f7f8]">
       <Navbar />
@@ -168,21 +175,25 @@ export default function ShopPage() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="relative rounded-2xl overflow-hidden mb-12 shadow-lg group">
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10"></div>
-          <img 
-            alt="Summer Collection Banner" 
-            className="w-full h-[400px] object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
-            src={shopHero.image}
-          />
+          {promoReady && promo.heroImage ? (
+            <img 
+              alt="Banner Promo Tumbas" 
+              className="w-full h-[360px] sm:h-[400px] object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
+              src={promo.heroImage}
+            />
+          ) : (
+            <div className="h-[360px] sm:h-[400px] w-full bg-slate-900" />
+          )}
           <div className="absolute inset-0 z-20 flex flex-col justify-center items-start p-8 md:p-16">
-            <span className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-white uppercase bg-[#137fec] rounded-full">{shopHero.badge}</span>
+            <span className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-white uppercase bg-[#137fec] rounded-full">{promo.heroBadge || "Promo Toko"}</span>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 max-w-xl">
-              {shopHero.title}
+              {promo.heroTitle || "Belanja Produk Favoritmu"}
             </h2>
             <p className="text-gray-200 text-lg md:text-xl mb-8 max-w-lg font-light">
-              {shopHero.subtitle}
+              {promo.heroSubtitle || "Temukan produk terbaru dan penawaran terbaik hanya di Tumbas."}
             </p>
-            <Link href="/shop" className="bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold py-3 px-8 rounded-lg transition-all transform hover:-translate-y-0.5 shadow-lg shadow-[#137fec]/30 flex items-center gap-2">
-              {shopHero.ctaText}
+            <Link href="/discounts" className="bg-[#137fec] hover:bg-[#0f65bd] text-white font-semibold py-3 px-8 rounded-lg transition-all transform hover:-translate-y-0.5 shadow-lg shadow-[#137fec]/30 flex items-center gap-2">
+              {promo.discountText || "Lihat Diskon"}
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
           </div>
@@ -447,7 +458,7 @@ export default function ShopPage() {
             {/* Pagination */}
             <div className="mt-12 flex flex-wrap items-center justify-center gap-2">
               <button
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => goToPage(Math.max(1, safeCurrentPage - 1))}
                 className="p-2 rounded-lg border border-[#e7edf3] text-[#4c739a] hover:bg-gray-100 transition-colors disabled:opacity-50"
                 disabled={safeCurrentPage === 1}
               >
@@ -464,7 +475,7 @@ export default function ShopPage() {
                       <span className="w-8 text-center text-sm font-medium text-[#4c739a]">...</span>
                     )}
                     <button
-                      onClick={() => setCurrentPage(page)}
+                      onClick={() => goToPage(page)}
                       className={`h-10 w-10 rounded-lg font-medium transition-colors ${
                         safeCurrentPage === page
                           ? "bg-[#137fec] text-white shadow-md shadow-[#137fec]/30"
@@ -478,7 +489,7 @@ export default function ShopPage() {
               })}
 
               <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                onClick={() => goToPage(Math.min(totalPages, safeCurrentPage + 1))}
                 className="p-2 rounded-lg border border-[#e7edf3] text-[#4c739a] hover:bg-gray-100 transition-colors disabled:opacity-50"
                 disabled={safeCurrentPage === totalPages}
               >

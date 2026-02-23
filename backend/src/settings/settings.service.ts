@@ -174,7 +174,7 @@ export class SettingsService {
     const defaults = {
       manualSlugs: [] as string[],
       maxItems: 12,
-      newArrivalsLimit: 4,
+      newArrivalsLimit: 12,
     };
 
     const keys = ['homepage_featured_manual_slugs', 'homepage_featured_max_items', 'homepage_new_arrivals_limit'];

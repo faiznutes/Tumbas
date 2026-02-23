@@ -53,7 +53,7 @@ export default function AdminSettings() {
   const [homepageFeaturedSettings, setHomepageFeaturedSettings] = useState({
     manualSlugs: [] as string[],
     maxItems: 12,
-    newArrivalsLimit: 4,
+    newArrivalsLimit: 12,
   });
   const [featuredSearch, setFeaturedSearch] = useState('');
   const [featuredProductsCatalog, setFeaturedProductsCatalog] = useState<Array<{ id: string; title: string; slug: string; category: string | null }>>([]);
@@ -284,11 +284,11 @@ export default function AdminSettings() {
         api.settings.getHomepageFeatured(),
         api.products.getAll({ limit: 200, status: 'AVAILABLE', sort: 'newest' }),
       ]);
-      setHomepageFeaturedSettings({
-        manualSlugs: data.manualSlugs,
-        maxItems: Math.min(50, Math.max(1, data.maxItems || 12)),
-        newArrivalsLimit: Math.min(64, Math.max(1, data.newArrivalsLimit || 4)),
-      });
+        setHomepageFeaturedSettings({
+          manualSlugs: data.manualSlugs,
+          maxItems: Math.min(50, Math.max(1, data.maxItems || 12)),
+          newArrivalsLimit: Math.min(64, Math.max(1, data.newArrivalsLimit || 12)),
+        });
       setFeaturedProductsCatalog(
         (products.data || []).map((item) => ({
           id: item.id,
