@@ -550,6 +550,7 @@ export class SettingsService {
       notifyOrderCreated: false,
       notifyPaymentPaid: true,
       chatIds: [] as string[],
+      botToken: '',
       botTokenConfigured: Boolean((process.env.TELEGRAM_BOT_TOKEN || '').trim()),
     };
 
@@ -558,6 +559,7 @@ export class SettingsService {
       'telegram_notify_order_created',
       'telegram_notify_payment_paid',
       'telegram_chat_ids',
+      'telegram_bot_token',
     ];
 
     const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
@@ -567,6 +569,7 @@ export class SettingsService {
       if (setting.key === 'telegram_enabled') result.enabled = setting.value === 'true';
       if (setting.key === 'telegram_notify_order_created') result.notifyOrderCreated = setting.value === 'true';
       if (setting.key === 'telegram_notify_payment_paid') result.notifyPaymentPaid = setting.value === 'true';
+      if (setting.key === 'telegram_bot_token') result.botToken = setting.value;
       if (setting.key === 'telegram_chat_ids') {
         result.chatIds = setting.value
           .split(',')
@@ -577,6 +580,8 @@ export class SettingsService {
       }
     });
 
+    result.botTokenConfigured = Boolean(result.botToken || (process.env.TELEGRAM_BOT_TOKEN || '').trim());
+
     return result;
   }
 
@@ -585,6 +590,7 @@ export class SettingsService {
     notifyOrderCreated?: boolean;
     notifyPaymentPaid?: boolean;
     chatIds?: string[];
+    botToken?: string;
   }) {
     const updates: Promise<any>[] = [];
 
@@ -604,6 +610,9 @@ export class SettingsService {
         .filter((item, index, arr) => arr.indexOf(item) === index)
         .slice(0, 50);
       updates.push(this.setSetting('telegram_chat_ids', safeChatIds.join(',')));
+    }
+    if (data.botToken !== undefined) {
+      updates.push(this.setSetting('telegram_bot_token', data.botToken.trim()));
     }
 
     if (updates.length > 0) await Promise.all(updates);

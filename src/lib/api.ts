@@ -711,6 +711,7 @@ export const api = {
       notifyOrderCreated: boolean;
       notifyPaymentPaid: boolean;
       chatIds: string[];
+      botToken: string;
       botTokenConfigured: boolean;
     }>('/settings/telegram'),
 
@@ -719,11 +720,13 @@ export const api = {
       notifyOrderCreated?: boolean;
       notifyPaymentPaid?: boolean;
       chatIds?: string[];
+      botToken?: string;
     }) => fetchApi<{
       enabled: boolean;
       notifyOrderCreated: boolean;
       notifyPaymentPaid: boolean;
       chatIds: string[];
+      botToken: string;
       botTokenConfigured: boolean;
     }>('/settings/telegram', {
       method: 'POST',

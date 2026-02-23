@@ -83,6 +83,7 @@ export default function AdminSettings() {
     notifyOrderCreated: false,
     notifyPaymentPaid: true,
     chatIdsText: '',
+    botToken: '',
     botTokenConfigured: false,
   });
   const [shopHeroSettings, setShopHeroSettings] = useState({
@@ -373,6 +374,7 @@ export default function AdminSettings() {
         notifyOrderCreated: data.notifyOrderCreated,
         notifyPaymentPaid: data.notifyPaymentPaid,
         chatIdsText: (data.chatIds || []).join('\n'),
+        botToken: data.botToken || '',
         botTokenConfigured: data.botTokenConfigured,
       });
     } catch (error) {
@@ -636,6 +638,7 @@ export default function AdminSettings() {
         notifyOrderCreated: telegramSettings.notifyOrderCreated,
         notifyPaymentPaid: telegramSettings.notifyPaymentPaid,
         chatIds,
+        botToken: telegramSettings.botToken,
       });
 
       setTelegramSettings({
@@ -643,6 +646,7 @@ export default function AdminSettings() {
         notifyOrderCreated: response.notifyOrderCreated,
         notifyPaymentPaid: response.notifyPaymentPaid,
         chatIdsText: (response.chatIds || []).join('\n'),
+        botToken: response.botToken || '',
         botTokenConfigured: response.botTokenConfigured,
       });
       addToast('Pengaturan Telegram Bot berhasil disimpan', 'success');
@@ -1768,7 +1772,23 @@ export default function AdminSettings() {
 
               <div className="space-y-6">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#4c739a]">
-                  Status Token Bot: <span className={`font-semibold ${telegramSettings.botTokenConfigured ? 'text-green-700' : 'text-red-700'}`}>{telegramSettings.botTokenConfigured ? 'Tersedia' : 'Belum di-set di env backend'}</span>
+                  Status Token Bot: <span className={`font-semibold ${telegramSettings.botTokenConfigured ? 'text-green-700' : 'text-red-700'}`}>{telegramSettings.botTokenConfigured ? 'Tersedia' : 'Belum di-set'}</span>
+                </div>
+
+                <div>
+                  <label htmlFor="telegramBotToken" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Telegram Bot Token
+                  </label>
+                  <input
+                    type="password"
+                    id="telegramBotToken"
+                    value={telegramSettings.botToken}
+                    onChange={(e) => setTelegramSettings((prev) => ({ ...prev, botToken: e.target.value }))}
+                    disabled={!canEditAdminNotice}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b] disabled:bg-slate-100"
+                    placeholder="Contoh: 123456789:AA..."
+                  />
+                  <p className="mt-2 text-xs text-[#4c739a]">Bisa diisi langsung di sini oleh Super Admin. Kosongkan jika ingin fallback dari env backend.</p>
                 </div>
 
                 <div className="flex items-center justify-between py-4 border-b border-slate-200">

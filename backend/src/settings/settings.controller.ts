@@ -117,6 +117,10 @@ class UpdateTelegramSettingsDto {
   @IsArray()
   @IsString({ each: true })
   chatIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  botToken?: string;
 }
 
 class UpdateShopHeroSettingsDto {

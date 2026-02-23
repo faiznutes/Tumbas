@@ -131,6 +131,7 @@ export class OrdersService {
             'telegram_notify_order_created',
             'telegram_notify_payment_paid',
             'telegram_chat_ids',
+            'telegram_bot_token',
           ],
         },
       },
@@ -152,7 +153,7 @@ export class OrdersService {
       notifyOrderCreated,
       notifyPaymentPaid,
       chatIds,
-      botToken: (process.env.TELEGRAM_BOT_TOKEN || '').trim(),
+      botToken: (map.get('telegram_bot_token') || '').trim() || (process.env.TELEGRAM_BOT_TOKEN || '').trim(),
     };
   }
 
