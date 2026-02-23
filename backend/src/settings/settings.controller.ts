@@ -100,6 +100,25 @@ class UpdateDiscountCampaignSettingsDto {
   campaigns?: Array<Record<string, any>>;
 }
 
+class UpdateTelegramSettingsDto {
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyOrderCreated?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyPaymentPaid?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  chatIds?: string[];
+}
+
 class UpdateShopHeroSettingsDto {
   @IsOptional()
   @IsString()
@@ -445,6 +464,20 @@ export class SettingsController {
   @Post('notifications')
   async updateNotificationSettings(@Body() data: UpdateNotificationSettingsDto) {
     return this.settingsService.setNotificationSettings(data);
+  }
+
+  @Get('telegram')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  async getTelegramSettings() {
+    return this.settingsService.getTelegramSettings();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  @Post('telegram')
+  async updateTelegramSettings(@Body() data: UpdateTelegramSettingsDto) {
+    return this.settingsService.setTelegramSettings(data);
   }
 
   @Get('admin-notice')

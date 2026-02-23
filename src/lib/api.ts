@@ -706,6 +706,30 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+    getTelegramSettings: () => fetchApi<{
+      enabled: boolean;
+      notifyOrderCreated: boolean;
+      notifyPaymentPaid: boolean;
+      chatIds: string[];
+      botTokenConfigured: boolean;
+    }>('/settings/telegram'),
+
+    updateTelegramSettings: (data: {
+      enabled?: boolean;
+      notifyOrderCreated?: boolean;
+      notifyPaymentPaid?: boolean;
+      chatIds?: string[];
+    }) => fetchApi<{
+      enabled: boolean;
+      notifyOrderCreated: boolean;
+      notifyPaymentPaid: boolean;
+      chatIds: string[];
+      botTokenConfigured: boolean;
+    }>('/settings/telegram', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
     getPromo: () => fetchApi<{
       heroImage: string;
       heroTitle: string;

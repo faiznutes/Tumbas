@@ -78,6 +78,13 @@ export default function AdminSettings() {
     title: 'Info Admin',
     message: '',
   });
+  const [telegramSettings, setTelegramSettings] = useState({
+    enabled: false,
+    notifyOrderCreated: false,
+    notifyPaymentPaid: true,
+    chatIdsText: '',
+    botTokenConfigured: false,
+  });
   const [shopHeroSettings, setShopHeroSettings] = useState({
     badge: 'Koleksi Baru',
     title: 'Koleksi Musim Panas Telah Tiba',
@@ -97,6 +104,7 @@ export default function AdminSettings() {
     if (tab === 'payment') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.payment.view') || hasAdminPermission('settings.payment.edit');
     if (tab === 'shipping') return hasGlobalSettingsView || hasGlobalSettingsEdit || hasAdminPermission('settings.shipping.view') || hasAdminPermission('settings.shipping.edit');
     if (tab === 'admin-notice') return hasAdminPermission('settings.notice.view') || canEditAdminNotice;
+    if (tab === 'telegram') return canEditAdminNotice;
     return false;
   };
 
@@ -111,9 +119,10 @@ export default function AdminSettings() {
     if (tab === 'payment') return hasGlobalSettingsEdit || hasAdminPermission('settings.payment.edit');
     if (tab === 'shipping') return hasGlobalSettingsEdit || hasAdminPermission('settings.shipping.edit');
     if (tab === 'admin-notice') return canEditAdminNotice;
+    if (tab === 'telegram') return canEditAdminNotice;
     return false;
   };
-  const canEditAnySettings = ['general', 'promo', 'weekly', 'homepage-featured', 'store', 'notifications', 'payment', 'shipping', 'admin-notice']
+  const canEditAnySettings = ['general', 'promo', 'weekly', 'homepage-featured', 'store', 'notifications', 'payment', 'shipping', 'admin-notice', 'telegram']
     .some((tab) => canEditTab(tab));
 
   const getErrorMessage = (error: unknown, fallback: string) => {
@@ -192,12 +201,14 @@ export default function AdminSettings() {
       fetchNotificationSettings();
     } else if (activeTab === 'admin-notice') {
       fetchAdminNoticeSettings();
+    } else if (activeTab === 'telegram') {
+      fetchTelegramSettings();
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (!canViewTab(activeTab)) {
-      const firstAllowed = ['general', 'promo', 'weekly', 'homepage-featured', 'store', 'notifications', 'payment', 'shipping', 'admin-notice']
+      const firstAllowed = ['general', 'promo', 'weekly', 'homepage-featured', 'store', 'notifications', 'payment', 'shipping', 'admin-notice', 'telegram']
         .find((tab) => canViewTab(tab));
       if (firstAllowed) {
         setActiveTab(firstAllowed);
@@ -347,6 +358,25 @@ export default function AdminSettings() {
       setAdminNoticeSettings(data);
     } catch (error) {
       console.error('Failed to fetch admin notice settings:', error);
+    }
+  }
+
+  async function fetchTelegramSettings() {
+    if (!canEditAdminNotice) {
+      return;
+    }
+
+    try {
+      const data = await api.settings.getTelegramSettings();
+      setTelegramSettings({
+        enabled: data.enabled,
+        notifyOrderCreated: data.notifyOrderCreated,
+        notifyPaymentPaid: data.notifyPaymentPaid,
+        chatIdsText: (data.chatIds || []).join('\n'),
+        botTokenConfigured: data.botTokenConfigured,
+      });
+    } catch (error) {
+      console.error('Failed to fetch telegram settings:', error);
     }
   }
 
@@ -588,6 +618,42 @@ export default function AdminSettings() {
     }
   }
 
+  async function saveTelegramSettings() {
+    if (!canEditAdminNotice) {
+      addToast('Hanya Super Admin yang dapat mengubah Telegram Bot', 'warning');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const chatIds = telegramSettings.chatIdsText
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      const response = await api.settings.updateTelegramSettings({
+        enabled: telegramSettings.enabled,
+        notifyOrderCreated: telegramSettings.notifyOrderCreated,
+        notifyPaymentPaid: telegramSettings.notifyPaymentPaid,
+        chatIds,
+      });
+
+      setTelegramSettings({
+        enabled: response.enabled,
+        notifyOrderCreated: response.notifyOrderCreated,
+        notifyPaymentPaid: response.notifyPaymentPaid,
+        chatIdsText: (response.chatIds || []).join('\n'),
+        botTokenConfigured: response.botTokenConfigured,
+      });
+      addToast('Pengaturan Telegram Bot berhasil disimpan', 'success');
+    } catch (error) {
+      console.error('Failed to save telegram settings:', error);
+      addToast(getErrorMessage(error, 'Gagal menyimpan pengaturan Telegram Bot'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -700,6 +766,18 @@ export default function AdminSettings() {
               >
                 <span className="material-symbols-outlined">campaign</span>
                 <span className="hidden text-sm font-medium lg:inline">Admin Notice</span>
+              </button>)}
+              {canViewTab("telegram") && (<button
+                onClick={() => setActiveTab("telegram")}
+                title="Telegram Bot"
+                className={`w-full flex items-center justify-center gap-2 px-2 py-3 rounded-lg transition-colors lg:justify-start lg:px-4 ${
+                  activeTab === "telegram"
+                    ? "bg-[#137fec]/10 text-[#137fec]"
+                    : "text-[#4c739a] hover:bg-slate-100"
+                }`}
+              >
+                <span className="material-symbols-outlined">send</span>
+                <span className="hidden text-sm font-medium lg:inline">Telegram Bot</span>
               </button>)}
               {canViewTab("payment") && (<button
                 onClick={() => setActiveTab("payment")}
@@ -1669,6 +1747,104 @@ export default function AdminSettings() {
                     className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
                   >
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "telegram" && (
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h2 className="text-lg font-bold text-[#0d141b] mb-2">Telegram Bot Notifikasi</h2>
+              <p className="text-sm text-[#4c739a] mb-6">
+                Khusus Super Admin. Atur notifikasi Telegram untuk order baru dan pembayaran sukses.
+              </p>
+
+              {!canEditAdminNotice && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Hanya Super Admin yang dapat melihat dan mengubah pengaturan Telegram Bot.
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#4c739a]">
+                  Status Token Bot: <span className={`font-semibold ${telegramSettings.botTokenConfigured ? 'text-green-700' : 'text-red-700'}`}>{telegramSettings.botTokenConfigured ? 'Tersedia' : 'Belum di-set di env backend'}</span>
+                </div>
+
+                <div className="flex items-center justify-between py-4 border-b border-slate-200">
+                  <div>
+                    <p className="font-medium text-[#0d141b]">Aktifkan Telegram Bot</p>
+                    <p className="text-sm text-[#4c739a]">Global switch notifikasi telegram</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={telegramSettings.enabled}
+                      onChange={(e) => setTelegramSettings((prev) => ({ ...prev, enabled: e.target.checked }))}
+                      disabled={!canEditAdminNotice}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-[#137fec] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#137fec]"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between py-4 border-b border-slate-200">
+                  <div>
+                    <p className="font-medium text-[#0d141b]">Notifikasi Order Baru</p>
+                    <p className="text-sm text-[#4c739a]">Jika aktif, order baru (belum dibayar) akan dikirim ke Telegram</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={telegramSettings.notifyOrderCreated}
+                      onChange={(e) => setTelegramSettings((prev) => ({ ...prev, notifyOrderCreated: e.target.checked }))}
+                      disabled={!canEditAdminNotice}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-[#137fec] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#137fec]"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between py-4 border-b border-slate-200">
+                  <div>
+                    <p className="font-medium text-[#0d141b]">Notifikasi Pembayaran Sukses</p>
+                    <p className="text-sm text-[#4c739a]">Jika aktif, status PAID dari Midtrans akan dikirim ke Telegram</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={telegramSettings.notifyPaymentPaid}
+                      onChange={(e) => setTelegramSettings((prev) => ({ ...prev, notifyPaymentPaid: e.target.checked }))}
+                      disabled={!canEditAdminNotice}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-[#137fec] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#137fec]"></div>
+                  </label>
+                </div>
+
+                <div>
+                  <label htmlFor="telegramChatIds" className="block text-sm font-medium text-[#0d141b] mb-2">
+                    Chat ID Tujuan (bisa lebih dari satu)
+                  </label>
+                  <textarea
+                    id="telegramChatIds"
+                    rows={5}
+                    value={telegramSettings.chatIdsText}
+                    onChange={(e) => setTelegramSettings((prev) => ({ ...prev, chatIdsText: e.target.value }))}
+                    disabled={!canEditAdminNotice}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] text-[#0d141b] disabled:bg-slate-100"
+                    placeholder={"Contoh:\n1229311218\n-1001234567890"}
+                  />
+                  <p className="mt-2 text-xs text-[#4c739a]">Pisahkan dengan baris baru atau koma. Harus numeric (contoh user: 1229311218, group: -1001234567890).</p>
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    onClick={saveTelegramSettings}
+                    disabled={loading || !canEditAdminNotice}
+                    className="bg-[#137fec] hover:bg-[#0f65bd] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Menyimpan...' : 'Simpan Pengaturan Telegram'}
                   </button>
                 </div>
               </div>

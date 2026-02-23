@@ -544,6 +544,72 @@ export class SettingsService {
     return this.getNotificationSettings();
   }
 
+  async getTelegramSettings() {
+    const defaults = {
+      enabled: false,
+      notifyOrderCreated: false,
+      notifyPaymentPaid: true,
+      chatIds: [] as string[],
+      botTokenConfigured: Boolean((process.env.TELEGRAM_BOT_TOKEN || '').trim()),
+    };
+
+    const keys = [
+      'telegram_enabled',
+      'telegram_notify_order_created',
+      'telegram_notify_payment_paid',
+      'telegram_chat_ids',
+    ];
+
+    const settings = await this.prisma.siteSettings.findMany({ where: { key: { in: keys } } });
+    const result = { ...defaults };
+
+    settings.forEach((setting) => {
+      if (setting.key === 'telegram_enabled') result.enabled = setting.value === 'true';
+      if (setting.key === 'telegram_notify_order_created') result.notifyOrderCreated = setting.value === 'true';
+      if (setting.key === 'telegram_notify_payment_paid') result.notifyPaymentPaid = setting.value === 'true';
+      if (setting.key === 'telegram_chat_ids') {
+        result.chatIds = setting.value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => /^-?\d+$/.test(item))
+          .filter((item, index, arr) => arr.indexOf(item) === index)
+          .slice(0, 50);
+      }
+    });
+
+    return result;
+  }
+
+  async setTelegramSettings(data: {
+    enabled?: boolean;
+    notifyOrderCreated?: boolean;
+    notifyPaymentPaid?: boolean;
+    chatIds?: string[];
+  }) {
+    const updates: Promise<any>[] = [];
+
+    if (data.enabled !== undefined) {
+      updates.push(this.setSetting('telegram_enabled', String(data.enabled)));
+    }
+    if (data.notifyOrderCreated !== undefined) {
+      updates.push(this.setSetting('telegram_notify_order_created', String(data.notifyOrderCreated)));
+    }
+    if (data.notifyPaymentPaid !== undefined) {
+      updates.push(this.setSetting('telegram_notify_payment_paid', String(data.notifyPaymentPaid)));
+    }
+    if (data.chatIds !== undefined) {
+      const safeChatIds = data.chatIds
+        .map((item) => item.trim())
+        .filter((item) => /^-?\d+$/.test(item))
+        .filter((item, index, arr) => arr.indexOf(item) === index)
+        .slice(0, 50);
+      updates.push(this.setSetting('telegram_chat_ids', safeChatIds.join(',')));
+    }
+
+    if (updates.length > 0) await Promise.all(updates);
+    return this.getTelegramSettings();
+  }
+
   async getAdminNoticeSettings() {
     const defaults = {
       enabled: false,

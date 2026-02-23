@@ -6,6 +6,17 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { ShippingService } from '../shipping/shipping.service';
 
+type TelegramNotifyOrder = {
+  orderCode: string;
+  customerName: string;
+  amount: number;
+  orderItems: Array<{
+    productTitleSnapshot: string;
+    quantity: number;
+    selectedVariantLabel?: string | null;
+  }>;
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -109,6 +120,107 @@ export class OrdersService {
     const raw = Number(this.configService.get<string>('ORDER_PENDING_TIMEOUT_MINUTES') || 120);
     if (!Number.isFinite(raw)) return 120;
     return Math.max(5, Math.floor(raw));
+  }
+
+  private async getTelegramNotificationSettings() {
+    const settings = await this.prisma.siteSettings.findMany({
+      where: {
+        key: {
+          in: [
+            'telegram_enabled',
+            'telegram_notify_order_created',
+            'telegram_notify_payment_paid',
+            'telegram_chat_ids',
+          ],
+        },
+      },
+    });
+    const map = new Map(settings.map((item) => [item.key, item.value]));
+
+    const enabled = (map.get('telegram_enabled') || 'false') === 'true';
+    const notifyOrderCreated = (map.get('telegram_notify_order_created') || 'false') === 'true';
+    const notifyPaymentPaid = (map.get('telegram_notify_payment_paid') || 'true') === 'true';
+    const chatIds = (map.get('telegram_chat_ids') || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => /^-?\d+$/.test(item))
+      .filter((item, index, arr) => arr.indexOf(item) === index)
+      .slice(0, 50);
+
+    return {
+      enabled,
+      notifyOrderCreated,
+      notifyPaymentPaid,
+      chatIds,
+      botToken: (process.env.TELEGRAM_BOT_TOKEN || '').trim(),
+    };
+  }
+
+  private buildTelegramOrderMessage(type: 'ORDER_CREATED' | 'PAYMENT_PAID', order: TelegramNotifyOrder) {
+    const itemLines = order.orderItems.length > 0
+      ? order.orderItems.map((item) => `- ${item.productTitleSnapshot}${item.selectedVariantLabel ? ` (${item.selectedVariantLabel})` : ''} x${item.quantity}`).join('\n')
+      : '- Item tidak tersedia';
+
+    const header = type === 'PAYMENT_PAID'
+      ? 'Pembayaran Pesanan Sukses'
+      : 'Pesanan Baru';
+    const statusLine = type === 'PAYMENT_PAID'
+      ? 'Status: Sudah dibayar'
+      : 'Status: Pesanan baru (belum dibayar)';
+
+    return [
+      `${header}`,
+      `Order: ${order.orderCode}`,
+      `Pembeli: ${order.customerName}`,
+      'Item Pembelian:',
+      itemLines,
+      `Total: Rp${Math.round(order.amount).toLocaleString('id-ID')}`,
+      statusLine,
+    ].join('\n');
+  }
+
+  private async sendTelegramMessage(chatId: string, text: string, botToken: string) {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Telegram API failed (${response.status}): ${body}`);
+    }
+  }
+
+  private async notifyTelegram(type: 'ORDER_CREATED' | 'PAYMENT_PAID', order: TelegramNotifyOrder) {
+    try {
+      const config = await this.getTelegramNotificationSettings();
+      if (!config.enabled) return;
+      if (!config.botToken) return;
+      if (config.chatIds.length === 0) return;
+      if (type === 'ORDER_CREATED' && !config.notifyOrderCreated) return;
+      if (type === 'PAYMENT_PAID' && !config.notifyPaymentPaid) return;
+
+      const message = this.buildTelegramOrderMessage(type, order);
+      await Promise.all(
+        config.chatIds.map((chatId) =>
+          this.sendTelegramMessage(chatId, message, config.botToken).catch((error) => {
+            console.error('[TELEGRAM_NOTIFY] Failed to send message', { type, chatId, error: error instanceof Error ? error.message : 'unknown_error' });
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error('[TELEGRAM_NOTIFY] Unexpected failure', {
+        type,
+        orderCode: order.orderCode,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      });
+    }
   }
 
   private async expireStalePendingOrders() {
@@ -700,7 +812,7 @@ export class OrdersService {
     selectedVariantKey?: string;
     selectedVariantLabel?: string;
   }) {
-    return this.prisma.$transaction(async (tx) => {
+    const createdOrder = await this.prisma.$transaction(async (tx) => {
       const requestedItems = Array.isArray(data.items) && data.items.length > 0
         ? data.items
         : data.productId
@@ -976,6 +1088,19 @@ export class OrdersService {
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
+
+    await this.notifyTelegram('ORDER_CREATED', {
+      orderCode: createdOrder.orderCode,
+      customerName: createdOrder.customerName,
+      amount: createdOrder.amount,
+      orderItems: (createdOrder.orderItems || []).map((item) => ({
+        productTitleSnapshot: item.productTitleSnapshot,
+        quantity: item.quantity,
+        selectedVariantLabel: item.selectedVariantLabel,
+      })),
+    });
+
+    return createdOrder;
   }
 
   async updateStatus(id: string, status: PaymentStatus) {
@@ -1004,7 +1129,7 @@ export class OrdersService {
     transaction_id?: string;
     status_code?: string;
   }) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
         where: { midtransOrderId: payload.order_id },
         include: { orderItems: true },
@@ -1015,7 +1140,7 @@ export class OrdersService {
       }
 
       if (order.paymentStatus === 'PAID') {
-        return { success: true, message: 'Already processed' };
+        return { success: true, message: 'Already processed', shouldNotifyPaid: false as const };
       }
 
       let paymentStatus: PaymentStatus = 'PENDING';
@@ -1058,7 +1183,29 @@ export class OrdersService {
         }
       }
 
-      return { success: true };
+      return {
+        success: true,
+        shouldNotifyPaid: paymentStatus === 'PAID',
+        notifyOrder:
+          paymentStatus === 'PAID'
+            ? {
+                orderCode: order.orderCode,
+                customerName: order.customerName,
+                amount: order.amount,
+                orderItems: (order.orderItems || []).map((item) => ({
+                  productTitleSnapshot: item.productTitleSnapshot,
+                  quantity: item.quantity,
+                  selectedVariantLabel: item.selectedVariantLabel,
+                })),
+              }
+            : null,
+      };
     });
+
+    if (result.success && result.shouldNotifyPaid && result.notifyOrder) {
+      await this.notifyTelegram('PAYMENT_PAID', result.notifyOrder);
+    }
+
+    return { success: result.success, message: (result as any).message };
   }
 }
