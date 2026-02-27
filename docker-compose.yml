@@ -41,6 +41,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tumbas-backend-http.entryPoints=http"
+      - "traefik.http.routers.tumbas-backend-http.rule=Host(`tumbas.faiznute.site`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.tumbas-backend-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.tumbas-backend-https.entryPoints=https"
+      - "traefik.http.routers.tumbas-backend-https.rule=Host(`tumbas.faiznute.site`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.tumbas-backend-https.tls=true"
+      - "traefik.http.routers.tumbas-backend-https.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tumbas-backend.loadbalancer.server.port=3001"
 
   frontend:
     build:
